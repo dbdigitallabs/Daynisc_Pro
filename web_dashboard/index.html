@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f1f4f9" />
+    <meta name="description" content="Daynisc — AI-Powered ERP & Business Automation for Indian SMEs" />
+    <title>Daynisc ERP</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <style>
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+      html, body { height: 100%; background: #f1f4f9; color: #1e293b; }
+      body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+      #root { height: 100%; display: flex; flex-direction: column; }
+
+      #initial-loader {
+        position: fixed; inset: 0; background: #0c1461;
+        display: flex; align-items: center; justify-content: center;
+        flex-direction: column; gap: 20px; z-index: 9999;
+      }
+      #initial-loader.hidden { display: none; }
+      .loader-brand { display: flex; align-items: center; gap: 12px; }
+      .loader-icon {
+        width: 44px; height: 44px; background: rgba(255,193,7,0.15);
+        border-radius: 10px; display: flex; align-items: center;
+        justify-content: center;
+      }
+      .loader-name {
+        font-family: 'Inter', sans-serif; font-weight: 800;
+        font-size: 26px; color: #fff; letter-spacing: -0.5px;
+      }
+      .loader-name span { color: #ffc107; }
+      .loader-sub {
+        font-family: 'Inter', sans-serif; font-size: 11px;
+        color: rgba(255,255,255,0.4); letter-spacing: 3px; text-transform: uppercase;
+      }
+      .loader-bar {
+        width: 160px; height: 3px; background: rgba(255,255,255,0.1);
+        border-radius: 2px; overflow: hidden;
+      }
+      .loader-bar::after {
+        content: ''; display: block; width: 60px; height: 100%;
+        background: linear-gradient(90deg, #4361ee, #7c3aed);
+        border-radius: 2px; animation: slide 1.4s ease-in-out infinite;
+      }
+      @keyframes slide {
+        0% { transform: translateX(-60px); }
+        100% { transform: translateX(220px); }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="initial-loader">
+      <div class="loader-brand">
+        <div class="loader-icon">
+          <img src="/logo_app.png" style="width: 28px; height: 28px; object-fit: contain;" alt="Daynisc Logo" />
+        </div>
+        <div class="loader-name">Day<span>nisc</span></div>
+      </div>
+      <div class="loader-sub">AI ERP Platform</div>
+      <div class="loader-bar"></div>
+    </div>
+    <div id="root"></div>
+    <script type="module" src="/main.tsx"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(() => {
+          const loader = document.getElementById('initial-loader');
+          if (loader) loader.classList.add('hidden');
+        }, 800);
+      });
+    </script>
+  </body>
+</html>

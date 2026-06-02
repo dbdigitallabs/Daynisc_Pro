@@ -1,0 +1,100 @@
+# ── Daynisc ERP — Render.com Deployment Config ────────────────────────────────
+# 100% FREE — No credit/debit card needed:
+#   • Render.com  → Web services + Background worker (free tier)
+#   • Supabase    → PostgreSQL (free, 500MB, no card)
+#   • Redis Cloud → Redis (free, 30MB, no card)
+#
+# Deploy steps:
+#   1. Push to GitHub
+#   2. Create Supabase DB → copy connection string → set DATABASE_URL below
+#   3. Create Redis Cloud DB → copy URL → set REDIS_URL below
+#   4. Go to https://dashboard.render.com → New → Blueprint → connect repo
+
+services:
+
+  # ── FastAPI Backend ──────────────────────────────────────────────────────────
+  - type: web
+    name: Daynics-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free                       # Free: 512MB RAM, spins down after 15min
+    envVars:
+      - key: DATABASE_URL
+        sync: false                  # Set from Supabase → Project → Settings → Database → URI
+                                     # Format: postgresql+asyncpg://postgres:PASSWORD@HOST:5432/postgres
+      - key: REDIS_URL
+        sync: false                  # Set from Redis Cloud → Database → Endpoint
+                                     # Format: redis://:PASSWORD@HOST:PORT/0
+      - key: CELERY_BROKER_URL
+        sync: false                  # Same host as REDIS_URL but /1 at end
+      - key: CELERY_RESULT_BACKEND
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DEBUG
+        value: "false"
+      - key: ALLOWED_ORIGINS
+        value: '["https://daynisc-web.onrender.com","http://localhost:3000"]'
+      - key: GEMINI_API_KEY
+        sync: false                  # Set from Google AI Studio
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_REGION
+        value: ap-south-1
+      - key: S3_BUCKET
+        sync: false
+      - key: GST_SANDBOX
+        value: "true"
+    healthCheckPath: /health
+
+  # ── Celery Worker (combined: all queues on free tier) ────────────────────────
+  - type: worker
+    name: daynisc-worker
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    dockerCommand: celery -A shared.tasks.celery_app worker -Q ai,erp,notifications -c 2 --loglevel=info
+    plan: free
+    envVars:
+      - key: DATABASE_URL
+        sync: false                  # Same as API service — from Supabase
+      - key: REDIS_URL
+        sync: false                  # Same as API service — from Redis Cloud
+      - key: CELERY_BROKER_URL
+        sync: false
+      - key: CELERY_RESULT_BACKEND
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_REGION
+        value: ap-south-1
+      - key: S3_BUCKET
+        sync: false
+
+  # ── React Web Dashboard ──────────────────────────────────────────────────────
+  - type: web
+    name: daynisc-web
+    runtime: docker
+    dockerfilePath: ./web_dashboard/Dockerfile.render
+    dockerContext: ./web_dashboard
+    plan: free
+    envVars:
+      - key: VITE_API_URL
+        value: https://daynisc-api.onrender.com/api/v1
+
+# ── NO Render managed database ─────────────────────────────────────────────────
+# Using Supabase (free forever, no card) instead.
+# Create at: https://supabase.com → New Project → Settings → Database → URI

@@ -1,0 +1,2285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI ERP & Business Automation Platform — Technical Blueprint</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&family=Noto+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #0a0a0f;
+  --paper: #f5f3ee;
+  --amber: #f5a623;
+  --amber-dim: #c8841a;
+  --steel: #1e2535;
+  --steel-light: #2e3a52;
+  --cyan: #00d4c8;
+  --cyan-dim: #009d93;
+  --red: #e84545;
+  --green: #2ecc71;
+  --muted: #8892a4;
+  --border: #2a3347;
+  --card: #141927;
+  --card-light: #1a2133;
+  --font-display: 'Syne', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  --font-body: 'Noto Sans', sans-serif;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--ink);
+  color: #d6dae6;
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.7;
+  overflow-x: hidden;
+}
+
+/* ── NOISE OVERLAY ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 999;
+  opacity: 0.4;
+}
+
+/* ── SIDEBAR NAV ── */
+nav {
+  position: fixed;
+  left: 0; top: 0; bottom: 0;
+  width: 220px;
+  background: var(--steel);
+  border-right: 1px solid var(--border);
+  padding: 32px 0;
+  z-index: 100;
+  overflow-y: auto;
+}
+
+nav .logo {
+  padding: 0 20px 24px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 20px;
+}
+
+nav .logo .badge {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--amber);
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: 4px;
+}
+
+nav .logo h1 {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.3;
+}
+
+nav a {
+  display: block;
+  padding: 8px 20px;
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 12px;
+  font-family: var(--font-mono);
+  letter-spacing: 0.5px;
+  transition: all 0.2s;
+  border-left: 2px solid transparent;
+}
+
+nav a:hover, nav a.active {
+  color: var(--cyan);
+  border-left-color: var(--cyan);
+  background: rgba(0,212,200,0.05);
+}
+
+nav .section-label {
+  padding: 16px 20px 4px;
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--border);
+  text-transform: uppercase;
+  font-family: var(--font-mono);
+}
+
+/* ── MAIN CONTENT ── */
+main {
+  margin-left: 220px;
+  padding: 0;
+}
+
+/* ── HERO ── */
+.hero {
+  position: relative;
+  padding: 80px 60px;
+  background: linear-gradient(135deg, var(--steel) 0%, var(--ink) 60%);
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  top: -100px; right: -100px;
+  width: 500px; height: 500px;
+  background: radial-gradient(circle, rgba(245,166,35,0.08) 0%, transparent 70%);
+}
+
+.hero::after {
+  content: '';
+  position: absolute;
+  bottom: -50px; left: 200px;
+  width: 300px; height: 300px;
+  background: radial-gradient(circle, rgba(0,212,200,0.06) 0%, transparent 70%);
+}
+
+.hero-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 3px;
+  color: var(--amber);
+  text-transform: uppercase;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hero-label::before {
+  content: '';
+  display: inline-block;
+  width: 24px;
+  height: 1px;
+  background: var(--amber);
+}
+
+.hero h1 {
+  font-family: var(--font-display);
+  font-size: 52px;
+  font-weight: 800;
+  line-height: 1.1;
+  color: #fff;
+  max-width: 700px;
+  margin-bottom: 20px;
+}
+
+.hero h1 span { color: var(--amber); }
+
+.hero p {
+  font-size: 15px;
+  color: var(--muted);
+  max-width: 560px;
+  margin-bottom: 32px;
+  line-height: 1.8;
+}
+
+.hero-meta {
+  display: flex;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+
+.hero-stat {
+  text-align: left;
+}
+
+.hero-stat .num {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--cyan);
+  line-height: 1;
+}
+
+.hero-stat .lbl {
+  font-size: 11px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  margin-top: 4px;
+}
+
+/* ── SECTIONS ── */
+section {
+  padding: 60px;
+  border-bottom: 1px solid var(--border);
+}
+
+section:nth-child(even) { background: rgba(30,37,53,0.3); }
+
+.section-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  margin-bottom: 40px;
+}
+
+.section-num {
+  font-family: var(--font-display);
+  font-size: 48px;
+  font-weight: 800;
+  color: var(--border);
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.section-title-block h2 {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 8px;
+}
+
+.section-title-block p {
+  color: var(--muted);
+  font-size: 13px;
+  max-width: 600px;
+}
+
+/* ── CARDS ── */
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 24px;
+  transition: border-color 0.2s, transform 0.2s;
+}
+
+.card:hover {
+  border-color: var(--cyan);
+  transform: translateY(-2px);
+}
+
+.card .card-icon {
+  width: 36px; height: 36px;
+  background: rgba(0,212,200,0.1);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  margin-bottom: 14px;
+}
+
+.card .card-icon.amber { background: rgba(245,166,35,0.1); }
+.card .card-icon.red { background: rgba(232,69,69,0.1); }
+.card .card-icon.green { background: rgba(46,204,113,0.1); }
+
+.card h3 {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 8px;
+}
+
+.card p {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.card ul {
+  list-style: none;
+  margin-top: 10px;
+}
+
+.card ul li {
+  font-size: 12px;
+  color: var(--muted);
+  padding: 3px 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.card ul li::before {
+  content: '→';
+  color: var(--cyan);
+  font-size: 10px;
+  flex-shrink: 0;
+}
+
+/* ── ARCHITECTURE DIAGRAM ── */
+.arch-diagram {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 32px;
+  margin: 24px 0;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  overflow-x: auto;
+}
+
+.arch-diagram .arch-title {
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--amber);
+  text-transform: uppercase;
+  margin-bottom: 24px;
+}
+
+.arch-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0;
+  flex-wrap: wrap;
+}
+
+.arch-box {
+  border: 1px solid;
+  border-radius: 4px;
+  padding: 6px 14px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.arch-box.cyan { border-color: var(--cyan); color: var(--cyan); background: rgba(0,212,200,0.08); }
+.arch-box.amber { border-color: var(--amber); color: var(--amber); background: rgba(245,166,35,0.08); }
+.arch-box.green { border-color: var(--green); color: var(--green); background: rgba(46,204,113,0.08); }
+.arch-box.red { border-color: var(--red); color: var(--red); background: rgba(232,69,69,0.08); }
+.arch-box.muted { border-color: var(--border); color: var(--muted); background: rgba(42,51,71,0.4); }
+.arch-box.white { border-color: #fff3; color: #fff; background: rgba(255,255,255,0.04); }
+
+.arch-arrow { color: var(--muted); font-size: 14px; }
+
+/* ── CODE BLOCKS ── */
+.code-block {
+  background: #0d1117;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 20px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.8;
+  overflow-x: auto;
+  margin: 16px 0;
+}
+
+.code-block .comment { color: #5c6773; }
+.code-block .key { color: var(--cyan); }
+.code-block .val { color: var(--amber); }
+.code-block .str { color: var(--green); }
+.code-block .kw { color: #c792ea; }
+
+/* ── DB TABLE ── */
+.db-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  margin: 16px 0;
+}
+
+.db-table th {
+  background: var(--steel);
+  color: var(--cyan);
+  padding: 10px 14px;
+  text-align: left;
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.db-table td {
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  vertical-align: top;
+}
+
+.db-table tr:hover td { background: rgba(0,212,200,0.03); }
+
+.db-table .col-name { color: #fff; }
+.db-table .col-type { color: var(--amber); }
+.db-table .col-pk { color: var(--green); font-size: 10px; }
+
+/* ── FLOW DIAGRAM ── */
+.flow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0;
+  margin: 20px 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.flow-step {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.flow-node {
+  background: var(--steel-light);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: #d6dae6;
+  white-space: nowrap;
+}
+
+.flow-node.highlight {
+  border-color: var(--amber);
+  color: var(--amber);
+  background: rgba(245,166,35,0.08);
+}
+
+.flow-node.success {
+  border-color: var(--green);
+  color: var(--green);
+  background: rgba(46,204,113,0.08);
+}
+
+.flow-arrow {
+  color: var(--muted);
+  padding: 0 8px;
+  font-size: 14px;
+}
+
+/* ── TABS ── */
+.tabs {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.tab-btn {
+  padding: 10px 20px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 1px;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+}
+
+.tab-btn.active {
+  color: var(--cyan);
+  border-bottom-color: var(--cyan);
+}
+
+.tab-content { display: none; padding-top: 20px; }
+.tab-content.active { display: block; }
+
+/* ── FOLDER TREE ── */
+.tree {
+  background: #0d1117;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 20px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 2;
+}
+
+.tree .dir { color: var(--cyan); }
+.tree .file { color: var(--muted); }
+.tree .file.dart { color: #54c5f8; }
+.tree .file.py { color: var(--green); }
+.tree .file.sql { color: var(--amber); }
+.tree .file.yaml { color: #c792ea; }
+.tree .comment { color: #3d4a5c; font-style: italic; }
+
+/* ── TAGS ── */
+.tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.tag {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  padding: 3px 8px;
+  border-radius: 3px;
+  border: 1px solid;
+}
+.tag.cyan { border-color: var(--cyan); color: var(--cyan); }
+.tag.amber { border-color: var(--amber); color: var(--amber); }
+.tag.green { border-color: var(--green); color: var(--green); }
+.tag.red { border-color: var(--red); color: var(--red); }
+.tag.muted { border-color: var(--border); color: var(--muted); }
+
+/* ── PRICING ── */
+.pricing-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-top: 16px; }
+
+.pricing-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 24px;
+  text-align: center;
+  transition: all 0.2s;
+}
+
+.pricing-card.featured {
+  border-color: var(--amber);
+  background: rgba(245,166,35,0.05);
+}
+
+.pricing-card .plan-name {
+  font-family: var(--font-display);
+  font-size: 12px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 12px;
+}
+
+.pricing-card .price {
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.pricing-card .price span {
+  font-size: 14px;
+  color: var(--muted);
+  font-weight: 400;
+}
+
+.pricing-card .price-sub {
+  font-size: 11px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  margin-bottom: 16px;
+}
+
+.pricing-card ul {
+  list-style: none;
+  text-align: left;
+  margin-bottom: 20px;
+}
+
+.pricing-card ul li {
+  font-size: 11px;
+  color: var(--muted);
+  padding: 4px 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pricing-card ul li .check { color: var(--green); }
+.pricing-card ul li .cross { color: var(--border); }
+
+.btn {
+  display: inline-block;
+  padding: 10px 20px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 1px;
+  border-radius: 4px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  background: transparent;
+  text-decoration: none;
+  transition: all 0.2s;
+  width: 100%;
+  text-align: center;
+}
+
+.btn.primary {
+  border-color: var(--amber);
+  color: var(--amber);
+  background: rgba(245,166,35,0.08);
+}
+
+/* ── PHASE TIMELINE ── */
+.timeline { margin: 20px 0; }
+
+.phase {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 24px;
+  position: relative;
+}
+
+.phase::before {
+  content: '';
+  position: absolute;
+  left: 18px;
+  top: 36px;
+  bottom: -24px;
+  width: 1px;
+  background: var(--border);
+}
+
+.phase:last-child::before { display: none; }
+
+.phase-dot {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+  flex-shrink: 0;
+  background: var(--ink);
+  position: relative;
+  z-index: 1;
+}
+
+.phase-dot.active {
+  border-color: var(--amber);
+  color: var(--amber);
+}
+
+.phase-content h4 {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 4px;
+}
+
+.phase-content p {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.phase-content .duration {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--amber);
+  margin-bottom: 6px;
+}
+
+/* ── WIDE CARD ── */
+.wide-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 24px 28px;
+  margin: 12px 0;
+}
+
+.wide-card h3 {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.wide-card h3 .tag {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  margin: 0;
+}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: var(--ink); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 1100px) {
+  nav { width: 180px; }
+  main { margin-left: 180px; }
+  .grid-4 { grid-template-columns: 1fr 1fr; }
+  .pricing-grid { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<nav>
+  <div class="logo">
+    <span class="badge">v1.0 Blueprint</span>
+    <h1>AI ERP<br>Platform</h1>
+  </div>
+
+  <span class="section-label">Overview</span>
+  <a href="#overview" class="active">System Overview</a>
+  <a href="#architecture">Architecture</a>
+
+  <span class="section-label">Modules</span>
+  <a href="#document-ai">Document AI</a>
+  <a href="#accounting">Accounting</a>
+  <a href="#inventory">Inventory</a>
+  <a href="#production">Production</a>
+  <a href="#sales">Sales</a>
+  <a href="#purchase">Purchase</a>
+  <a href="#transport">Transport</a>
+  <a href="#gst">GST</a>
+
+  <span class="section-label">Integration</span>
+  <a href="#tally">Tally / ERP</a>
+  <a href="#whatsapp">WhatsApp</a>
+
+  <span class="section-label">Platform</span>
+  <a href="#flutter">Flutter App</a>
+  <a href="#web-erp">Web Dashboard</a>
+  <a href="#backend">Backend API</a>
+  <a href="#database">Database</a>
+  <a href="#security">Security</a>
+  <a href="#deployment">Deployment</a>
+  <a href="#saas">SaaS Model</a>
+  <a href="#roadmap">Roadmap</a>
+</nav>
+
+<main>
+
+<!-- HERO -->
+<div class="hero" id="overview">
+  <div class="hero-label">Technical Blueprint — Indian SME ERP Platform</div>
+  <h1>AI <span>Business Automation</span><br>Ecosystem</h1>
+  <p>Complete architecture for an AI-first ERP platform serving Indian manufacturers, traders, distributors, and warehouses. From invoice scan to Tally entry — automated.</p>
+  <div class="hero-meta">
+    <div class="hero-stat"><div class="num">10</div><div class="lbl">Core Modules</div></div>
+    <div class="hero-stat"><div class="num">42</div><div class="lbl">MCP Tools</div></div>
+    <div class="hero-stat"><div class="num">3</div><div class="lbl">Languages (EN/HI/GU)</div></div>
+    <div class="hero-stat"><div class="num">6</div><div class="lbl">ERP Integrations</div></div>
+    <div class="hero-stat"><div class="num">∞</div><div class="lbl">AI Automation</div></div>
+  </div>
+</div>
+
+<!-- ARCHITECTURE -->
+<section id="architecture">
+  <div class="section-header">
+    <div class="section-num">01</div>
+    <div class="section-title-block">
+      <h2>System Architecture</h2>
+      <p>Multi-layer SaaS architecture with AI at the core. Every business document flows through the AI engine before reaching accounting or ERP.</p>
+    </div>
+  </div>
+
+  <div class="arch-diagram">
+    <div class="arch-title">// FULL SYSTEM ARCHITECTURE</div>
+
+    <div class="arch-row">
+      <span style="color:var(--muted);font-size:10px;width:100px">CLIENT LAYER</span>
+      <div class="arch-box cyan">Flutter Mobile App</div>
+      <div class="arch-arrow">|</div>
+      <div class="arch-box cyan">React Web Dashboard</div>
+      <div class="arch-arrow">|</div>
+      <div class="arch-box cyan">WhatsApp Bot</div>
+    </div>
+
+    <div class="arch-row" style="margin:4px 0 4px 106px">
+      <div class="arch-arrow">↓ HTTPS / WSS</div>
+    </div>
+
+    <div class="arch-row">
+      <span style="color:var(--muted);font-size:10px;width:100px">API GATEWAY</span>
+      <div class="arch-box amber">API Gateway (Kong / AWS ALB)</div>
+      <div class="arch-arrow">—</div>
+      <div class="arch-box muted">Rate Limiting</div>
+      <div class="arch-arrow">—</div>
+      <div class="arch-box muted">JWT Auth</div>
+      <div class="arch-arrow">—</div>
+      <div class="arch-box muted">Multi-tenant Router</div>
+    </div>
+
+    <div class="arch-row" style="margin:4px 0 4px 106px">
+      <div class="arch-arrow">↓</div>
+    </div>
+
+    <div class="arch-row">
+      <span style="color:var(--muted);font-size:10px;width:100px">MICROSERVICES</span>
+      <div class="arch-box white">Document Svc</div>
+      <div class="arch-box white">Accounting Svc</div>
+      <div class="arch-box white">Inventory Svc</div>
+      <div class="arch-box white">Production Svc</div>
+      <div class="arch-box white">Sales Svc</div>
+      <div class="arch-box white">GST Svc</div>
+    </div>
+
+    <div class="arch-row" style="margin:4px 0 4px 106px">
+      <div class="arch-arrow">↓ Message Queue (Celery + Redis)</div>
+    </div>
+
+    <div class="arch-row">
+      <span style="color:var(--muted);font-size:10px;width:100px">AI ENGINE</span>
+      <div class="arch-box amber">OCR Pipeline</div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-box amber">Gemini Vision</div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-box amber">Entity Extraction</div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-box amber">Confidence Scorer</div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-box amber">ERP Mapper</div>
+    </div>
+
+    <div class="arch-row" style="margin:4px 0 4px 106px">
+      <div class="arch-arrow">↓</div>
+    </div>
+
+    <div class="arch-row">
+      <span style="color:var(--muted);font-size:10px;width:100px">DATA LAYER</span>
+      <div class="arch-box green">PostgreSQL (Primary)</div>
+      <div class="arch-arrow">|</div>
+      <div class="arch-box green">Redis Cache</div>
+      <div class="arch-arrow">|</div>
+      <div class="arch-box green">S3 (Documents)</div>
+      <div class="arch-arrow">|</div>
+      <div class="arch-box green">Elasticsearch</div>
+    </div>
+
+    <div class="arch-row" style="margin:4px 0 4px 106px">
+      <div class="arch-arrow">↓ ERP Connector Layer</div>
+    </div>
+
+    <div class="arch-row">
+      <span style="color:var(--muted);font-size:10px;width:100px">ERP TARGETS</span>
+      <div class="arch-box red">TallyPrime XML</div>
+      <div class="arch-box red">Zoho Books API</div>
+      <div class="arch-box red">ERPNext REST</div>
+      <div class="arch-box red">Odoo RPC</div>
+      <div class="arch-box muted">SAP (future)</div>
+    </div>
+  </div>
+
+  <div class="grid-3" style="margin-top:24px">
+    <div class="card">
+      <div class="card-icon">🏗️</div>
+      <h3>Microservice Design</h3>
+      <p>Each business domain is an independent FastAPI service with its own DB schema, deployable and scalable independently.</p>
+      <div class="tags">
+        <span class="tag cyan">FastAPI</span>
+        <span class="tag amber">Docker</span>
+        <span class="tag green">K8s</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-icon amber">🤖</div>
+      <h3>AI-First Pipeline</h3>
+      <p>Every document passes through AI extraction before any ERP entry. Human verification only when confidence &lt; 85%.</p>
+      <div class="tags">
+        <span class="tag amber">Gemini Vision</span>
+        <span class="tag cyan">OCR</span>
+        <span class="tag green">Auto-entry</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-icon green">🏢</div>
+      <h3>Multi-Tenant SaaS</h3>
+      <p>Complete company isolation using schema-per-tenant in PostgreSQL. Each subscription gets its own data namespace.</p>
+      <div class="tags">
+        <span class="tag green">Schema Isolation</span>
+        <span class="tag muted">RBAC</span>
+        <span class="tag cyan">JWT</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DOCUMENT AI MODULE -->
+<section id="document-ai">
+  <div class="section-header">
+    <div class="section-num">02</div>
+    <div class="section-title-block">
+      <h2>AI Document Processing</h2>
+      <p>Upload any business document — invoice, LR, challan, bill, WhatsApp screenshot — and the AI extracts all structured data automatically.</p>
+    </div>
+  </div>
+
+  <div class="flow">
+    <div class="flow-step">
+      <div class="flow-node highlight">📄 Upload Document</div>
+      <div class="flow-arrow">→</div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-node">S3 Storage</div>
+      <div class="flow-arrow">→</div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-node highlight">🔍 OCR Engine</div>
+      <div class="flow-arrow">→</div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-node highlight">🤖 Gemini Vision</div>
+      <div class="flow-arrow">→</div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-node">Entity Extract</div>
+      <div class="flow-arrow">→</div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-node">Confidence Score</div>
+      <div class="flow-arrow">→</div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-node success">✅ ERP Entry</div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div>
+      <h3 style="font-family:var(--font-display);color:#fff;margin-bottom:16px;font-size:15px">Supported Document Types</h3>
+      <div class="grid-2">
+        <div class="card" style="padding:16px">
+          <h3>📄 Invoices</h3>
+          <ul>
+            <li>GST Tax Invoice</li>
+            <li>Proforma Invoice</li>
+            <li>Sales Invoice</li>
+            <li>Purchase Bill</li>
+          </ul>
+        </div>
+        <div class="card" style="padding:16px">
+          <h3>🚚 Transport</h3>
+          <ul>
+            <li>Lorry Receipt (LR)</li>
+            <li>Challan</li>
+            <li>E-Way Bill</li>
+            <li>Delivery Note</li>
+          </ul>
+        </div>
+        <div class="card" style="padding:16px">
+          <h3>💳 Payments</h3>
+          <ul>
+            <li>UPI Screenshot</li>
+            <li>NEFT/RTGS Confirm</li>
+            <li>Cheque Image</li>
+            <li>Bank Statement</li>
+          </ul>
+        </div>
+        <div class="card" style="padding:16px">
+          <h3>📱 WhatsApp</h3>
+          <ul>
+            <li>Forwarded Invoices</li>
+            <li>Payment Proofs</li>
+            <li>Order Images</li>
+            <li>Product Photos</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div>
+      <h3 style="font-family:var(--font-display);color:#fff;margin-bottom:16px;font-size:15px">Extracted Fields</h3>
+      <div class="code-block">
+<span class="comment">// AI Extraction Output Schema</span>
+{
+  <span class="key">"invoice_number"</span>: <span class="str">"INV/2024/1045"</span>,
+  <span class="key">"date"</span>: <span class="str">"2024-03-15"</span>,
+  <span class="key">"party_name"</span>: <span class="str">"ABC Plastics Pvt Ltd"</span>,
+  <span class="key">"gstin"</span>: <span class="str">"24AABCA1234Z1Z5"</span>,
+  <span class="key">"line_items"</span>: [
+    {
+      <span class="key">"name"</span>: <span class="str">"BLACK_MASTERBATCH_001"</span>,
+      <span class="key">"qty"</span>: <span class="val">500</span>,
+      <span class="key">"unit"</span>: <span class="str">"KG"</span>,
+      <span class="key">"rate"</span>: <span class="val">125.00</span>,
+      <span class="key">"hsn"</span>: <span class="str">"3206"</span>,
+      <span class="key">"gst_rate"</span>: <span class="val">18</span>
+    }
+  ],
+  <span class="key">"total"</span>: <span class="val">73750.00</span>,
+  <span class="key">"confidence"</span>: <span class="val">0.94</span>,
+  <span class="key">"language"</span>: <span class="str">"gujarati"</span>
+}
+      </div>
+      <div class="wide-card" style="margin-top:12px">
+        <h3>🧠 AI Name Matching <span class="tag amber">Self-Learning</span></h3>
+        <p style="font-size:12px;color:var(--muted)">"Blk MB" → "BLACK MB" → "Black Masterbatch" → <strong style="color:var(--cyan)">BLACK_MASTERBATCH_001</strong></p>
+        <p style="font-size:11px;color:var(--muted);margin-top:8px">The AI learns product aliases per company, improving match accuracy with every document processed.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ACCOUNTING -->
+<section id="accounting">
+  <div class="section-header">
+    <div class="section-num">03</div>
+    <div class="section-title-block">
+      <h2>Accounting Automation</h2>
+      <p>Automated voucher creation, GST calculations, ledger management, and reconciliation for Indian accounting workflows.</p>
+    </div>
+  </div>
+
+  <div class="grid-4" style="margin-bottom:24px">
+    <div class="card">
+      <div class="card-icon">📗</div>
+      <h3>Voucher Types</h3>
+      <ul>
+        <li>Purchase Voucher</li>
+        <li>Sales Voucher</li>
+        <li>Payment Entry</li>
+        <li>Receipt Entry</li>
+        <li>Journal Voucher</li>
+        <li>Debit / Credit Note</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-icon amber">🧾</div>
+      <h3>GST Automation</h3>
+      <ul>
+        <li>CGST + SGST Split</li>
+        <li>IGST (interstate)</li>
+        <li>HSN Mapping</li>
+        <li>ITC Calculation</li>
+        <li>RCM Handling</li>
+        <li>GST Reconciliation</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-icon green">📊</div>
+      <h3>Ledger Management</h3>
+      <ul>
+        <li>Customer Ledger</li>
+        <li>Supplier Ledger</li>
+        <li>Bank Ledger</li>
+        <li>Cash Ledger</li>
+        <li>AI Ledger Mapping</li>
+        <li>Party Grouping</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-icon red">💰</div>
+      <h3>Outstanding</h3>
+      <ul>
+        <li>Receivables Aging</li>
+        <li>Payables Aging</li>
+        <li>30/60/90 day buckets</li>
+        <li>Auto Reconciliation</li>
+        <li>PDC Management</li>
+        <li>Balance Confirmation</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3 style="font-family:var(--font-display);color:#fff;margin-bottom:16px;font-size:15px">Accounting Workflow</h3>
+  <div class="flow" style="flex-direction:column;align-items:flex-start;gap:4px">
+    <div style="display:flex;align-items:center;gap:8px">
+      <div class="flow-node highlight">📸 Invoice Upload</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node">AI Extraction</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node">Duplicate Check</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node">GST Validation</div>
+    </div>
+    <div style="padding:4px 0 4px 60px;color:var(--muted)">↓</div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <div class="flow-node">Ledger Mapping</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node">Voucher Draft</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node highlight">Human Verify (if conf &lt;85%)</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node success">✅ Voucher Created</div>
+    </div>
+    <div style="padding:4px 0 4px 60px;color:var(--muted)">↓</div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <div class="flow-node">Ledger Updated</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node">Outstanding Updated</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node success">✅ Tally Synced</div>
+    </div>
+  </div>
+</section>
+
+<!-- INVENTORY -->
+<section id="inventory">
+  <div class="section-header">
+    <div class="section-num">04</div>
+    <div class="section-title-block">
+      <h2>Inventory & Warehouse</h2>
+      <p>Multi-warehouse stock management with batch tracking, barcode/QR support, and real-time stock visibility.</p>
+    </div>
+  </div>
+
+  <div class="grid-3">
+    <div class="card">
+      <div class="card-icon">🏭</div>
+      <h3>Stock Movements</h3>
+      <ul>
+        <li>Inward (Purchase / Receipt)</li>
+        <li>Outward (Sales / Dispatch)</li>
+        <li>Inter-warehouse Transfer</li>
+        <li>Manual Adjustment</li>
+        <li>Return Processing</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-icon amber">📦</div>
+      <h3>Warehouse Features</h3>
+      <ul>
+        <li>Multi-warehouse Support</li>
+        <li>Batch / Lot Tracking</li>
+        <li>Barcode + QR Scan</li>
+        <li>Expiry Date Tracking</li>
+        <li>Storage Location Mapping</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-icon green">📈</div>
+      <h3>Analytics</h3>
+      <ul>
+        <li>FIFO / LIFO / WA Valuation</li>
+        <li>Low Stock Alerts</li>
+        <li>Fast / Slow Moving Items</li>
+        <li>Reorder Level Automation</li>
+        <li>Stock Aging Report</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3 style="font-family:var(--font-display);color:#fff;margin:24px 0 16px;font-size:15px">Database Schema — Stock Ledger</h3>
+  <table class="db-table">
+    <thead>
+      <tr>
+        <th>Column</th><th>Type</th><th>Description</th><th>Key</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td class="col-name">id</td><td class="col-type">UUID</td><td>Primary key</td><td class="col-pk">PK</td></tr>
+      <tr><td class="col-name">company_id</td><td class="col-type">UUID</td><td>Tenant isolation</td><td class="col-pk">FK</td></tr>
+      <tr><td class="col-name">item_code</td><td class="col-type">VARCHAR(50)</td><td>Product SKU</td><td class="col-pk">IDX</td></tr>
+      <tr><td class="col-name">warehouse_id</td><td class="col-type">UUID</td><td>Warehouse reference</td><td class="col-pk">FK</td></tr>
+      <tr><td class="col-name">batch_number</td><td class="col-type">VARCHAR(50)</td><td>Batch/lot number</td><td></td></tr>
+      <tr><td class="col-name">movement_type</td><td class="col-type">ENUM</td><td>inward/outward/transfer/adj</td><td></td></tr>
+      <tr><td class="col-name">quantity</td><td class="col-type">NUMERIC(12,3)</td><td>Movement quantity</td><td></td></tr>
+      <tr><td class="col-name">balance_qty</td><td class="col-type">NUMERIC(12,3)</td><td>Running balance</td><td></td></tr>
+      <tr><td class="col-name">unit_cost</td><td class="col-type">NUMERIC(12,4)</td><td>Cost per unit INR</td><td></td></tr>
+      <tr><td class="col-name">reference_type</td><td class="col-type">VARCHAR(30)</td><td>voucher/grn/production</td><td></td></tr>
+      <tr><td class="col-name">reference_id</td><td class="col-type">UUID</td><td>Linked document ID</td><td class="col-pk">FK</td></tr>
+      <tr><td class="col-name">movement_date</td><td class="col-type">DATE</td><td>Effective date</td><td class="col-pk">IDX</td></tr>
+      <tr><td class="col-name">created_at</td><td class="col-type">TIMESTAMPTZ</td><td>Audit timestamp</td><td></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- PRODUCTION -->
+<section id="production">
+  <div class="section-header">
+    <div class="section-num">05</div>
+    <div class="section-title-block">
+      <h2>Production Automation</h2>
+      <p>End-to-end production management with BOM, machine tracking, shift management, and automatic raw material consumption calculation.</p>
+    </div>
+  </div>
+
+  <div class="arch-diagram">
+    <div class="arch-title">// PRODUCTION WORKFLOW</div>
+    <div style="display:flex;gap:0;align-items:center;flex-wrap:wrap">
+      <div class="arch-box amber">Raw Material<br>Stock Check</div>
+      <div class="arch-arrow"> → </div>
+      <div class="arch-box amber">Production Order<br>Created (BOM)</div>
+      <div class="arch-arrow"> → </div>
+      <div class="arch-box cyan">Machine Assigned<br>Operator Assigned</div>
+      <div class="arch-arrow"> → </div>
+      <div class="arch-box cyan">Production<br>In Progress</div>
+      <div class="arch-arrow"> → </div>
+      <div class="arch-box green">Finished Goods<br>Generated</div>
+      <div class="arch-arrow"> → </div>
+      <div class="arch-box green">Stock Updated<br>Tally Synced</div>
+    </div>
+  </div>
+
+  <div class="grid-2" style="margin-top:16px">
+    <div>
+      <div class="wide-card">
+        <h3>📋 Bill of Materials (BOM)</h3>
+        <div class="code-block" style="margin-top:12px">
+<span class="comment">// BOM: BLACK MASTERBATCH 1000 KG Batch</span>
+{
+  <span class="key">"finished_item"</span>: <span class="str">"BLACK_MB_001"</span>,
+  <span class="key">"output_qty"</span>: <span class="val">1000</span> <span class="comment">// KG</span>,
+  <span class="key">"components"</span>: [
+    { <span class="key">"item"</span>: <span class="str">"LDPE_BASE"</span>, <span class="key">"qty"</span>: <span class="val">820</span>, <span class="key">"wastage"</span>: <span class="val">2.5</span> },
+    { <span class="key">"item"</span>: <span class="str">"CARBON_BLACK"</span>, <span class="key">"qty"</span>: <span class="val">180</span>, <span class="key">"wastage"</span>: <span class="val">1.0</span> },
+    { <span class="key">"item"</span>: <span class="str">"DISPERSING_AGENT"</span>, <span class="key">"qty"</span>: <span class="val">15</span>, <span class="key">"wastage"</span>: <span class="val">0</span> }
+  ],
+  <span class="key">"machine"</span>: <span class="str">"EXTRUDER_01"</span>,
+  <span class="key">"cycle_time_mins"</span>: <span class="val">240</span>
+}
+        </div>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-icon">⚙️</div>
+        <h3>Machine Mgmt</h3>
+        <ul>
+          <li>Machine Register</li>
+          <li>Capacity Planning</li>
+          <li>Downtime Tracking</li>
+          <li>Maintenance Log</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="card-icon amber">👷</div>
+        <h3>Shift Mgmt</h3>
+        <ul>
+          <li>Shift A/B/Night</li>
+          <li>Operator Assignment</li>
+          <li>Production per Shift</li>
+          <li>Attendance Link</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="card-icon green">♻️</div>
+        <h3>Wastage Track</h3>
+        <ul>
+          <li>Planned vs Actual</li>
+          <li>Wastage by Machine</li>
+          <li>Cost Impact</li>
+          <li>Quality Reject</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="card-icon red">📊</div>
+        <h3>Reports</h3>
+        <ul>
+          <li>Efficiency Report</li>
+          <li>Cost per Unit</li>
+          <li>Batch Report</li>
+          <li>Shift Comparison</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SALES -->
+<section id="sales">
+  <div class="section-header">
+    <div class="section-num">06</div>
+    <div class="section-title-block">
+      <h2>Sales Automation</h2>
+      <p>Complete order-to-cash automation with GST-compliant invoicing, e-Invoice, e-Way Bill, and WhatsApp payment reminders.</p>
+    </div>
+  </div>
+
+  <div class="grid-4">
+    <div class="card">
+      <div class="card-icon">📝</div>
+      <h3>Quotation</h3>
+      <ul><li>PDF Generation</li><li>WhatsApp Share</li><li>Convert to Order</li><li>Validity Tracking</li></ul>
+    </div>
+    <div class="card">
+      <div class="card-icon amber">📋</div>
+      <h3>Sales Order</h3>
+      <ul><li>PO Reference</li><li>Stock Reserve</li><li>Delivery Schedule</li><li>Order Tracking</li></ul>
+    </div>
+    <div class="card">
+      <div class="card-icon green">🧾</div>
+      <h3>GST Invoice</h3>
+      <ul><li>e-Invoice IRN</li><li>e-Way Bill</li><li>CGST/IGST Auto</li><li>PDF + WhatsApp</li></ul>
+    </div>
+    <div class="card">
+      <div class="card-icon red">💬</div>
+      <h3>Collections</h3>
+      <ul><li>Auto Reminders</li><li>Aging Alerts</li><li>WhatsApp/SMS</li><li>PDC Tracking</li></ul>
+    </div>
+  </div>
+</section>
+
+<!-- PURCHASE -->
+<section id="purchase">
+  <div class="section-header">
+    <div class="section-num">07</div>
+    <div class="section-title-block">
+      <h2>Purchase Automation</h2>
+      <p>Supplier invoice processing, GRN, stock update, and payables management — all automated from a photo of the bill.</p>
+    </div>
+  </div>
+
+  <div class="flow">
+    <div class="flow-step">
+      <div class="flow-node highlight">📸 Bill Photo</div>
+      <div class="flow-arrow">→</div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-node">AI Reads Bill</div>
+      <div class="flow-arrow">→</div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-node">Stock Updated (GRN)</div>
+      <div class="flow-arrow">→</div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-node">Purchase Voucher</div>
+      <div class="flow-arrow">→</div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-node">Supplier Ledger</div>
+      <div class="flow-arrow">→</div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-node success">✅ Tally Synced</div>
+    </div>
+  </div>
+
+  <div class="grid-3" style="margin-top:16px">
+    <div class="card"><div class="card-icon">📋</div><h3>Purchase Order</h3><ul><li>Supplier PO</li><li>PDF Generation</li><li>Approval Workflow</li><li>PO vs GRN Match</li></ul></div>
+    <div class="card"><div class="card-icon amber">📦</div><h3>Goods Receipt</h3><ul><li>GRN Entry</li><li>Short/Excess Handling</li><li>Quality Check Gate</li><li>Warehouse Assignment</li></ul></div>
+    <div class="card"><div class="card-icon green">📊</div><h3>Purchase Reports</h3><ul><li>Supplier-wise</li><li>Item-wise</li><li>Monthly Trend</li><li>ITC Summary</li></ul></div>
+  </div>
+</section>
+
+<!-- TRANSPORT -->
+<section id="transport">
+  <div class="section-header">
+    <div class="section-num">08</div>
+    <div class="section-title-block">
+      <h2>Transport & Dispatch</h2>
+      <p>LR management, transporter accounting, vehicle tracking, and delivery confirmation with POD upload.</p>
+    </div>
+  </div>
+
+  <div class="grid-4">
+    <div class="card"><div class="card-icon">🚚</div><h3>LR Management</h3><ul><li>LR from Document</li><li>Vehicle Number OCR</li><li>Consignor/Consignee</li><li>Freight Terms</li></ul></div>
+    <div class="card"><div class="card-icon amber">📍</div><h3>Dispatch Track</h3><ul><li>Loaded Status</li><li>In-Transit Status</li><li>Delivered / POD</li><li>Return Handling</li></ul></div>
+    <div class="card"><div class="card-icon green">💰</div><h3>Transporter Ledger</h3><ul><li>Freight Payables</li><li>TDS on Freight</li><li>Transporter Balance</li><li>Payment History</li></ul></div>
+    <div class="card"><div class="card-icon red">📊</div><h3>Analytics</h3><ul><li>Freight per KM</li><li>Transporter Compare</li><li>Delivery TAT</li><li>Route Analysis</li></ul></div>
+  </div>
+</section>
+
+<!-- GST -->
+<section id="gst">
+  <div class="section-header">
+    <div class="section-num">09</div>
+    <div class="section-title-block">
+      <h2>GST Automation</h2>
+      <p>Complete Indian GST compliance — GSTR filing data, e-Invoice, e-Way Bill, and ITC reconciliation built-in.</p>
+    </div>
+  </div>
+
+  <div class="grid-3">
+    <div class="card">
+      <div class="card-icon">🧾</div>
+      <h3>GST Returns</h3>
+      <ul>
+        <li>GSTR-1 (Outward)</li>
+        <li>GSTR-3B (Summary)</li>
+        <li>GSTR-2B Reconcile</li>
+        <li>GSTR-9 Annual</li>
+        <li>JSON Export Ready</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-icon amber">🔗</div>
+      <h3>e-Invoice / e-Way Bill</h3>
+      <ul>
+        <li>IRN Generation (IRP)</li>
+        <li>QR Code Embedding</li>
+        <li>EWB for &gt;₹50K</li>
+        <li>Cancellation (within 24h)</li>
+        <li>Bulk Generation</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-icon green">✅</div>
+      <h3>ITC Reconciliation</h3>
+      <ul>
+        <li>GSTR-2B vs Purchase</li>
+        <li>Auto Match</li>
+        <li>Mismatch Report</li>
+        <li>Pending ITC Alert</li>
+        <li>ITC Utilization</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- TALLY INTEGRATION -->
+<section id="tally">
+  <div class="section-header">
+    <div class="section-num">10</div>
+    <div class="section-title-block">
+      <h2>Tally & ERP Integration</h2>
+      <p>Seamless bidirectional sync with TallyPrime, Zoho Books, ERPNext, and Odoo using native APIs and XML connectors.</p>
+    </div>
+  </div>
+
+  <div class="arch-diagram">
+    <div class="arch-title">// TALLY INTEGRATION ARCHITECTURE</div>
+    <div class="arch-row">
+      <div class="arch-box cyan">AI ERP Platform</div>
+      <div class="arch-arrow">→ REST API</div>
+      <div class="arch-box amber">Tally Connector Service</div>
+      <div class="arch-arrow">→ XML over HTTP</div>
+      <div class="arch-box red">TallyPrime (port 9000)</div>
+    </div>
+    <div style="margin:12px 0 12px 0;color:var(--muted);font-size:11px">
+      Connector uses Tally's built-in XML server. Each voucher is converted to Tally XML and POSTed to http://localhost:9000.
+    </div>
+    <div class="arch-row">
+      <div class="arch-box muted">Purchase Voucher</div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-box muted">Sales Voucher</div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-box muted">Receipt Entry</div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-box muted">Payment Entry</div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-box muted">Stock Journal</div>
+    </div>
+  </div>
+
+  <div class="grid-2" style="margin-top:16px">
+    <div>
+      <h3 style="font-family:var(--font-display);color:#fff;margin-bottom:12px;font-size:14px">Tally XML Voucher Sample</h3>
+      <div class="code-block">
+<span class="comment">&lt;!-- Purchase Voucher XML for TallyPrime --&gt;</span>
+<span class="key">&lt;ENVELOPE&gt;</span>
+  <span class="kw">&lt;HEADER&gt;</span>
+    <span class="kw">&lt;TALLYREQUEST&gt;</span>Import Data<span class="kw">&lt;/TALLYREQUEST&gt;</span>
+  <span class="kw">&lt;/HEADER&gt;</span>
+  <span class="kw">&lt;BODY&gt;</span>
+    <span class="key">&lt;VOUCHER TYPE="Purchase"&gt;</span>
+      <span class="key">&lt;DATE&gt;</span><span class="str">20240315</span><span class="key">&lt;/DATE&gt;</span>
+      <span class="key">&lt;PARTYLEDGERNAME&gt;</span>
+        <span class="str">ABC Plastics Pvt Ltd</span>
+      <span class="key">&lt;/PARTYLEDGERNAME&gt;</span>
+      <span class="key">&lt;ALLLEDGERENTRIES&gt;</span>
+        <span class="key">&lt;LEDGERNAME&gt;</span><span class="str">Purchase @18%</span><span class="key">&lt;/LEDGERNAME&gt;</span>
+        <span class="key">&lt;AMOUNT&gt;</span><span class="val">-62500.00</span><span class="key">&lt;/AMOUNT&gt;</span>
+      <span class="key">&lt;/ALLLEDGERENTRIES&gt;</span>
+    <span class="key">&lt;/VOUCHER&gt;</span>
+  <span class="kw">&lt;/BODY&gt;</span>
+<span class="key">&lt;/ENVELOPE&gt;</span>
+      </div>
+    </div>
+    <div>
+      <h3 style="font-family:var(--font-display);color:#fff;margin-bottom:12px;font-size:14px">ERP Connectors</h3>
+      <div class="card" style="margin-bottom:10px">
+        <h3>🟢 TallyPrime</h3>
+        <p>XML over HTTP on port 9000. Full voucher, stock, and ledger sync. Bi-directional.</p>
+        <div class="tags"><span class="tag green">Stable</span><span class="tag cyan">Bi-directional</span></div>
+      </div>
+      <div class="card" style="margin-bottom:10px">
+        <h3>🔵 Zoho Books</h3>
+        <p>REST API with OAuth2. Full invoice, contact, and inventory sync.</p>
+        <div class="tags"><span class="tag cyan">REST API</span><span class="tag muted">OAuth2</span></div>
+      </div>
+      <div class="card" style="margin-bottom:10px">
+        <h3>🟡 ERPNext</h3>
+        <p>Frappe REST API with doctype-level push. Full accounting and stock.</p>
+        <div class="tags"><span class="tag amber">REST</span><span class="tag muted">Frappe</span></div>
+      </div>
+      <div class="card">
+        <h3>🟣 Odoo</h3>
+        <p>XML-RPC connector. Modules: account, stock, sale, purchase.</p>
+        <div class="tags"><span class="tag muted">XML-RPC</span><span class="tag muted">v16+</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- WHATSAPP -->
+<section id="whatsapp">
+  <div class="section-header">
+    <div class="section-num">11</div>
+    <div class="section-title-block">
+      <h2>WhatsApp Business Automation</h2>
+      <p>Import invoices, read payment screenshots, send reminders, and dispatch notifications — all through WhatsApp Business API.</p>
+    </div>
+  </div>
+
+  <div class="grid-3">
+    <div class="card">
+      <div class="card-icon">📥</div>
+      <h3>Document Import</h3>
+      <p>Customer forwards invoice photo → AI extracts data → ERP entry created automatically.</p>
+      <ul><li>Any image / PDF</li><li>Auto OCR + extract</li><li>Confirm via WA reply</li></ul>
+    </div>
+    <div class="card">
+      <div class="card-icon amber">📤</div>
+      <h3>Outbound Messages</h3>
+      <ul>
+        <li>Invoice PDF Share</li>
+        <li>Payment Reminders</li>
+        <li>Dispatch Notification</li>
+        <li>LR Number Alert</li>
+        <li>Stock Low Alert</li>
+        <li>Delivery Confirmation</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-icon green">💳</div>
+      <h3>Payment Screenshot OCR</h3>
+      <p>Customer sends UPI payment screenshot → AI reads UTR, amount, date → auto-reconcile against invoice.</p>
+      <ul><li>GPay / PhonePe / Paytm</li><li>NEFT / RTGS</li><li>Auto-reconcile</li></ul>
+    </div>
+  </div>
+</section>
+
+<!-- FLUTTER APP -->
+<section id="flutter">
+  <div class="section-header">
+    <div class="section-num">12</div>
+    <div class="section-title-block">
+      <h2>Flutter Mobile App</h2>
+      <p>Industrial-grade mobile app for field staff, warehouse operators, and business owners. Dark/light mode, glassmorphism UI.</p>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div>
+      <h3 style="font-family:var(--font-display);color:#fff;margin-bottom:16px;font-size:15px">App Folder Structure</h3>
+      <div class="tree">
+<span class="dir">lib/</span>
+├── <span class="dir">core/</span>
+│   ├── <span class="file dart">api_client.dart</span>       <span class="comment">// Dio HTTP client</span>
+│   ├── <span class="file dart">app_router.dart</span>       <span class="comment">// GoRouter navigation</span>
+│   ├── <span class="file dart">theme.dart</span>            <span class="comment">// Design system tokens</span>
+│   └── <span class="file dart">localization.dart</span>     <span class="comment">// EN/HI/GU strings</span>
+├── <span class="dir">features/</span>
+│   ├── <span class="dir">auth/</span>               <span class="comment">// OTP login, JWT storage</span>
+│   ├── <span class="dir">dashboard/</span>          <span class="comment">// Home KPI dashboard</span>
+│   ├── <span class="dir">document_scan/</span>      <span class="comment">// Camera + OCR upload</span>
+│   ├── <span class="dir">inventory/</span>          <span class="comment">// Stock list, movements</span>
+│   ├── <span class="dir">production/</span>         <span class="comment">// Orders, BOM, tracking</span>
+│   ├── <span class="dir">sales/</span>              <span class="comment">// Quotation, invoice</span>
+│   ├── <span class="dir">purchase/</span>           <span class="comment">// PO, GRN, bill scan</span>
+│   ├── <span class="dir">transport/</span>          <span class="comment">// LR, dispatch, track</span>
+│   ├── <span class="dir">accounting/</span>         <span class="comment">// Ledger, vouchers</span>
+│   └── <span class="dir">notifications/</span>      <span class="comment">// FCM push alerts</span>
+├── <span class="dir">shared/</span>
+│   ├── <span class="dir">widgets/</span>            <span class="comment">// Design system components</span>
+│   ├── <span class="dir">models/</span>             <span class="comment">// Freezed data models</span>
+│   └── <span class="dir">providers/</span>         <span class="comment">// Riverpod state</span>
+└── <span class="file dart">main.dart</span>
+      </div>
+    </div>
+    <div>
+      <h3 style="font-family:var(--font-display);color:#fff;margin-bottom:16px;font-size:15px">Key Screens</h3>
+      <div class="grid-2">
+        <div class="card" style="padding:14px">
+          <h3>📊 Dashboard</h3>
+          <ul>
+            <li>KPI Cards</li>
+            <li>Sales Today</li>
+            <li>Stock Alerts</li>
+            <li>Pending Actions</li>
+          </ul>
+        </div>
+        <div class="card" style="padding:14px">
+          <h3>📸 Document Scan</h3>
+          <ul>
+            <li>Camera Capture</li>
+            <li>PDF Upload</li>
+            <li>WA Import</li>
+            <li>Live OCR Preview</li>
+          </ul>
+        </div>
+        <div class="card" style="padding:14px">
+          <h3>📦 Stock Check</h3>
+          <ul>
+            <li>Search by item</li>
+            <li>Barcode Scan</li>
+            <li>Warehouse Filter</li>
+            <li>Low Stock List</li>
+          </ul>
+        </div>
+        <div class="card" style="padding:14px">
+          <h3>🏭 Production</h3>
+          <ul>
+            <li>Order Status</li>
+            <li>Start/Complete</li>
+            <li>Wastage Entry</li>
+            <li>Shift Update</li>
+          </ul>
+        </div>
+        <div class="card" style="padding:14px">
+          <h3>🚚 Dispatch</h3>
+          <ul>
+            <li>LR Upload</li>
+            <li>Status Update</li>
+            <li>POD Upload</li>
+            <li>Delivery Confirm</li>
+          </ul>
+        </div>
+        <div class="card" style="padding:14px">
+          <h3>📱 Approvals</h3>
+          <ul>
+            <li>AI Extraction Review</li>
+            <li>Voucher Approval</li>
+            <li>PO Approval</li>
+            <li>1-tap Approve</li>
+          </ul>
+        </div>
+      </div>
+      <div class="tags" style="margin-top:16px">
+        <span class="tag cyan">Flutter 3.x</span>
+        <span class="tag green">Riverpod</span>
+        <span class="tag amber">GoRouter</span>
+        <span class="tag muted">Dio</span>
+        <span class="tag muted">Freezed</span>
+        <span class="tag cyan">FCM Push</span>
+        <span class="tag green">Hive Local DB</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- WEB DASHBOARD -->
+<section id="web-erp">
+  <div class="section-header">
+    <div class="section-num">13</div>
+    <div class="section-title-block">
+      <h2>Web ERP Dashboard</h2>
+      <p>Enterprise-grade React dashboard with module dashboards for accounting, inventory, production, and AI verification.</p>
+    </div>
+  </div>
+
+  <div class="grid-4" style="margin-bottom:24px">
+    <div class="card">
+      <div class="card-icon">🖥️</div>
+      <h3>Admin Dashboard</h3>
+      <ul><li>Company Overview</li><li>User Management</li><li>Subscription Status</li><li>Audit Logs</li></ul>
+    </div>
+    <div class="card">
+      <div class="card-icon amber">📈</div>
+      <h3>Analytics Dashboard</h3>
+      <ul><li>Sales Trend Charts</li><li>Purchase Analytics</li><li>Stock Movement Graph</li><li>GST Summary</li></ul>
+    </div>
+    <div class="card">
+      <div class="card-icon green">🤖</div>
+      <h3>AI Verification</h3>
+      <ul><li>Pending Extractions</li><li>Confidence Score View</li><li>1-click Approve</li><li>Correction Interface</li></ul>
+    </div>
+    <div class="card">
+      <div class="card-icon red">🔗</div>
+      <h3>ERP Sync Monitor</h3>
+      <ul><li>Sync Status Board</li><li>Failed Records</li><li>Re-sync Button</li><li>Tally Health Check</li></ul>
+    </div>
+  </div>
+
+  <div class="wide-card">
+    <h3>🗂️ Web Dashboard Tech Stack <span class="tag cyan">React</span></h3>
+    <div class="grid-4" style="margin-top:12px">
+      <div style="font-size:12px;color:var(--muted)"><strong style="color:#fff">Framework</strong><br>React 18 + TypeScript<br>Vite build tooling</div>
+      <div style="font-size:12px;color:var(--muted)"><strong style="color:#fff">State</strong><br>Zustand + React Query<br>Optimistic updates</div>
+      <div style="font-size:12px;color:var(--muted)"><strong style="color:#fff">Charts</strong><br>Recharts / Chart.js<br>Real-time WebSocket</div>
+      <div style="font-size:12px;color:var(--muted)"><strong style="color:#fff">UI</strong><br>Tailwind CSS + shadcn/ui<br>Dark/light mode</div>
+    </div>
+  </div>
+</section>
+
+<!-- BACKEND -->
+<section id="backend">
+  <div class="section-header">
+    <div class="section-num">14</div>
+    <div class="section-title-block">
+      <h2>Backend API Architecture</h2>
+      <p>Python FastAPI microservices with Celery workers, Redis queuing, and async processing for AI workloads.</p>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div>
+      <h3 style="font-family:var(--font-display);color:#fff;margin-bottom:16px;font-size:15px">Backend Folder Structure</h3>
+      <div class="tree">
+<span class="dir">backend/</span>
+├── <span class="dir">services/</span>
+│   ├── <span class="dir">document_service/</span>
+│   │   ├── <span class="file py">main.py</span>         <span class="comment"># FastAPI app</span>
+│   │   ├── <span class="file py">routes.py</span>       <span class="comment"># API endpoints</span>
+│   │   ├── <span class="file py">ocr_engine.py</span>   <span class="comment"># OCR pipeline</span>
+│   │   └── <span class="file py">ai_extractor.py</span> <span class="comment"># Gemini Vision</span>
+│   ├── <span class="dir">accounting_service/</span>
+│   ├── <span class="dir">inventory_service/</span>
+│   ├── <span class="dir">production_service/</span>
+│   ├── <span class="dir">sales_service/</span>
+│   ├── <span class="dir">purchase_service/</span>
+│   ├── <span class="dir">transport_service/</span>
+│   ├── <span class="dir">gst_service/</span>
+│   └── <span class="dir">erp_connector/</span>
+│       ├── <span class="file py">tally_connector.py</span>
+│       ├── <span class="file py">zoho_connector.py</span>
+│       └── <span class="file py">erpnext_connector.py</span>
+├── <span class="dir">shared/</span>
+│   ├── <span class="file py">auth.py</span>            <span class="comment"># JWT + OTP</span>
+│   ├── <span class="file py">database.py</span>        <span class="comment"># SQLAlchemy async</span>
+│   ├── <span class="file py">middleware.py</span>       <span class="comment"># Tenant isolation</span>
+│   └── <span class="file py">celery_app.py</span>      <span class="comment"># Task queue</span>
+├── <span class="dir">migrations/</span>         <span class="comment"># Alembic DB migrations</span>
+├── <span class="file yaml">docker-compose.yml</span>
+└── <span class="file yaml">k8s/</span>                <span class="comment"># Kubernetes manifests</span>
+      </div>
+    </div>
+    <div>
+      <h3 style="font-family:var(--font-display);color:#fff;margin-bottom:16px;font-size:15px">API Endpoint Examples</h3>
+      <div class="code-block">
+<span class="comment"># Document Processing API</span>
+<span class="kw">POST</span>   /api/v1/documents/upload
+<span class="kw">GET</span>    /api/v1/documents/{id}
+<span class="kw">POST</span>   /api/v1/documents/{id}/verify
+<span class="kw">GET</span>    /api/v1/documents/check-duplicate
+
+<span class="comment"># Accounting API</span>
+<span class="kw">POST</span>   /api/v1/accounting/vouchers
+<span class="kw">GET</span>    /api/v1/accounting/ledger/{party_id}
+<span class="kw">POST</span>   /api/v1/accounting/reconcile
+<span class="kw">GET</span>    /api/v1/accounting/outstanding
+
+<span class="comment"># Inventory API</span>
+<span class="kw">POST</span>   /api/v1/inventory/movements
+<span class="kw">GET</span>    /api/v1/inventory/stock
+<span class="kw">GET</span>    /api/v1/inventory/valuation
+
+<span class="comment"># ERP Sync API</span>
+<span class="kw">POST</span>   /api/v1/erp/sync/voucher
+<span class="kw">POST</span>   /api/v1/erp/sync/bulk
+<span class="kw">GET</span>    /api/v1/erp/sync/status
+
+<span class="comment"># GST API</span>
+<span class="kw">POST</span>   /api/v1/gst/einvoice/{invoice_id}
+<span class="kw">POST</span>   /api/v1/gst/eway-bill
+<span class="kw">POST</span>   /api/v1/gst/returns/generate
+      </div>
+      <div class="tags" style="margin-top:12px">
+        <span class="tag green">FastAPI</span>
+        <span class="tag cyan">SQLAlchemy Async</span>
+        <span class="tag amber">Celery + Redis</span>
+        <span class="tag muted">Alembic</span>
+        <span class="tag muted">Pydantic v2</span>
+        <span class="tag cyan">PostgreSQL</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DATABASE -->
+<section id="database">
+  <div class="section-header">
+    <div class="section-num">15</div>
+    <div class="section-title-block">
+      <h2>Database Schema</h2>
+      <p>PostgreSQL with schema-per-tenant isolation. Key tables for all ERP modules with audit trails.</p>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="showTab('tab-companies')">Companies</button>
+    <button class="tab-btn" onclick="showTab('tab-documents')">Documents</button>
+    <button class="tab-btn" onclick="showTab('tab-vouchers')">Vouchers</button>
+    <button class="tab-btn" onclick="showTab('tab-items')">Items</button>
+    <button class="tab-btn" onclick="showTab('tab-production')">Production</button>
+  </div>
+
+  <div id="tab-companies" class="tab-content active">
+    <table class="db-table">
+      <thead><tr><th>Table: companies</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td class="col-name">id</td><td class="col-type">UUID PK</td><td>Company unique ID</td></tr>
+        <tr><td class="col-name">name</td><td class="col-type">VARCHAR(200)</td><td>Company legal name</td></tr>
+        <tr><td class="col-name">gstin</td><td class="col-type">VARCHAR(15)</td><td>15-digit GSTIN</td></tr>
+        <tr><td class="col-name">pan</td><td class="col-type">VARCHAR(10)</td><td>PAN number</td></tr>
+        <tr><td class="col-name">state_code</td><td class="col-type">VARCHAR(2)</td><td>GST state code (24=Gujarat)</td></tr>
+        <tr><td class="col-name">db_schema</td><td class="col-type">VARCHAR(50)</td><td>PostgreSQL schema name (tenant isolation)</td></tr>
+        <tr><td class="col-name">plan</td><td class="col-type">ENUM</td><td>starter / sme / factory / enterprise</td></tr>
+        <tr><td class="col-name">tally_config</td><td class="col-type">JSONB</td><td>Tally URL, company name, credentials</td></tr>
+        <tr><td class="col-name">whatsapp_token</td><td class="col-type">TEXT</td><td>Encrypted WhatsApp Business token</td></tr>
+        <tr><td class="col-name">subscription_expiry</td><td class="col-type">DATE</td><td>SaaS subscription end date</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div id="tab-documents" class="tab-content">
+    <table class="db-table">
+      <thead><tr><th>Table: document_extractions</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td class="col-name">id</td><td class="col-type">UUID PK</td><td>Extraction job ID</td></tr>
+        <tr><td class="col-name">company_id</td><td class="col-type">UUID FK</td><td>Tenant company</td></tr>
+        <tr><td class="col-name">s3_key</td><td class="col-type">TEXT</td><td>S3 object path</td></tr>
+        <tr><td class="col-name">document_type</td><td class="col-type">ENUM</td><td>invoice/lr/challan/payment_ss/eway_bill</td></tr>
+        <tr><td class="col-name">status</td><td class="col-type">ENUM</td><td>pending/extracted/verified/pushed/failed</td></tr>
+        <tr><td class="col-name">extracted_data</td><td class="col-type">JSONB</td><td>Full AI extraction result</td></tr>
+        <tr><td class="col-name">confidence_score</td><td class="col-type">NUMERIC(5,4)</td><td>AI confidence 0.0-1.0</td></tr>
+        <tr><td class="col-name">corrections</td><td class="col-type">JSONB</td><td>Human corrections applied</td></tr>
+        <tr><td class="col-name">language</td><td class="col-type">VARCHAR(5)</td><td>Detected: en/hi/gu</td></tr>
+        <tr><td class="col-name">is_duplicate</td><td class="col-type">BOOLEAN</td><td>Duplicate detection flag</td></tr>
+        <tr><td class="col-name">erp_voucher_id</td><td class="col-type">UUID FK</td><td>Created accounting voucher</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div id="tab-vouchers" class="tab-content">
+    <table class="db-table">
+      <thead><tr><th>Table: accounting_vouchers</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td class="col-name">id</td><td class="col-type">UUID PK</td><td>Voucher ID</td></tr>
+        <tr><td class="col-name">voucher_number</td><td class="col-type">VARCHAR(30)</td><td>Auto-generated number</td></tr>
+        <tr><td class="col-name">voucher_type</td><td class="col-type">ENUM</td><td>purchase/sales/payment/receipt/journal</td></tr>
+        <tr><td class="col-name">voucher_date</td><td class="col-type">DATE</td><td>Effective accounting date</td></tr>
+        <tr><td class="col-name">party_id</td><td class="col-type">UUID FK</td><td>Customer / supplier ledger</td></tr>
+        <tr><td class="col-name">reference_number</td><td class="col-type">VARCHAR(50)</td><td>Invoice / cheque reference</td></tr>
+        <tr><td class="col-name">line_items</td><td class="col-type">JSONB</td><td>Array of items with rate/qty/GST</td></tr>
+        <tr><td class="col-name">subtotal</td><td class="col-type">NUMERIC(14,2)</td><td>Pre-tax amount</td></tr>
+        <tr><td class="col-name">cgst</td><td class="col-type">NUMERIC(12,2)</td><td>CGST amount</td></tr>
+        <tr><td class="col-name">sgst</td><td class="col-type">NUMERIC(12,2)</td><td>SGST amount</td></tr>
+        <tr><td class="col-name">igst</td><td class="col-type">NUMERIC(12,2)</td><td>IGST amount (interstate)</td></tr>
+        <tr><td class="col-name">total</td><td class="col-type">NUMERIC(14,2)</td><td>Total amount</td></tr>
+        <tr><td class="col-name">tally_synced</td><td class="col-type">BOOLEAN</td><td>Pushed to Tally flag</td></tr>
+        <tr><td class="col-name">tally_sync_at</td><td class="col-type">TIMESTAMPTZ</td><td>Tally sync timestamp</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div id="tab-items" class="tab-content">
+    <table class="db-table">
+      <thead><tr><th>Table: item_master</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td class="col-name">id</td><td class="col-type">UUID PK</td><td>Item ID</td></tr>
+        <tr><td class="col-name">item_code</td><td class="col-type">VARCHAR(50)</td><td>Canonical SKU code</td></tr>
+        <tr><td class="col-name">item_name</td><td class="col-type">VARCHAR(200)</td><td>Full product name</td></tr>
+        <tr><td class="col-name">item_group</td><td class="col-type">VARCHAR(100)</td><td>Category group</td></tr>
+        <tr><td class="col-name">hsn_code</td><td class="col-type">VARCHAR(8)</td><td>HSN/SAC code</td></tr>
+        <tr><td class="col-name">gst_rate</td><td class="col-type">NUMERIC(4,1)</td><td>GST rate %: 0/5/12/18/28</td></tr>
+        <tr><td class="col-name">unit</td><td class="col-type">VARCHAR(10)</td><td>Primary UOM: KG/PCS/LTR/MTR</td></tr>
+        <tr><td class="col-name">reorder_level</td><td class="col-type">NUMERIC(12,3)</td><td>Low stock threshold</td></tr>
+        <tr><td class="col-name">aliases</td><td class="col-type">TEXT[]</td><td>AI aliases: ['Blk MB', 'BLACK MB']</td></tr>
+        <tr><td class="col-name">standard_rate</td><td class="col-type">NUMERIC(12,4)</td><td>Default price INR</td></tr>
+        <tr><td class="col-name">is_produced</td><td class="col-type">BOOLEAN</td><td>True = has BOM (finished good)</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div id="tab-production" class="tab-content">
+    <table class="db-table">
+      <thead><tr><th>Table: production_orders</th><th>Type</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td class="col-name">id</td><td class="col-type">UUID PK</td><td>Order ID</td></tr>
+        <tr><td class="col-name">order_number</td><td class="col-type">VARCHAR(30)</td><td>Auto-generated order number</td></tr>
+        <tr><td class="col-name">bom_id</td><td class="col-type">UUID FK</td><td>Bill of Materials used</td></tr>
+        <tr><td class="col-name">planned_qty</td><td class="col-type">NUMERIC(12,3)</td><td>Target output quantity</td></tr>
+        <tr><td class="col-name">actual_qty</td><td class="col-type">NUMERIC(12,3)</td><td>Actual produced quantity</td></tr>
+        <tr><td class="col-name">wastage_qty</td><td class="col-type">NUMERIC(12,3)</td><td>Recorded wastage</td></tr>
+        <tr><td class="col-name">status</td><td class="col-type">ENUM</td><td>planned/in_progress/completed/on_hold</td></tr>
+        <tr><td class="col-name">machine_id</td><td class="col-type">UUID FK</td><td>Assigned machine</td></tr>
+        <tr><td class="col-name">operator_id</td><td class="col-type">UUID FK</td><td>Assigned operator</td></tr>
+        <tr><td class="col-name">shift</td><td class="col-type">VARCHAR(10)</td><td>A / B / Night</td></tr>
+        <tr><td class="col-name">planned_date</td><td class="col-type">DATE</td><td>Target production date</td></tr>
+        <tr><td class="col-name">started_at</td><td class="col-type">TIMESTAMPTZ</td><td>Actual start time</td></tr>
+        <tr><td class="col-name">completed_at</td><td class="col-type">TIMESTAMPTZ</td><td>Actual completion time</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- SECURITY -->
+<section id="security">
+  <div class="section-header">
+    <div class="section-num">16</div>
+    <div class="section-title-block">
+      <h2>Security Architecture</h2>
+      <p>Enterprise-grade security with RBAC, OTP login, JWT, multi-tenant isolation, and comprehensive audit logging.</p>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-icon">🔐</div>
+        <h3>Authentication</h3>
+        <ul>
+          <li>OTP via SMS (MSG91)</li>
+          <li>JWT Access Token (15m)</li>
+          <li>Refresh Token (30d)</li>
+          <li>Device Fingerprint</li>
+          <li>IP Allowlist (optional)</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="card-icon amber">👥</div>
+        <h3>RBAC Roles</h3>
+        <ul>
+          <li>Super Admin</li>
+          <li>Company Admin</li>
+          <li>Accountant</li>
+          <li>Inventory Manager</li>
+          <li>Production Supervisor</li>
+          <li>Sales Rep (read)</li>
+          <li>Warehouse Operator</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="card-icon green">🏢</div>
+        <h3>Multi-Tenant</h3>
+        <ul>
+          <li>Schema-per-company</li>
+          <li>Row-level policies</li>
+          <li>Encrypted secrets</li>
+          <li>Company isolation</li>
+          <li>Cross-tenant block</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="card-icon red">📋</div>
+        <h3>Audit Trail</h3>
+        <ul>
+          <li>Every write logged</li>
+          <li>User + IP + timestamp</li>
+          <li>Before/after values</li>
+          <li>Immutable audit table</li>
+          <li>7-year retention</li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <div class="wide-card">
+        <h3>🔒 Security Checklist</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px;font-size:12px">
+          <div style="color:var(--green)">✅ HTTPS everywhere (TLS 1.3)</div>
+          <div style="color:var(--green)">✅ Encrypted S3 documents</div>
+          <div style="color:var(--green)">✅ Secrets in AWS Secrets Manager</div>
+          <div style="color:var(--green)">✅ SQL injection prevention (ORM)</div>
+          <div style="color:var(--green)">✅ Rate limiting per IP</div>
+          <div style="color:var(--green)">✅ CORS policy enforcement</div>
+          <div style="color:var(--green)">✅ Input validation (Pydantic)</div>
+          <div style="color:var(--green)">✅ File type validation (MIME)</div>
+          <div style="color:var(--green)">✅ Daily encrypted backups</div>
+          <div style="color:var(--green)">✅ VAPT penetration testing</div>
+          <div style="color:var(--green)">✅ PII data masking in logs</div>
+          <div style="color:var(--green)">✅ CSP headers on web app</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DEPLOYMENT -->
+<section id="deployment">
+  <div class="section-header">
+    <div class="section-num">17</div>
+    <div class="section-title-block">
+      <h2>Cloud & Deployment Architecture</h2>
+      <p>AWS-based deployment with Kubernetes, auto-scaling, multi-AZ failover, and CDN for mobile app assets.</p>
+    </div>
+  </div>
+
+  <div class="arch-diagram">
+    <div class="arch-title">// AWS DEPLOYMENT ARCHITECTURE</div>
+    <div class="arch-row">
+      <div class="arch-box cyan">CloudFront CDN</div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-box amber">ALB (Load Balancer)</div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-box cyan">EKS (Kubernetes)</div>
+    </div>
+    <div style="margin:6px 0 6px 0">
+      <span style="color:var(--muted);font-size:11px">EKS Pods: api-gateway | document-svc | accounting-svc | inventory-svc | production-svc | ai-worker | erp-connector</span>
+    </div>
+    <div class="arch-row">
+      <div class="arch-box green">RDS PostgreSQL (Multi-AZ)</div>
+      <div class="arch-arrow">|</div>
+      <div class="arch-box green">ElastiCache Redis</div>
+      <div class="arch-arrow">|</div>
+      <div class="arch-box green">S3 (Documents)</div>
+      <div class="arch-arrow">|</div>
+      <div class="arch-box green">SQS (Task Queue)</div>
+    </div>
+    <div class="arch-row" style="margin-top:8px">
+      <div class="arch-box muted">CloudWatch Monitoring</div>
+      <div class="arch-arrow">|</div>
+      <div class="arch-box muted">AWS WAF</div>
+      <div class="arch-arrow">|</div>
+      <div class="arch-box muted">Secrets Manager</div>
+      <div class="arch-arrow">|</div>
+      <div class="arch-box muted">Route53 DNS</div>
+    </div>
+  </div>
+
+  <div class="grid-3" style="margin-top:16px">
+    <div class="card">
+      <div class="card-icon">🐳</div>
+      <h3>Docker Setup</h3>
+      <div class="code-block" style="margin-top:10px;font-size:11px">
+<span class="comment"># docker-compose.yml</span>
+<span class="key">services</span>:
+  <span class="str">api</span>: fastapi:latest
+  <span class="str">worker</span>: celery:latest
+  <span class="str">redis</span>: redis:7
+  <span class="str">postgres</span>: postgres:16
+  <span class="str">nginx</span>: nginx:alpine
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-icon amber">⚙️</div>
+      <h3>Auto-scaling</h3>
+      <ul>
+        <li>HPA on CPU/memory</li>
+        <li>Min 2, Max 20 pods</li>
+        <li>AI workers scale on queue depth</span></li>
+        <li>Spot instances for workers</li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-icon green">🔄</div>
+      <h3>CI/CD Pipeline</h3>
+      <ul>
+        <li>GitHub Actions</li>
+        <li>Docker build + ECR push</li>
+        <li>Helm chart deploy to EKS</li>
+        <li>Automated DB migrations</li>
+        <li>Blue/green deployments</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- SAAS MODEL -->
+<section id="saas">
+  <div class="section-header">
+    <div class="section-num">18</div>
+    <div class="section-title-block">
+      <h2>SaaS Business Model</h2>
+      <p>Subscription-based pricing with AI credit add-ons, ERP integration setup fees, and enterprise custom plans.</p>
+    </div>
+  </div>
+
+  <div class="pricing-grid">
+    <div class="pricing-card">
+      <div class="plan-name">Starter</div>
+      <div class="price">₹999<span>/mo</span></div>
+      <div class="price-sub">1 company · 3 users</div>
+      <ul>
+        <li><span class="check">✓</span> 100 AI scans/month</li>
+        <li><span class="check">✓</span> Basic accounting</li>
+        <li><span class="check">✓</span> Inventory (1 warehouse)</li>
+        <li><span class="check">✓</span> WhatsApp (100 msgs)</li>
+        <li><span class="cross">✗</span> Tally Integration</li>
+        <li><span class="cross">✗</span> Production module</li>
+        <li><span class="cross">✗</span> e-Invoice</li>
+      </ul>
+      <a class="btn">Get Started</a>
+    </div>
+
+    <div class="pricing-card featured">
+      <div class="plan-name" style="color:var(--amber)">SME</div>
+      <div class="price" style="color:var(--amber)">₹2,499<span>/mo</span></div>
+      <div class="price-sub">1 company · 10 users</div>
+      <ul>
+        <li><span class="check">✓</span> 500 AI scans/month</li>
+        <li><span class="check">✓</span> Full accounting + GST</li>
+        <li><span class="check">✓</span> 3 warehouses</li>
+        <li><span class="check">✓</span> Tally Integration</li>
+        <li><span class="check">✓</span> e-Invoice + e-Way Bill</li>
+        <li><span class="check">✓</span> WhatsApp (500 msgs)</li>
+        <li><span class="cross">✗</span> Production module</li>
+      </ul>
+      <a class="btn primary">Most Popular</a>
+    </div>
+
+    <div class="pricing-card">
+      <div class="plan-name">Factory</div>
+      <div class="price">₹4,999<span>/mo</span></div>
+      <div class="price-sub">1 company · 25 users</div>
+      <ul>
+        <li><span class="check">✓</span> 2000 AI scans/month</li>
+        <li><span class="check">✓</span> Full accounting + GST</li>
+        <li><span class="check">✓</span> Unlimited warehouses</li>
+        <li><span class="check">✓</span> Production + BOM</li>
+        <li><span class="check">✓</span> Tally + Zoho + ERPNext</li>
+        <li><span class="check">✓</span> WhatsApp (2000 msgs)</li>
+        <li><span class="check">✓</span> Priority support</li>
+      </ul>
+      <a class="btn">Get Started</a>
+    </div>
+
+    <div class="pricing-card">
+      <div class="plan-name">Enterprise</div>
+      <div class="price">Custom</div>
+      <div class="price-sub">Multi-company · Unlimited</div>
+      <ul>
+        <li><span class="check">✓</span> Unlimited AI scans</li>
+        <li><span class="check">✓</span> All modules</li>
+        <li><span class="check">✓</span> SAP / Dynamics</li>
+        <li><span class="check">✓</span> Dedicated infra</li>
+        <li><span class="check">✓</span> On-premise option</li>
+        <li><span class="check">✓</span> SLA 99.9%</li>
+        <li><span class="check">✓</span> Custom integrations</li>
+      </ul>
+      <a class="btn">Contact Sales</a>
+    </div>
+  </div>
+
+  <div class="wide-card" style="margin-top:24px">
+    <h3>💳 Additional Revenue Streams</h3>
+    <div class="grid-4" style="margin-top:12px">
+      <div style="font-size:12px;color:var(--muted)"><strong style="color:#fff">AI Credits</strong><br>₹1 per extra scan<br>₹500 = 500 extra docs</div>
+      <div style="font-size:12px;color:var(--muted)"><strong style="color:#fff">ERP Setup</strong><br>₹5,000 one-time<br>Tally/Zoho integration setup</div>
+      <div style="font-size:12px;color:var(--muted)"><strong style="color:#fff">WhatsApp Add-on</strong><br>₹0.30 per extra message<br>Bulk = discounted</div>
+      <div style="font-size:12px;color:var(--muted)"><strong style="color:#fff">Training</strong><br>₹10,000 onboarding<br>Staff training package</div>
+    </div>
+  </div>
+</section>
+
+<!-- ROADMAP -->
+<section id="roadmap">
+  <div class="section-header">
+    <div class="section-num">19</div>
+    <div class="section-title-block">
+      <h2>Development Roadmap</h2>
+      <p>6-phase MVP development plan from OCR basics to full AI business assistant. 12-18 months to enterprise-ready.</p>
+    </div>
+  </div>
+
+  <div class="timeline">
+    <div class="phase">
+      <div class="phase-dot active">P1</div>
+      <div class="phase-content">
+        <div class="duration">Months 1-2 → MVP Foundation</div>
+        <h4>Invoice Upload + OCR Extraction</h4>
+        <p>Flutter app with camera scan, FastAPI backend, Gemini Vision integration, basic extraction UI, PostgreSQL setup, OTP auth.</p>
+        <div class="tags" style="margin-top:8px">
+          <span class="tag cyan">Flutter App</span>
+          <span class="tag green">FastAPI</span>
+          <span class="tag amber">Gemini OCR</span>
+          <span class="tag muted">Auth</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="phase">
+      <div class="phase-dot active">P2</div>
+      <div class="phase-content">
+        <div class="duration">Months 3-4 → ERP Core</div>
+        <h4>Tally Integration + Stock Automation</h4>
+        <p>Tally XML connector, stock inward/outward automation, purchase voucher auto-creation, duplicate detection, basic accounting.</p>
+        <div class="tags" style="margin-top:8px">
+          <span class="tag red">Tally XML</span>
+          <span class="tag cyan">Inventory</span>
+          <span class="tag amber">Accounting</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="phase">
+      <div class="phase-dot">P3</div>
+      <div class="phase-content">
+        <div class="duration">Months 5-6 → Sales & Purchase</div>
+        <h4>Full Sales-Purchase Cycle + GST</h4>
+        <p>Quotation, sales order, GST invoice, e-Invoice IRN, e-Way Bill, purchase automation, GRN, ITC reconciliation.</p>
+        <div class="tags" style="margin-top:8px">
+          <span class="tag green">e-Invoice</span>
+          <span class="tag amber">GST Portal</span>
+          <span class="tag cyan">Full S2P Cycle</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="phase">
+      <div class="phase-dot">P4</div>
+      <div class="phase-content">
+        <div class="duration">Months 7-9 → Factory Module</div>
+        <h4>Production + Transport + WhatsApp</h4>
+        <p>BOM management, production orders, machine tracking, LR management, dispatch workflow, WhatsApp Business API integration.</p>
+        <div class="tags" style="margin-top:8px">
+          <span class="tag amber">Production BOM</span>
+          <span class="tag cyan">Transport LR</span>
+          <span class="tag green">WhatsApp API</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="phase">
+      <div class="phase-dot">P5</div>
+      <div class="phase-content">
+        <div class="duration">Months 10-12 → Multi-ERP + AI Learning</div>
+        <h4>Zoho / ERPNext / Odoo + Self-Learning AI</h4>
+        <p>Additional ERP connectors, AI self-learning product mapping, predictive inventory, analytics dashboard, web ERP dashboard v1.</p>
+        <div class="tags" style="margin-top:8px">
+          <span class="tag red">Zoho + ERPNext</span>
+          <span class="tag amber">AI Learning</span>
+          <span class="tag cyan">Web Dashboard</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="phase">
+      <div class="phase-dot">P6</div>
+      <div class="phase-content">
+        <div class="duration">Months 13-18 → Full AI Business Assistant</div>
+        <h4>Conversational AI + Advanced Analytics</h4>
+        <p>AI business assistant (chat interface), predictive analytics, demand forecasting, SAP/Dynamics connectors, enterprise features.</p>
+        <div class="tags" style="margin-top:8px">
+          <span class="tag cyan">AI Assistant</span>
+          <span class="tag amber">Forecasting</span>
+          <span class="tag green">Enterprise</span>
+          <span class="tag muted">SAP Connector</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="wide-card" style="margin-top:8px;border-color:var(--amber)">
+    <h3 style="color:var(--amber)">🎯 Core Differentiator</h3>
+    <p style="font-size:13px;color:#d6dae6;margin-top:8px;line-height:1.8">This is not just another ERP. It is an <strong style="color:var(--cyan)">AI Automation Layer</strong> that sits on top of existing ERP systems (Tally, Zoho, ERPNext) and automates the manual data entry work that costs Indian businesses thousands of hours per year. The platform respects existing ERP investments while adding AI superpowers — document scanning, auto-entry, smart matching, and WhatsApp workflows — that no traditional ERP offers out of the box.</p>
+    <div class="tags" style="margin-top:12px">
+      <span class="tag amber">AI-First</span>
+      <span class="tag cyan">Works WITH existing ERP</span>
+      <span class="tag green">Indian Business Workflow</span>
+      <span class="tag muted">Multilingual EN/HI/GU</span>
+      <span class="tag amber">Factory-Ready</span>
+      <span class="tag cyan">WhatsApp Native</span>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<script>
+// Tab switching
+function showTab(id) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// Active nav highlighting
+const sections = document.querySelectorAll('section, .hero, div[id]');
+const navLinks = document.querySelectorAll('nav a');
+
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      navLinks.forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href') === '#' + entry.target.id) {
+          link.classList.add('active');
+        }
+      });
+    }
+  });
+}, { rootMargin: '-30% 0px -60% 0px' });
+
+document.querySelectorAll('[id]').forEach(section => observer.observe(section));
+</script>
+</body>
+</html>
