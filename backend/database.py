@@ -19,8 +19,8 @@ from config import settings
 def _build_connect_args() -> dict:
     """Return SSL connect_args when connecting to a hosted provider (Supabase, RDS)."""
     url = settings.DATABASE_URL
-    # Supabase and AWS RDS both require SSL
-    if "supabase.co" in url or "rds.amazonaws.com" in url:
+    # Supabase (direct: supabase.co, pooler: supabase.com) and AWS RDS both require SSL
+    if "supabase.co" in url or "supabase.com" in url or "rds.amazonaws.com" in url:
         return {"ssl": "require"}
     return {}
 
@@ -28,7 +28,7 @@ def _build_connect_args() -> dict:
 def _pool_kwargs() -> dict:
     """Smaller pool for cloud free-tier (fewer allowed connections)."""
     url = settings.DATABASE_URL
-    if "supabase.co" in url:
+    if "supabase.co" in url or "supabase.com" in url:
         # Supabase free tier allows ~60 connections total; keep our share small
         return {"pool_size": 3, "max_overflow": 5}
     return {
