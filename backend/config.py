@@ -8,9 +8,16 @@ from typing import Any
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import field_validator
 
+# .env lives in the project root (parent of backend/)
+_ENV_FILE = os.path.join(os.path.dirname(__file__), "..", ".env")
+
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=_ENV_FILE,
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
     # ── App ───────────────────────────────────────────────────────────────────
     APP_NAME: str = "AI ERP Platform"
