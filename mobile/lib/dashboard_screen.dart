@@ -76,18 +76,21 @@ class DashboardScreen extends ConsumerWidget {
                     ),
                     Padding(
                       padding: const EdgeInsets.only(right: 12),
-                      child: CircleAvatar(
-                        radius: 16,
-                        backgroundColor: AppColors.primaryBg,
-                        child: Text(
-                          (data.companyName.isNotEmpty
-                              ? data.companyName[0]
-                              : 'D'),
-                          style: const TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 13,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.primary,
+                      child: GestureDetector(
+                        onTap: () => context.go(Routes.profile),
+                        child: CircleAvatar(
+                          radius: 16,
+                          backgroundColor: AppColors.primaryBg,
+                          child: Text(
+                            (data.companyName.isNotEmpty
+                                ? data.companyName[0]
+                                : 'D'),
+                            style: const TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.primary,
+                            ),
                           ),
                         ),
                       ),

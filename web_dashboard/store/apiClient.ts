@@ -2,7 +2,25 @@
 import axios from "axios";
 import { useAuthStore } from "./authStore";
 
-const BASE_URL = import.meta.env.VITE_API_URL || "/api/v1";
+// In Electron, window.location.protocol === 'file:'
+// Relative paths like /api/v1 resolve to file:///api/v1 which is invalid.
+// Always fall back to http://localhost:8000/api/v1 in Electron.
+function getBaseURL(): string {
+  const envUrl = import.meta.env.VITE_API_URL as string | undefined;
+  const isElectron = typeof window !== "undefined" && window.location.protocol === "file:";
+
+  if (isElectron) {
+    // In Electron: always hit the local backend directly
+    return "http://localhost:8000/api/v1";
+  }
+  // In browser: use env var if set and absolute, otherwise use Vite proxy
+  if (envUrl && (envUrl.startsWith("http://") || envUrl.startsWith("https://"))) {
+    return envUrl;
+  }
+  return "/api/v1"; // Works via Vite dev proxy or same-origin deployment
+}
+
+const BASE_URL = getBaseURL();
 
 const api = axios.create({
   baseURL: BASE_URL,
@@ -38,11 +56,12 @@ api.interceptors.response.use(
           return api(error.config);
         } catch {
           useAuthStore.getState().logout();
-          window.location.href = "/login";
+          // Use hash navigation — works in both browser and Electron (HashRouter)
+          window.location.hash = "#/login";
         }
       } else {
         useAuthStore.getState().logout();
-        window.location.href = "/login";
+        window.location.hash = "#/login";
       }
     }
     return Promise.reject(error);

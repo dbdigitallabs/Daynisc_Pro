@@ -34,21 +34,46 @@ export default function PurchasePage() {
   const pending  = orders.filter((o: any) => o.status === "pending").length;
 
   return (
-    <div style={{ padding: "24px 28px", fontFamily: "'Inter',sans-serif", background: T.pageBg, minHeight: "100%" }}>
-      <h1 style={{ fontSize: 22, fontWeight: 800, color: T.text1, marginBottom: 24, letterSpacing: "-0.4px" }}>Purchase</h1>
+    <div style={{ padding: "16px 20px", fontFamily: "'Inter',sans-serif", background: T.pageBg, minHeight: "100%" }}>
+      {/* Premium Breadcrumbs & Actions Toolbar */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, flexWrap: "wrap", gap: 10 }}>
+        <div>
+          <div style={{ fontSize: 11, color: T.text3, display: "flex", alignItems: "center", gap: 4, marginBottom: 4 }}>
+            <span>Dashboard</span>
+            <span>&gt;</span>
+            <span>Purchase</span>
+            <span>&gt;</span>
+            <span style={{ fontWeight: 600, color: T.primary }}>{status ? `Filtered: ${status}` : "All Orders"}</span>
+          </div>
+          <h1 style={{ fontSize: 20, fontWeight: 800, color: T.text1, letterSpacing: "-0.5px" }}>Purchase Operations</h1>
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button style={{ padding: "7px 14px", background: T.primary, color: "#fff", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 6 }}>
+            <span>+ Create PO</span>
+          </button>
+          <button style={{ padding: "7px 12px", background: "#fff", border: `1px solid ${T.border}`, borderRadius: 6, fontSize: 12, fontWeight: 700, color: T.text2, cursor: "pointer" }}>
+            Import
+          </button>
+          <button style={{ padding: "7px 12px", background: "#fff", border: `1px solid ${T.border}`, borderRadius: 6, fontSize: 12, fontWeight: 700, color: T.text2, cursor: "pointer" }}>
+            Export
+          </button>
+        </div>
+      </div>
 
       {/* KPIs */}
-      <div style={{ display: "flex", gap: 14, marginBottom: 22 }}>
+      <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
         {[
-          { label: "Total Orders",   value: String(orders.length), icon: <IconCart size={22} color={T.primary} />,  color: T.primary },
-          { label: "Total PO Value", value: inr(totalPO),          icon: <IconMoney size={22} color={T.amber} />,   color: T.amber  },
-          { label: "Invoiced Value", value: inr(totalInv),         icon: <IconFile size={22} color={T.green} />,    color: T.green  },
-          { label: "Pending GRN",    value: String(pending),       icon: <IconClock size={22} color={T.red} />,     color: T.red    },
+          { label: "Total Orders",   value: String(orders.length), icon: <IconCart size={16} color={T.primary} />,  color: T.primary },
+          { label: "Total PO Value", value: inr(totalPO),          icon: <IconMoney size={16} color={T.amber} />,   color: T.amber  },
+          { label: "Invoiced Value", value: inr(totalInv),         icon: <IconFile size={16} color={T.green} />,    color: T.green  },
+          { label: "Pending GRN",    value: String(pending),       icon: <IconClock size={16} color={T.red} />,     color: T.red    },
         ].map(k => (
-          <div key={k.label} style={cardStyle({ padding: "18px 20px", flex: 1 })}>
-            <div style={{ marginBottom: 8 }}>{k.icon}</div>
-            <div style={{ fontSize: 22, fontWeight: 800, color: k.color }}>{k.value}</div>
-            <div style={{ fontSize: 11, color: T.text3, fontWeight: 600, marginTop: 4, textTransform: "uppercase", letterSpacing: "0.4px" }}>{k.label}</div>
+          <div key={k.label} style={cardStyle({ padding: "10px 14px", flex: 1, minWidth: 140 })}>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+              <span>{k.icon}</span>
+              <span style={{ fontSize: 10, color: T.text3, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.4px" }}>{k.label}</span>
+            </div>
+            <div style={{ fontSize: 18, fontWeight: 800, color: k.color, letterSpacing: "-0.5px" }}>{k.value}</div>
           </div>
         ))}
       </div>

@@ -10,6 +10,7 @@ import 'production_screen.dart';
 import 'inventory_screen.dart';
 import 'stub_screens.dart';
 import 'shell_scaffold.dart';
+import 'profile_screen.dart';
 
 // ── Route constants ────────────────────────────────────────────────────────────
 
@@ -28,6 +29,7 @@ class Routes {
   static const purchase = '/purchase';
   static const dispatch = '/transport';
   static const ledger = '/accounting';
+  static const profile = '/profile';
 }
 
 // ── Router provider ────────────────────────────────────────────────────────────
@@ -37,8 +39,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     initialLocation: _isLoggedIn() ? Routes.dashboard : Routes.login,
     redirect: (context, state) {
       final loggedIn = _isLoggedIn();
-      final onAuthRoute = state.matchedLocation == Routes.login ||
-          state.matchedLocation == Routes.otp;
+      final onAuthRoute = state.matchedLocation == Routes.login;
       if (!loggedIn && !onAuthRoute) return Routes.login;
       if (loggedIn && onAuthRoute) return Routes.dashboard;
       return null;
@@ -46,12 +47,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     routes: [
       // ── Auth (no shell) ──────────────────────────────────────────────────
       GoRoute(path: Routes.login, builder: (_, __) => const LoginScreen()),
-      GoRoute(path: Routes.otp, builder: (_, state) {
-        final phone = state.extra as String? ?? '';
-        return OTPScreen(phoneNumber: phone);
-      }),
 
       // ── Main app with bottom nav shell ───────────────────────────────────
+
       ShellRoute(
         builder: (context, state, child) => ShellScaffold(child: child),
         routes: [
@@ -105,6 +103,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           GoRoute(path: Routes.purchase, builder: (_, __) => const PurchaseScreen()),
           GoRoute(path: Routes.dispatch, builder: (_, __) => const DispatchScreen()),
           GoRoute(path: Routes.ledger, builder: (_, __) => const LedgerScreen()),
+          GoRoute(path: Routes.profile, builder: (_, __) => const ProfileScreen()),
         ],
       ),
     ],

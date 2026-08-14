@@ -1,23 +1,49 @@
 // src/pages/AIVerificationPage.tsx
-import { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "../store/apiClient";
-import { T, inr, cardStyle, badge } from "../store/theme";
+import { T, inr, cardStyle, badge, thStyle, tdStyle } from "../store/theme";
 import { IconUpload, IconInbox, IconFile, IconAI, IconCheckCircle, IconXCircle, IconRefresh } from "../components/Icons";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface LineItem {
   item_name: string; quantity: number; unit: string;
   rate: number; gst_rate: number; total: number;
+  hsn_code?: string; description_full?: string;
 }
 interface Extraction {
   id: string; status: string; document_type: string;
   language: string; confidence_score: number; is_duplicate: boolean;
   created_at: string;
   extracted_data: {
+    document_type?: string;
+    // Domestic invoice
     invoice_number?: string; party_name?: string; invoice_date?: string;
     total_amount?: number; party_gstin?: string; vehicle_number?: string;
     line_items?: LineItem[]; confidence?: Record<string, number>;
+    payment_terms?: string; amount_in_words?: string;
+    subtotal?: number; total_cgst?: number; total_sgst?: number; total_igst?: number;
+    // LR / Payment fields
+    lr_number?: string; transporter_name?: string; utr_number?: string;
+    payment_mode?: string; bank_reference?: string;
+    // Export Invoice fields
+    currency?: string;
+    exporter_ref?: string; other_reference?: string;
+    iec_code?: string; ad_code?: string;
+    consignee_name?: string;
+    consignee_address?: { line1?: string; city?: string; state?: string; country?: string };
+    country_of_origin?: string; country_of_destination?: string;
+    incoterms?: string;
+    pre_carriage_by?: string; vessel_flight_no?: string;
+    port_of_loading?: string; port_of_discharge?: string; final_destination?: string;
+    marks_and_nos?: string; no_of_packages?: string;
+    gross_weight_kg?: number; net_weight_kg?: number;
+    advance_licence_no?: string; advance_licence_date?: string;
+    proforma_invoice_no?: string; lc_no?: string; lc_date?: string;
+    net_invoice_amount?: number;
+    // Bank Statement
+    bank_name?: string; account_number?: string; statement_period?: string;
+    transactions?: any[];
   } | null;
 }
 
@@ -42,6 +68,16 @@ function ConfidencePill({ score }: { score: number }) {
   return <span style={badge(color, bg)}>{pct}% confidence</span>;
 }
 
+// ── Shared style constants ──────────────────────────────────────────────────────
+const sectionHeader: React.CSSProperties = {
+  fontSize: 11, fontWeight: 800, color: T.text2,
+  textTransform: "uppercase", letterSpacing: "0.6px",
+  marginTop: 20, marginBottom: 10,
+  paddingBottom: 6,
+  borderBottom: `2px solid ${T.border}`,
+  display: "flex", alignItems: "center", gap: 6,
+};
+
 // ── Detail Panel ───────────────────────────────────────────────────────────────
 function ExtractionDetail({ extraction, onApprove, onReject, approving }: {
   extraction: Extraction;
@@ -52,6 +88,10 @@ function ExtractionDetail({ extraction, onApprove, onReject, approving }: {
   const d = extraction.extracted_data;
   const [corrections, setCorrections] = useState<Record<string, string>>({});
   const [txList, setTxList] = useState<any[]>([]);
+
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     if (d?.transactions) {
@@ -66,6 +106,17 @@ function ExtractionDetail({ extraction, onApprove, onReject, approving }: {
       setTxList([]);
     }
   }, [extraction]);
+
+  const filteredTx = txList.filter(t => {
+    if (!searchTerm) return true;
+    const term = searchTerm.toLowerCase();
+    return (t.description || "").toLowerCase().includes(term) ||
+           (t.party_name || "").toLowerCase().includes(term) ||
+           (t.reference_number || "").toLowerCase().includes(term);
+  });
+
+  const totalPages = Math.ceil(filteredTx.length / pageSize) || 1;
+  const currentTx = filteredTx.slice((page - 1) * pageSize, page * pageSize);
 
   function Field({ label, field, value }: { label: string; field: string; value?: string | number | null }) {
     const conf  = d?.confidence?.[field];
@@ -103,10 +154,11 @@ function ExtractionDetail({ extraction, onApprove, onReject, approving }: {
   }
 
   // Determine document type specific fields
-  const docType = (extraction.document_type || "").toLowerCase();
+  const docType = (extraction.document_type || d?.document_type || "").toLowerCase();
   const isLR = docType === "lr" || docType === "lorry_receipt";
   const isPayment = docType === "payment" || docType === "payment_screenshot" || docType === "payment_proof";
   const isBankStatement = docType === "bank_statement";
+  const isExport = docType === "export_invoice" || docType === "export";
 
   if (isBankStatement) {
     const totalPayments = txList.filter(t => t.approved && t.voucher_type === "payment").reduce((s, t) => s + Number(t.withdrawal || 0), 0);
@@ -153,17 +205,90 @@ function ExtractionDetail({ extraction, onApprove, onReject, approving }: {
         </div>
 
         {/* Transactions list header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 10 }}>
           <h3 style={{ fontSize: 14, fontWeight: 800, color: T.text1, textTransform: "uppercase", letterSpacing: "0.5px" }}>
             Statement Transactions ({txList.length})
           </h3>
-          <span style={{ fontSize: 12, color: T.text3, fontWeight: 500 }}>
-            Configure and select entries to import
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            {/* Search Input */}
+            <input
+              type="text"
+              placeholder="🔍 Search narration/party/ref..."
+              value={searchTerm}
+              onChange={e => { setSearchTerm(e.target.value); setPage(1); }}
+              style={{
+                padding: "6px 12px", border: `1px solid ${T.border}`, borderRadius: 6,
+                fontSize: 12, outline: "none", width: 220
+              }}
+            />
+            {/* Select/Deselect All */}
+            <button
+              onClick={() => {
+                const allApproved = txList.every(t => t.approved);
+                setTxList(prev => prev.map(t => ({ ...t, approved: !allApproved })));
+              }}
+              style={{
+                padding: "6px 12px", background: "#f1f5f9", border: `1px solid ${T.border}`,
+                borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: "pointer", color: T.text1
+              }}
+            >
+              {txList.every(t => t.approved) ? "Deselect All" : "Select All"}
+            </button>
+            {/* Page Size Selector */}
+            <select
+              value={pageSize}
+              onChange={e => { setPageSize(Number(e.target.value)); setPage(1); }}
+              style={{
+                padding: "6px 10px", border: `1px solid ${T.border}`, borderRadius: 6,
+                fontSize: 12, outline: "none", cursor: "pointer"
+              }}
+            >
+              <option value={25}>25 / page</option>
+              <option value={50}>50 / page</option>
+              <option value={100}>100 / page</option>
+              <option value={1000}>Show All</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Pagination Bar */}
+        <div style={{
+          display: "flex", justifyContent: "space-between", alignItems: "center",
+          padding: "8px 12px", background: "#f8fafc", border: `1px solid ${T.border}`,
+          borderBottom: "none", borderTopLeftRadius: 10, borderTopRightRadius: 10, fontSize: 12
+        }}>
+          <span style={{ color: T.text3 }}>
+            Showing {filteredTx.length === 0 ? 0 : (page - 1) * pageSize + 1}–{Math.min(page * pageSize, filteredTx.length)} of {filteredTx.length} items
           </span>
+          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+            <button
+              disabled={page <= 1}
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              style={{
+                padding: "4px 10px", border: `1px solid ${T.border}`, borderRadius: 4,
+                background: page <= 1 ? "#f1f5f9" : "#fff", cursor: page <= 1 ? "default" : "pointer",
+                fontSize: 11, fontWeight: 600
+              }}
+            >
+              ◀ Prev
+            </button>
+            <span style={{ fontWeight: 700, color: T.primary }}>Page {page} of {totalPages}</span>
+            <button
+              disabled={page >= totalPages}
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              style={{
+                padding: "4px 10px", border: `1px solid ${T.border}`, borderRadius: 4,
+                background: page >= totalPages ? "#f1f5f9" : "#fff", cursor: page >= totalPages ? "default" : "pointer",
+                fontSize: 11, fontWeight: 600
+              }}
+            >
+              Next ▶
+            </button>
+          </div>
         </div>
 
         {/* Transactions Table */}
-        <div style={{ border: `1px solid ${T.border}`, borderRadius: 10, overflow: "hidden", marginBottom: 24 }}>
+        <div style={{ border: `1px solid ${T.border}`, borderBottomLeftRadius: 10, borderBottomRightRadius: 10, overflow: "hidden", marginBottom: 24 }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
             <thead>
               <tr style={{ background: "#f8fafc" }}>
@@ -176,11 +301,11 @@ function ExtractionDetail({ extraction, onApprove, onReject, approving }: {
               </tr>
             </thead>
             <tbody>
-              {txList.map((tx, idx) => {
+              {currentTx.map((tx, idx) => {
                 const isDebit = tx.withdrawal > 0;
                 const amt = isDebit ? tx.withdrawal : tx.deposit;
                 return (
-                  <tr key={idx} style={{
+                  <tr key={tx.id ?? idx} style={{
                     borderBottom: idx < txList.length - 1 ? `1px solid ${T.divider}` : "none",
                     background: tx.approved ? (isDebit ? "#fee2e240" : "#dcfce740") : "#fff",
                     transition: "all 0.15s"
@@ -359,43 +484,171 @@ function ExtractionDetail({ extraction, onApprove, onReject, approving }: {
         {extraction.is_duplicate && (
           <span style={badge(T.red, T.redBg)}>⚠ Duplicate</span>
         )}
+        {isExport && <span style={badge("#0369a1", "#e0f2fe")}>🌐 Export Invoice</span>}
+        {d?.currency && d.currency !== "INR" && (
+          <span style={badge("#7c3aed", "#ede9fe")}>{d.currency}</span>
+        )}
         <span style={{ marginLeft: "auto", fontSize: 11, color: T.text3, fontWeight: 500 }}>
           {extraction.document_type.toUpperCase()} · {extraction.language?.toUpperCase()}
         </span>
       </div>
 
-      {/* Fields grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
-        {isLR ? (
-          <>
-            <Field label="Lorry Receipt No."  field="lr_number" value={d?.lr_number ?? d?.invoice_number} />
-            <Field label="Date"               field="invoice_date"   value={d?.invoice_date} />
-            <Field label="Transporter Name"   field="transporter_name" value={d?.transporter_name ?? d?.party_name} />
-            <Field label="Vehicle Number"     field="vehicle_number" value={d?.vehicle_number} />
-            <Field label="Freight Amount (₹)"  field="total_amount" value={d?.total_amount} />
-          </>
-        ) : isPayment ? (
-          <>
-            <Field label="UTR / Transaction No." field="utr_number" value={d?.utr_number ?? d?.invoice_number} />
-            <Field label="Payment Date"         field="invoice_date"   value={d?.invoice_date} />
-            <Field label="Payment Mode"         field="payment_mode"   value={d?.payment_mode} />
-            <Field label="Bank Reference"       field="bank_reference" value={d?.bank_reference} />
-            <Field label="Amount Paid (₹)"      field="total_amount"  value={d?.total_amount} />
-          </>
-        ) : (
-          <>
-            <Field label="Invoice Number"  field="invoice_number" value={d?.invoice_number} />
-            <Field label="Date"            field="invoice_date"   value={d?.invoice_date} />
-            <Field label="Party Name"      field="party_name"     value={d?.party_name} />
-            <Field label="GSTIN"           field="party_gstin"    value={d?.party_gstin} />
-            <Field label="Vehicle Number"  field="vehicle_number" value={d?.vehicle_number} />
-            <Field label="Total Amount (₹)" field="total_amount"  value={d?.total_amount} />
-          </>
-        )}
-      </div>
+      {/* ── EXPORT INVOICE PANEL ──────────────────────────────────────── */}
+      {isExport ? (
+        <>
+          {/* Section: Invoice Header */}
+          <div style={sectionHeader}>📄 Invoice Details</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
+            <Field label="Invoice Number"    field="invoice_number"   value={d?.invoice_number} />
+            <Field label="Invoice Date"      field="invoice_date"     value={d?.invoice_date} />
+            <Field label="Exporter Ref"      field="exporter_ref"     value={d?.exporter_ref} />
+            <Field label="Other Reference"   field="other_reference"  value={d?.other_reference} />
+            <Field label="Currency"          field="currency"         value={d?.currency ?? "USD"} />
+            <Field label="Payment Terms"     field="payment_terms"    value={d?.payment_terms} />
+          </div>
 
-      {/* Line Items */}
-      {!isPayment && !isLR && (d?.line_items?.length ?? 0) > 0 && (
+          {/* Section: Exporter */}
+          <div style={sectionHeader}>🏭 Exporter (Seller)</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
+            <Field label="Exporter Name"    field="party_name"   value={d?.party_name} />
+            <Field label="GSTIN"            field="party_gstin" value={d?.party_gstin} />
+            <Field label="IEC Code"         field="iec_code"    value={d?.iec_code} />
+            <Field label="AD Code"          field="ad_code"     value={d?.ad_code} />
+          </div>
+
+          {/* Section: Consignee */}
+          <div style={sectionHeader}>📦 Consignee (Buyer)</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
+            <Field label="Consignee Name"     field="consignee_name" value={d?.consignee_name} />
+            <Field label="Consignee City"     field="consignee_city" value={d?.consignee_address?.city} />
+            <Field label="Consignee Country"  field="country_of_destination" value={d?.country_of_destination} />
+            <Field label="Country of Origin" field="country_of_origin"      value={d?.country_of_origin ?? "INDIA"} />
+          </div>
+
+          {/* Section: Shipping */}
+          <div style={sectionHeader}>🚢 Shipping & Logistics</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
+            <Field label="INCOTERMS"            field="incoterms"          value={d?.incoterms} />
+            <Field label="Pre-carriage By"      field="pre_carriage_by"    value={d?.pre_carriage_by} />
+            <Field label="Vessel / Flight No."  field="vessel_flight_no"   value={d?.vessel_flight_no} />
+            <Field label="Port of Loading"      field="port_of_loading"    value={d?.port_of_loading} />
+            <Field label="Port of Discharge"    field="port_of_discharge"  value={d?.port_of_discharge} />
+            <Field label="Final Destination"    field="final_destination"  value={d?.final_destination} />
+          </div>
+
+          {/* Section: Package Info */}
+          <div style={sectionHeader}>📏 Package & Weight</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
+            <Field label="Marks & Nos"     field="marks_and_nos"    value={d?.marks_and_nos} />
+            <Field label="No. of Packages" field="no_of_packages"   value={d?.no_of_packages} />
+            <Field label="Gross Weight (KG)" field="gross_weight_kg" value={d?.gross_weight_kg} />
+            <Field label="Net Weight (KG)"   field="net_weight_kg"  value={d?.net_weight_kg} />
+          </div>
+
+          {/* Section: Compliance */}
+          <div style={sectionHeader}>📋 Compliance & References</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
+            <Field label="Advance Licence No."  field="advance_licence_no"   value={d?.advance_licence_no} />
+            <Field label="Adv. Licence Date"    field="advance_licence_date" value={d?.advance_licence_date} />
+            <Field label="Proforma Invoice No." field="proforma_invoice_no"  value={d?.proforma_invoice_no} />
+            <Field label="LC / DC No."          field="lc_no"                value={d?.lc_no} />
+            <Field label="LC Date"              field="lc_date"              value={d?.lc_date} />
+            <Field label="Net Invoice Amount"   field="net_invoice_amount"   value={d?.net_invoice_amount} />
+          </div>
+
+          {/* Line Items */}
+          {(d?.line_items?.length ?? 0) > 0 && (
+            <div style={{ marginTop: 16 }}>
+              <div style={sectionHeader}>🧾 Line Items</div>
+              <div style={{ border: `1px solid ${T.border}`, borderRadius: 8, overflow: "hidden" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                  <thead>
+                    <tr style={{ background: "#f8fafc" }}>
+                      {["HSN", "Description", "Qty", "Unit", `Rate (${d?.currency ?? "USD"})`, `Amount (${d?.currency ?? "USD"})`].map(h => (
+                        <th key={h} style={{ padding: "8px 12px", textAlign: "left", color: T.text3, fontWeight: 600, fontSize: 11, borderBottom: `1px solid ${T.border}` }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {d!.line_items!.map((item, i) => (
+                      <tr key={i} style={{ borderBottom: i < d!.line_items!.length - 1 ? `1px solid ${T.divider}` : "none" }}>
+                        <td style={{ padding: "9px 12px", color: T.text3, fontFamily: "monospace", fontSize: 11 }}>{item.hsn_code || "—"}</td>
+                        <td style={{ padding: "9px 12px", color: T.text1, fontWeight: 500 }}>
+                          <div>{item.item_name}</div>
+                          {item.description_full && (
+                            <div style={{ fontSize: 10, color: T.text3, marginTop: 2, lineHeight: 1.4 }}>{item.description_full}</div>
+                          )}
+                        </td>
+                        <td style={{ padding: "9px 12px", color: T.text2 }}>{item.quantity}</td>
+                        <td style={{ padding: "9px 12px", color: T.text3 }}>{item.unit}</td>
+                        <td style={{ padding: "9px 12px", color: T.text1, fontWeight: 600 }}>{item.rate?.toLocaleString()}</td>
+                        <td style={{ padding: "9px 12px", color: T.primary, fontWeight: 700 }}>{item.total?.toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Totals */}
+          <div style={{
+            marginTop: 16,
+            padding: "16px 20px",
+            border: `1.5px solid ${T.border}`,
+            borderRadius: 10,
+            background: "#f8fafc",
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: "10px 24px"
+          }}>
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: T.text3, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 2 }}>Total Amount</div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: T.primary }}>
+                {d?.currency ?? "USD"} {d?.total_amount?.toLocaleString() ?? "—"}
+              </div>
+            </div>
+            <div>
+              <div style={{ fontSize: 10, fontWeight: 700, color: T.text3, textTransform: "uppercase", letterSpacing: 0.4, marginBottom: 2 }}>Amount in Words</div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: T.text2, lineHeight: 1.4 }}>{d?.amount_in_words ?? "—"}</div>
+            </div>
+          </div>
+        </>
+
+      ) : (
+        /* ── DOMESTIC INVOICE / LR / PAYMENT FIELDS ──────────────────── */
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
+          {isLR ? (
+            <>
+              <Field label="Lorry Receipt No."  field="lr_number" value={d?.lr_number ?? d?.invoice_number} />
+              <Field label="Date"               field="invoice_date"   value={d?.invoice_date} />
+              <Field label="Transporter Name"   field="transporter_name" value={d?.transporter_name ?? d?.party_name} />
+              <Field label="Vehicle Number"     field="vehicle_number" value={d?.vehicle_number} />
+              <Field label="Freight Amount (₹)"  field="total_amount" value={d?.total_amount} />
+            </>
+          ) : isPayment ? (
+            <>
+              <Field label="UTR / Transaction No." field="utr_number" value={d?.utr_number ?? d?.invoice_number} />
+              <Field label="Payment Date"         field="invoice_date"   value={d?.invoice_date} />
+              <Field label="Payment Mode"         field="payment_mode"   value={d?.payment_mode} />
+              <Field label="Bank Reference"       field="bank_reference" value={d?.bank_reference} />
+              <Field label="Amount Paid (₹)"      field="total_amount"  value={d?.total_amount} />
+            </>
+          ) : (
+            <>
+              <Field label="Invoice Number"  field="invoice_number" value={d?.invoice_number} />
+              <Field label="Date"            field="invoice_date"   value={d?.invoice_date} />
+              <Field label="Party Name"      field="party_name"     value={d?.party_name} />
+              <Field label="GSTIN"           field="party_gstin"    value={d?.party_gstin} />
+              <Field label="Vehicle Number"  field="vehicle_number" value={d?.vehicle_number} />
+              <Field label="Total Amount (₹)" field="total_amount"  value={d?.total_amount} />
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Domestic Line Items (non-export) */}
+      {!isExport && !isPayment && !isLR && (d?.line_items?.length ?? 0) > 0 && (
         <div style={{ marginTop: 16 }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: T.text2, marginBottom: 10, textTransform: "uppercase", letterSpacing: "0.5px" }}>
             Line Items ({d!.line_items!.length})
@@ -404,7 +657,7 @@ function ExtractionDetail({ extraction, onApprove, onReject, approving }: {
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
               <thead>
                 <tr style={{ background: "#f8fafc" }}>
-                  {["Item", "Qty", "Unit", "Rate", "GST%", "Total"].map(h => (
+                  {["Item", "HSN", "Qty", "Unit", "Rate", "GST%", "Total"].map(h => (
                     <th key={h} style={{ padding: "8px 12px", textAlign: "left", color: T.text3, fontWeight: 600, fontSize: 11, borderBottom: `1px solid ${T.border}` }}>{h}</th>
                   ))}
                 </tr>
@@ -413,6 +666,7 @@ function ExtractionDetail({ extraction, onApprove, onReject, approving }: {
                 {d!.line_items!.map((item, i) => (
                   <tr key={i} style={{ borderBottom: i < d!.line_items!.length - 1 ? `1px solid ${T.divider}` : "none" }}>
                     <td style={{ padding: "9px 12px", color: T.text1, fontWeight: 500 }}>{item.item_name}</td>
+                    <td style={{ padding: "9px 12px", color: T.text3, fontFamily: "monospace", fontSize: 11 }}>{item.hsn_code || "—"}</td>
                     <td style={{ padding: "9px 12px", color: T.text2 }}>{item.quantity}</td>
                     <td style={{ padding: "9px 12px", color: T.text3 }}>{item.unit}</td>
                     <td style={{ padding: "9px 12px", color: T.text1, fontWeight: 600 }}>{inr(item.rate)}</td>
@@ -426,12 +680,46 @@ function ExtractionDetail({ extraction, onApprove, onReject, approving }: {
         </div>
       )}
 
+      {/* Tally Connection Banner */}
+      <div style={{
+        marginTop: 20, padding: "12px 16px", background: "#f8fafc",
+        border: `1px solid ${T.border}`, borderRadius: 10,
+        display: "flex", justifyContent: "space-between", alignItems: "center"
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ width: 8, height: 8, borderRadius: "50%", background: T.green }} />
+          <span style={{ fontSize: 12, fontWeight: 700, color: T.text1 }}>TallyPrime HTTP Integration:</span>
+          <span style={{ fontSize: 12, color: T.text2, fontFamily: "monospace" }}>http://localhost:9000</span>
+        </div>
+        <span style={{ fontSize: 10, fontWeight: 700, color: T.green, background: T.greenBg, padding: "2px 8px", borderRadius: 4 }}>
+          READY FOR XML SYNC
+        </span>
+      </div>
+
       {/* Action buttons */}
       {["extracted", "pending"].includes(extraction.status) && (
         <div style={{
-          display: "flex", gap: 12, marginTop: 22,
-          paddingTop: 18, borderTop: `1px solid ${T.border}`,
+          display: "flex", gap: 10, marginTop: 16,
+          paddingTop: 16, borderTop: `1px solid ${T.border}`,
         }}>
+          {(extraction.confidence_score || 0) >= 0.8 && (
+            <button
+              onClick={() => onApprove(Object.keys(corrections).length ? corrections : undefined)}
+              disabled={approving}
+              style={{
+                padding: "12px 16px",
+                background: "linear-gradient(135deg, #7c3aed, #4361ee)",
+                border: "none", borderRadius: 8,
+                color: "#fff",
+                cursor: approving ? "default" : "pointer",
+                fontSize: 12, fontWeight: 700,
+                boxShadow: "0 4px 12px rgba(124, 58, 237, 0.35)",
+                display: "flex", alignItems: "center", gap: 6
+              }}
+            >
+              ✨ Fast Approve
+            </button>
+          )}
           <button
             onClick={() => onApprove(Object.keys(corrections).length ? corrections : undefined)}
             disabled={approving}
@@ -441,18 +729,19 @@ function ExtractionDetail({ extraction, onApprove, onReject, approving }: {
               border: "none", borderRadius: 8,
               color: approving ? T.green : "#fff",
               cursor: approving ? "default" : "pointer",
-              fontSize: 13, fontWeight: 700, transition: "all 0.15s",
+              fontSize: 12, fontWeight: 700, transition: "all 0.15s",
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 6
             }}
           >
-            {approving ? "⏳ Creating ERP Entry…" : "✅ Approve & Push to ERP"}
+            {approving ? "⏳ Creating ERP & Tally Entry…" : "⚡ Approve & Sync directly to Tally"}
           </button>
           <button
             onClick={onReject}
             style={{
-              padding: "12px 20px",
+              padding: "12px 18px",
               background: "#fff", border: `1.5px solid ${T.red}`,
               borderRadius: 8, color: T.red,
-              cursor: "pointer", fontSize: 13, fontWeight: 600,
+              cursor: "pointer", fontSize: 12, fontWeight: 600,
             }}
           >
             ✗ Reject
@@ -722,6 +1011,7 @@ export default function AIVerificationPage() {
               >
                 <option value="purchase">Purchase Bill</option>
                 <option value="sales">Sales Invoice</option>
+                <option value="export_invoice">Export Invoice</option>
                 <option value="lr">Lorry Receipt (LR)</option>
                 <option value="payment">Payment Proof</option>
                 <option value="bank_statement">Bank Statement</option>
@@ -749,13 +1039,13 @@ export default function AIVerificationPage() {
               {uploadStatus === "idle" && (
                 <>
                   <p style={{ fontSize: 14, fontWeight: 700, color: T.text1, marginBottom: 5 }}>
-                    Drop bill here or click to browse
+                    Drop file here or click to browse
                   </p>
-                  <p style={{ fontSize: 12, color: T.text3 }}>JPG · PNG · PDF · Max 10MB · Multiple files OK</p>
+                  <p style={{ fontSize: 12, color: T.text3 }}>PDF · Excel (.xlsx/.csv) · JPG · PNG · Multiple files OK</p>
                 </>
               )}
               {uploadStatus === "uploading" && (
-                <p style={{ fontSize: 13, color: T.amber, fontWeight: 600 }}>Uploading and sending to AI…</p>
+                <p style={{ fontSize: 13, color: T.amber, fontWeight: 600 }}>Uploading and sending to AI Engine…</p>
               )}
               {(uploadStatus === "done" || uploadStatus === "error") && (
                 <p style={{ fontSize: 12, color: uploadStatus === "done" ? T.green : T.red, padding: "0 20px", fontWeight: 600 }}>
@@ -764,12 +1054,53 @@ export default function AIVerificationPage() {
               )}
             </div>
 
-            <input ref={fileInputRef} type="file" accept="image/*,.pdf" multiple
+            <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (fileInputRef.current) {
+                    fileInputRef.current.setAttribute("capture", "environment");
+                    fileInputRef.current.click();
+                  }
+                }}
+                style={{
+                  flex: 1, padding: "10px", background: "#f1f5f9",
+                  border: `1px solid ${T.border}`, borderRadius: 8,
+                  fontSize: 12, fontWeight: 600, color: T.text1,
+                  cursor: "pointer", display: "flex", alignItems: "center",
+                  justifyContent: "center", gap: 6
+                }}
+              >
+                📸 Camera Scan Mode
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (fileInputRef.current) {
+                    fileInputRef.current.removeAttribute("capture");
+                    fileInputRef.current.click();
+                  }
+                }}
+                style={{
+                  flex: 1, padding: "10px", background: "#eff6ff",
+                  border: `1px solid ${T.primary}40`, borderRadius: 8,
+                  fontSize: 12, fontWeight: 600, color: T.primary,
+                  cursor: "pointer", display: "flex", alignItems: "center",
+                  justifyContent: "center", gap: 6
+                }}
+              >
+                📁 Browse Documents
+              </button>
+            </div>
+
+            <input ref={fileInputRef} type="file" accept="image/*,.pdf,.xlsx,.csv,.xls" multiple
               style={{ display: "none" }} onChange={e => handleUpload(e.target.files)} />
 
             <p style={{ fontSize: 11, color: T.text3, lineHeight: 1.7, textAlign: "center" }}>
-              💡 AI extracts: Party name · Invoice no. · Date · Items · GST amounts<br />
-              You review &amp; approve before it enters accounting.
+              💡 Omnichannel Extraction: Purchase Bills · Bank Statements · Lorry Receipts (LR) · Excel Sheets<br />
+              All verified entries are automatically pushed XML to Tally Prime.
             </p>
           </div>
         </div>

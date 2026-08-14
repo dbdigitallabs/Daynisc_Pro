@@ -25,16 +25,18 @@ router = APIRouter()
 
 # Map user-facing document_type → DB enum value
 DOC_TYPE_MAP = {
-    "purchase":   "purchase_bill",
-    "sales":      "invoice",
-    "invoice":    "invoice",
-    "expense":    "other",
-    "lr":         "lr",
-    "challan":    "challan",
-    "payment":    "payment_screenshot",
-    "eway":       "eway_bill",
-    "bank_statement": "other",
-    "other":      "other",
+    "purchase":        "purchase_bill",
+    "sales":           "invoice",
+    "invoice":         "invoice",
+    "export":          "invoice",
+    "export_invoice":  "invoice",
+    "expense":         "other",
+    "lr":              "lr",
+    "challan":         "challan",
+    "payment":         "payment_screenshot",
+    "eway":            "eway_bill",
+    "bank_statement":  "bank_statement",
+    "other":           "other",
 }
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -124,7 +126,22 @@ async def upload_document(
         mime = content_type
 
     # ── Check Gemini key ──────────────────────────────────────────────────
-    gemini_key = getattr(settings, "GEMINI_API_KEY", "") or ""
+    gemini_key = ""
+    if user.company_id:
+        try:
+            res = await db.execute(
+                text("SELECT gemini_key FROM public.companies WHERE id = :company_id"),
+                {"company_id": user.company_id}
+            )
+            row = res.fetchone()
+            if row and row[0]:
+                gemini_key = str(row[0]).strip()
+        except Exception as e:
+            print(f"[DEBUG documents_router] DB key check failed: {e}", flush=True)
+
+    if not gemini_key or gemini_key in ("", "your-gemini-key", "change-me", "None"):
+        gemini_key = getattr(settings, "GEMINI_API_KEY", "") or ""
+
     if not gemini_key or gemini_key in ("", "your-gemini-key", "change-me", "None"):
         # Save record with failed status, clear message
         doc_id = str(uuid.uuid4())
@@ -164,6 +181,7 @@ async def upload_document(
         image_bytes=image_bytes,
         mime_type=mime,
         document_type_hint=document_type,
+        api_key=gemini_key,
     )
 
     has_error = bool(extracted.get("extraction_error"))
@@ -419,6 +437,7 @@ async def verify_document(
     vtype_map = {
         "invoice": "sales", "purchase_bill": "purchase",
         "purchase": "purchase", "sales": "sales",
+        "export_invoice": "sales", "export": "sales",
         "payment_screenshot": "payment", "other": "journal",
         "lr": "journal", "challan": "journal",
     }
@@ -426,7 +445,18 @@ async def verify_document(
 
     try:
         # ── 1. Find or create the party ───────────────────────────────────
-        party_name = data.get("party_name") or data.get("transporter_name") or data.get("bank_reference") or "Unknown Party"
+        party_name = (
+            data.get("consignee_name")                # export: buyer is the party
+            or data.get("party_name")
+            or data.get("transporter_name")
+            or data.get("bank_reference")
+            or "Unknown Party"
+        ) if vtype == "sales" else (
+            data.get("party_name")
+            or data.get("transporter_name")
+            or data.get("bank_reference")
+            or "Unknown Party"
+        )
         party_type = "supplier" if vtype == "purchase" else "customer"
 
         res = await db.execute(text("""
@@ -478,7 +508,18 @@ async def verify_document(
         if dup.fetchone():
             voucher_num = f"{voucher_num}-{doc_id[:4].upper()}"
 
-        # ── 4. Insert voucher ─────────────────────────────────────────────
+        # Build narration — include export-specific context if available
+        _narration_parts = [f"AI-extracted from {doc_type_raw} — {party_name}"]
+        if data.get("consignee_name") and doc_type_raw in ("export_invoice", "invoice"):
+            _narration_parts.append(f"Consignee: {data['consignee_name']}")
+        if data.get("incoterms"):
+            _narration_parts.append(f"INCOTERMS: {data['incoterms']}")
+        if data.get("currency") and data.get("currency") != "INR":
+            _narration_parts.append(f"Currency: {data['currency']}")
+        if data.get("advance_licence_no"):
+            _narration_parts.append(f"Adv. Licence: {data['advance_licence_no']}")
+        _narration = " | ".join(_narration_parts)
+
         await db.execute(text("""
             INSERT INTO accounting_vouchers (
                 id, voucher_number, voucher_type, voucher_date,
@@ -508,7 +549,7 @@ async def verify_document(
             "sgst":       float(data.get("total_sgst") or 0),
             "igst":       float(data.get("total_igst") or 0),
             "total":      float(data.get("total_amount") or 0),
-            "narration":  f"AI-extracted from {doc_type_raw} — {party_name}",
+            "narration":  _narration,
             "src":        uuid.UUID(doc_id),
             "created_by": _safe_uuid(user.id),
         })

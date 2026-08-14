@@ -34,7 +34,7 @@ CREATE TYPE extraction_status_enum AS ENUM (
 
 CREATE TYPE doc_type_enum AS ENUM (
   'invoice','purchase_bill','lr','challan','payment_screenshot',
-  'eway_bill','whatsapp_img','other'
+  'eway_bill','bank_statement','whatsapp_img','other'
 );
 
 CREATE TYPE erp_target_enum AS ENUM (
@@ -59,7 +59,9 @@ CREATE TABLE IF NOT EXISTS public.companies (
   phone               VARCHAR(15),
   email               VARCHAR(100),
   db_schema           VARCHAR(50) UNIQUE NOT NULL, -- e.g. 'co_abc_pvt_ltd'
+  parent_id           UUID REFERENCES public.companies(id), -- Hierarchical parent branch
   plan                VARCHAR(20) DEFAULT 'starter', -- starter/sme/factory/enterprise
+
   ai_credits          INT DEFAULT 100,
   tally_config        JSONB DEFAULT '{}',
   whatsapp_token      TEXT,  -- Encrypted

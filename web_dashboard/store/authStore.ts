@@ -6,6 +6,7 @@ interface User {
   name: string;
   phone: string;
   role: string;
+  email?: string;
 }
 
 interface Company {

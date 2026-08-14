@@ -10,17 +10,17 @@ import re
 from datetime import datetime
 from typing import Any
 
+# pyrefly: ignore [missing-import]
 from google import genai
+# pyrefly: ignore [missing-import]
 from google.genai import types
 from shared.config import settings
 
-_client = None
-
-def _get_client():
-    global _client
-    if _client is None:
-        _client = genai.Client(api_key=settings.GEMINI_API_KEY)
-    return _client
+def _get_client(api_key: str | None = None):
+    key = api_key or settings.GEMINI_API_KEY
+    truncated_key = (key[:15] + "...") if key else "None"
+    print(f"[DEBUG ai_extractor] Creating Gemini client with key: {truncated_key} (len={len(key) if key else 0})", flush=True)
+    return genai.Client(api_key=key)
 
 # ── System prompt — tuned for Indian business documents ──────────────────────
 
@@ -28,6 +28,7 @@ _EXTRACTION_SYSTEM_PROMPT = """
 You are an expert Indian business document parser. You extract structured data from:
 - GST Tax Invoices (English, Hindi, Gujarati)
 - Purchase Bills / Supplier Invoices
+- Export Invoices (international trade, may have USD/EUR amounts, consignee, INCOTERMS, IEC code)
 - Lorry Receipts (LR)
 - Transport Challans
 - E-Way Bills
@@ -36,7 +37,7 @@ You are an expert Indian business document parser. You extract structured data f
 
 EXTRACTION RULES:
 1. Extract ALL line items with full details for invoices.
-2. For Bank Statements, extract ALL transaction rows into the "transactions" list. Each transaction must contain: date, description/narration, reference_number (cheque/ref/utr), withdrawal (debit amount as number, 0 if credit), deposit (credit amount as number, 0 if debit), and balance.
+2. For Bank Statements, extract ALL transaction rows into the "transactions" list. Each transaction must contain: date (YYYY-MM-DD), description, reference_number (cheque/ref/utr), withdrawal (debit/withdrawal/payment amount as number, 0 if credit/deposit), deposit (credit/deposit/receipt amount as number, 0 if debit/withdrawal), and balance. Carefully check columns like "Type", "Credit/Debit", "Cr/Dr", "Amount", or color-coding to properly identify withdrawals vs deposits.
 3. Separate CGST, SGST, IGST amounts individually.
 4. Detect vehicle number format (e.g. GJ05AB1234).
 5. Parse Indian date formats: DD/MM/YYYY, DD-MM-YYYY, DD.MM.YYYY.
@@ -45,35 +46,71 @@ EXTRACTION RULES:
 8. Map common abbreviations: Qty=quantity, HSN=hsn_code, MRP=mrp, Disc=discount.
 9. For Gujarati: ₹ amounts, party names, and dates are priority fields.
 10. Assign confidence 0.0-1.0 per field; overall confidence = average of key fields.
+11. For Export Invoices: Extract consignee details, INCOTERMS, port of loading/discharge, country of origin/destination, IEC code, advance licence number, AD code, currency (USD/EUR/GBP), gross/net weight, vessel/flight info, and any reference numbers (proforma invoice no, LC no, etc.).
+12. If document has "EXPORT INVOICE" header or has consignee outside India or mentions CFR/CIF/FOB INCOTERMS, classify as export_invoice.
 
 RESPOND ONLY WITH VALID JSON. No markdown, no explanation.
 """
 
 _EXTRACTION_SCHEMA = """
 {
-  "document_type": "invoice|purchase_bill|lr|challan|eway_bill|payment_screenshot|bank_statement|other",
+  "document_type": "invoice|purchase_bill|export_invoice|lr|challan|eway_bill|payment_screenshot|bank_statement|other",
   "language": "en|hi|gu|mixed",
   "invoice_number": "string or null",
   "invoice_date": "YYYY-MM-DD or null",
   "due_date": "YYYY-MM-DD or null",
-  "party_name": "string or null",
+  "currency": "INR|USD|EUR|GBP or null (default INR for domestic, USD for export)",
+
+  "party_name": "string or null (Exporter/Seller name)",
   "party_gstin": "string or null",
   "party_address": {
-    "line1": "string", "city": "string", "state": "string", "pincode": "string"
+    "line1": "string", "city": "string", "state": "string", "pincode": "string", "country": "string"
   },
   "our_gstin": "string or null",
+  "exporter_ref": "string or null (Exporter's reference number)",
+  "other_reference": "string or null (Other references / AD code / IEC)",
+  "iec_code": "string or null (Import Export Code, 10-digit)",
+  "ad_code": "string or null (Authorized Dealer Code)",
+
+  "consignee_name": "string or null (Buyer/Consignee name for export)",
+  "consignee_address": {
+    "line1": "string", "city": "string", "state": "string", "pincode": "string", "country": "string"
+  },
+
+  "country_of_origin": "string or null (e.g. INDIA)",
+  "country_of_destination": "string or null (e.g. SRI LANKA)",
+  "incoterms": "string or null (e.g. CFR COLOMBO SRI LANKA, FOB MUMBAI)",
+  "payment_terms": "string or null (e.g. LC AT SIGHT, Net 30)",
+  "pre_carriage_by": "string or null (Road/Rail/Air)",
+  "vessel_flight_no": "string or null",
+  "port_of_loading": "string or null (e.g. ANY PORT IN INDIA)",
+  "port_of_discharge": "string or null (e.g. COLOMBO SRI LANKA)",
+  "final_destination": "string or null",
+  "marks_and_nos": "string or null (Marks & Nos / Container No)",
+  "no_of_packages": "string or null (e.g. 200 Two Hundred Bags)",
+  "gross_weight_kg": number,
+  "net_weight_kg": number,
+
+  "advance_licence_no": "string or null (Export Against Advance Licence No)",
+  "advance_licence_date": "YYYY-MM-DD or null",
+  "proforma_invoice_no": "string or null (REF.NO / PI number)",
+  "lc_no": "string or null (Irrevocable Documentary Credit No)",
+  "lc_date": "YYYY-MM-DD or null",
+  "net_invoice_amount": number,
+
   "line_items": [
     {
       "item_name": "string",
       "hsn_code": "string or null",
       "quantity": number,
-      "unit": "KG|PCS|LTR|MTR|BAG|BOX",
+      "unit": "KG|PCS|LTR|MTR|BAG|BOX|MT",
       "rate": number,
       "discount_pct": number,
       "taxable_amount": number,
       "gst_rate": number,
       "cgst": number, "sgst": number, "igst": number,
-      "total": number
+      "total": number,
+      "description_full": "string or null (full multi-line item description from bill)"
     }
   ],
   "subtotal": number,
@@ -82,13 +119,13 @@ _EXTRACTION_SCHEMA = """
   "total_igst": number,
   "total_amount": number,
   "amount_in_words": "string or null",
-  "payment_terms": "string or null",
+
   "vehicle_number": "string or null",
   "lr_number": "string or null",
   "transporter_name": "string or null",
   "e_way_bill_number": "string or null",
   "utr_number": "string or null",
-  "payment_mode": "upi|neft|rtgs|cheque|cash or null",
+  "payment_mode": "upi|neft|rtgs|cheque|cash|lc or null",
   "bank_reference": "string or null",
   "bank_name": "string or null",
   "account_number": "string or null",
@@ -116,7 +153,7 @@ class AIExtractor:
     """Gemini Vision-based document extractor for Indian business documents."""
 
     # Priority order — first available and non-quota-exhausted model is used
-    MODELS = ["gemini-2.5-flash", "gemini-flash-latest"]
+    MODELS = ["gemini-2.5-flash", "gemini-1.5-flash"]
 
     async def extract(
         self,
@@ -124,6 +161,8 @@ class AIExtractor:
         mime_type: str,
         language_hint: str = "auto",
         document_type_hint: str | None = None,
+        api_key: str | None = None,
+        history_context: str | None = None,
     ) -> dict[str, Any]:
         """
         Extract structured data from a document image/PDF.
@@ -138,9 +177,13 @@ class AIExtractor:
             "" if not document_type_hint
             else f"\nDocument type hint: {document_type_hint}"
         )
+        hist_hint = (
+            "" if not history_context
+            else f"\nHistorical ledger mappings & user corrections for reference (AI Learning):\n{history_context}"
+        )
 
         prompt = f"""{_EXTRACTION_SYSTEM_PROMPT}
-{lang_hint}{type_hint}
+{lang_hint}{type_hint}{hist_hint}
 
 Extract all data from this document and return JSON matching this schema:
 {_EXTRACTION_SCHEMA}
@@ -150,7 +193,7 @@ Detect Indian number format: 1,23,456.00 = 123456.00
 """
 
         last_error = "No models available"
-        client = _get_client()
+        client = _get_client(api_key)
 
         for model in self.MODELS:
             try:
@@ -196,8 +239,8 @@ Detect Indian number format: 1,23,456.00 = 123456.00
             except Exception as e:
                 err_str = str(e)
                 last_error = err_str
-                # Quota exhausted → try next model
-                if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str or "quota" in err_str.lower():
+                # Quota exhausted or server unavailable → try next model
+                if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str or "quota" in err_str.lower() or "503" in err_str or "UNAVAILABLE" in err_str:
                     continue
                 # Any other error → fail immediately (bad key, invalid file, etc.)
                 return self._error_result(f"{model}: {err_str}")

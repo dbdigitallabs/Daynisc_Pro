@@ -8,10 +8,13 @@ import random
 import string
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
 from pydantic import BaseModel
 from jose import jwt
 import redis as redis_lib
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import text
+from shared.database import get_db
 
 from config import settings
 
@@ -95,7 +98,10 @@ async def send_otp(body: SendOTPRequest):
 
 
 @router.post("/verify-otp", status_code=200)
-async def verify_otp(body: VerifyOTPRequest):
+async def verify_otp(
+    body: VerifyOTPRequest,
+    db: AsyncSession = Depends(get_db)
+):
     """Verify OTP and issue JWT access + refresh tokens."""
     phone = body.phone.strip()
     otp_input = body.otp.strip()
@@ -123,14 +129,29 @@ async def verify_otp(body: VerifyOTPRequest):
     except Exception:
         pass
 
-    # Build minimal user payload (replace with DB lookup in production)
+    # Query user and company from DB
+    res = await db.execute(text("""
+        SELECT u.id as user_id, u.name as user_name, u.role, u.company_id, 
+               c.name as company_name, c.plan, c.db_schema
+        FROM public.users u
+        LEFT JOIN public.companies c ON u.company_id = c.id
+        WHERE u.phone = :phone AND u.is_active = true
+    """), {"phone": phone})
+    row = res.fetchone()
+
+    if not row:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not registered in the system. Contact Super Admin."
+        )
+
     user_payload = {
-        "sub": f"dev:{phone}",
+        "sub": str(row.user_id),
         "phone": phone,
-        "name": "Demo User",
-        "role": "owner",
-        "company_id": "demo-company",
-        "db_schema": "public",
+        "name": row.user_name or "User",
+        "role": row.role or "accountant",
+        "company_id": str(row.company_id) if row.company_id else "",
+        "db_schema": row.db_schema or "public",
     }
 
     access_token = _issue_token(
@@ -154,8 +175,8 @@ async def verify_otp(body: VerifyOTPRequest):
         },
         "company": {
             "id": user_payload["company_id"],
-            "name": "Demo Company",
-            "plan": "starter",
+            "name": row.company_name or "Company",
+            "plan": row.plan or "starter",
         },
     }
 

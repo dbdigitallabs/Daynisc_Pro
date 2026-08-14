@@ -1,19 +1,15 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:dio/dio.dart';
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:image_picker/image_picker.dart';
 
 import 'theme.dart';
 import 'app_router.dart';
-
 import 'api_client.dart';
-
-final _dio = ApiClient().dio;
-
-// ── Login Screen ──────────────────────────────────────────────────────────────
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -23,249 +19,168 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
-  final _phoneCtrl = TextEditingController();
-  bool _loading = false;
-  String _error = '';
+  final MobileScannerController _scannerController = MobileScannerController(
+    detectionSpeed: DetectionSpeed.noDuplicates,
+    facing: CameraFacing.back,
+  );
+  
+  final TextEditingController _ipCtrl = TextEditingController();
+  
+  bool _isLoading = false;
+  String? _errorMessage;
+  bool _showManualInput = false;
 
-  Future<void> _sendOtp() async {
-    final phone = _phoneCtrl.text.trim();
-    if (phone.length != 10) {
-      setState(() => _error = 'Enter a valid 10-digit mobile number');
+  Future<void> _handleScannedData(String scannedString) async {
+    if (_isLoading) return;
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    String? targetUrl;
+    String? token;
+    String? refreshToken;
+
+    // 1. Try parsing scanned string as JSON
+    try {
+      final Map<String, dynamic> data = jsonDecode(scannedString);
+      targetUrl = data['url'];
+      token = data['token'];
+      refreshToken = data['refresh_token'];
+    } catch (_) {
+      // 2. Fallback: Try parsing as URL with query params
+      if (scannedString.startsWith('http://') || scannedString.startsWith('https://')) {
+        try {
+          final uri = Uri.parse(scannedString);
+          token = uri.queryParameters['token'];
+          // Remove query params to get API base path
+          targetUrl = uri.replace(queryParameters: {}).toString();
+          if (targetUrl.endsWith('?')) {
+            targetUrl = targetUrl.substring(0, targetUrl.length - 1);
+          }
+        } catch (_) {}
+      }
+    }
+
+    // 3. Fallback: Try decoding as pure pairing code or IP address
+    if (targetUrl == null || targetUrl.isEmpty) {
+      final cleaned = scannedString.trim();
+      if (cleaned.contains('.')) {
+        targetUrl = cleaned.startsWith('http') ? cleaned : 'http://$cleaned:8000/api/v1';
+      } else if (cleaned.length == 6 && int.tryParse(cleaned) != null) {
+        final octet2 = cleaned.substring(0, 2);
+        final octet3Digit = cleaned.substring(2, 3);
+        final octet4 = cleaned.substring(3);
+        final octet3 = octet3Digit == '5' ? '55' : octet3Digit;
+        targetUrl = 'http://10.$octet2.$octet3.$octet4:8000/api/v1';
+      }
+    }
+
+    if (targetUrl == null || targetUrl.isEmpty) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Invalid QR code or address format.';
+      });
       return;
     }
-    setState(() { _loading = true; _error = ''; });
+
+    // Default token fallbacks for development/local server mode
+    token ??= 'demo-jwt-token-daynisc-2025';
+    refreshToken ??= 'demo-jwt-token-daynisc-2025-refresh';
+
     try {
-      await _dio.post('/auth/send-otp', data: {'phone': phone});
-      if (mounted) context.push(Routes.otp, extra: phone);
-    } on DioException catch (e) {
-      setState(() => _error = e.response?.data?['detail'] ?? 'Failed to send OTP');
-    } finally {
-      if (mounted) setState(() => _loading = false);
+      // Create a temporary Dio client to verify connection and auth state
+      final verifyDio = Dio(BaseOptions(
+        baseUrl: targetUrl,
+        connectTimeout: const Duration(seconds: 8),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      ));
+
+      final res = await verifyDio.get('/auth/me');
+      
+      if (res.statusCode == 200) {
+        // Successful link and login! Save details in Hive
+        final box = Hive.box('auth');
+        await box.put('access_token', token);
+        await box.put('refresh_token', refreshToken);
+        await box.put('api_base_url', targetUrl);
+        
+        final userData = res.data['user'];
+        if (userData != null) {
+          await box.put('user', userData);
+        }
+        
+        final companyData = res.data['company'];
+        if (companyData != null) {
+          await box.put('company_id', companyData['id']);
+          await box.put('company', companyData);
+        }
+
+        // Apply new endpoint URL to ApiClient singleton
+        ApiClient().updateBaseUrl(targetUrl);
+
+        if (mounted) {
+          context.go(Routes.dashboard);
+        }
+      } else {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'Connected but server returned code ${res.statusCode}';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Connection failed. Verify server is running at:\n$targetUrl';
+      });
     }
   }
 
-  void _showDeviceSyncDialog() {
-    final codeCtrl = TextEditingController();
-    bool testing = false;
-    String statusMsg = '';
-    bool isSuccess = false;
+  Future<void> _pickGalleryQr() async {
+    final picker = ImagePicker();
+    final XFile? file = await picker.pickImage(source: ImageSource.gallery);
+    if (file == null) return;
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            Future<void> verifyCode() async {
-              final code = codeCtrl.text.trim();
-              if (code.length < 3) {
-                setModalState(() => statusMsg = 'Please enter a valid code or IP');
-                return;
-              }
-              setModalState(() {
-                testing = true;
-                statusMsg = 'Connecting to server...';
-                isSuccess = false;
-              });
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
 
-              // Decode pairing code: e.g. 395239 -> http://10.39.55.239:8000/api/v1
-              String targetUrl;
-              if (code.contains('.')) {
-                targetUrl = code.startsWith('http') ? code : 'http://$code:8000/api/v1';
-              } else if (code.length == 6) {
-                final octet2 = code.substring(0, 2);
-                final octet3_digit = code.substring(2, 3);
-                final octet4 = code.substring(3);
-                final octet3 = octet3_digit == '5' ? '55' : octet3_digit;
-                targetUrl = 'http://10.$octet2.$octet3.$octet4:8000/api/v1';
-              } else {
-                setModalState(() {
-                  testing = false;
-                  statusMsg = 'Invalid pairing code format (use 6 digits or IP)';
-                });
-                return;
-              }
+    try {
+      final capture = await _scannerController.analyzeImage(file.path);
+      if (capture == null || capture.barcodes.isEmpty) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'No valid QR code detected in the selected image.';
+        });
+      } else {
+        final code = capture.barcodes.first.rawValue;
+        if (code != null) {
+          _handleScannedData(code);
+        } else {
+          setState(() {
+            _isLoading = false;
+            _errorMessage = 'QR code found but it contains no readable data.';
+          });
+        }
+      }
+    }
+ catch (e) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Failed to scan image: $e';
+      });
+    }
+  }
 
-              try {
-                // Ping /health or /api/v1/health on the targetUrl
-                final checkDio = Dio(BaseOptions(
-                  baseUrl: targetUrl,
-                  connectTimeout: const Duration(seconds: 4),
-                ));
-                final res = await checkDio.get('/health');
-                if (res.statusCode == 200) {
-                  ApiClient().updateBaseUrl(targetUrl);
-                  setModalState(() {
-                    testing = false;
-                    isSuccess = true;
-                    statusMsg = 'Connected successfully to\n$targetUrl';
-                  });
-                  Future.delayed(const Duration(seconds: 2), () {
-                    if (mounted) Navigator.pop(context);
-                  });
-                } else {
-                  setModalState(() {
-                    testing = false;
-                    statusMsg = 'Server online but returned ${res.statusCode}';
-                  });
-                }
-              } catch (e) {
-                // Try fallback to /auth/me or health unauth endpoint
-                try {
-                  final checkDio = Dio(BaseOptions(
-                    baseUrl: targetUrl,
-                    connectTimeout: const Duration(seconds: 4),
-                  ));
-                  final res = await checkDio.get('/api/v1/health');
-                  ApiClient().updateBaseUrl(targetUrl);
-                  setModalState(() {
-                    testing = false;
-                    isSuccess = true;
-                    statusMsg = 'Connected successfully to\n$targetUrl';
-                  });
-                  Future.delayed(const Duration(seconds: 2), () {
-                    if (mounted) Navigator.pop(context);
-                  });
-                } catch (e2) {
-                  setModalState(() {
-                    testing = false;
-                    statusMsg = 'Connection failed. Verify server is running at:\n$targetUrl';
-                  });
-                }
-              }
-            }
-
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom,
-              ),
-              child: Container(
-                decoration: const BoxDecoration(
-                  color: AppColors.pageBg,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(20),
-                    topRight: Radius.circular(20),
-                  ),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Connect to Desktop Software',
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.text1,
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.close, color: AppColors.text3),
-                          onPressed: () => Navigator.pop(context),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Enter the 6-digit pairing code or local IP displayed on your desktop dashboard Settings page.',
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 13,
-                        color: AppColors.text3,
-                        height: 1.4,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: codeCtrl,
-                            keyboardType: TextInputType.text,
-                            style: const TextStyle(
-                              fontFamily: 'Inter',
-                              fontWeight: FontWeight.w700,
-                              fontSize: 15,
-                              color: AppColors.text1,
-                            ),
-                            decoration: InputDecoration(
-                              hintText: 'e.g. 395239 or 10.39.55.239',
-                              filled: true,
-                              fillColor: AppColors.cardBg,
-                              border: OutlineInputBorder(
-                                borderRadius: AppRadius.sm,
-                                borderSide: const BorderSide(color: AppColors.border),
-                              ),
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 14,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        SizedBox(
-                          height: 48,
-                          child: ElevatedButton(
-                            onPressed: testing ? null : verifyCode,
-                            style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(horizontal: 24),
-                            ),
-                            child: testing
-                                ? const SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.white,
-                                    ),
-                                  )
-                                : const Text('Link'),
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (statusMsg.isNotEmpty) ...[
-                      const SizedBox(height: 16),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 14,
-                          vertical: 10,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isSuccess ? AppColors.greenBg : AppColors.primaryBg,
-                          borderRadius: AppRadius.sm,
-                          border: Border.all(
-                            color: isSuccess ? AppColors.green.withAlpha(50) : AppColors.primary.withAlpha(50),
-                          ),
-                        ),
-                        child: Text(
-                          statusMsg,
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 12,
-                            color: isSuccess ? AppColors.green : AppColors.primary,
-                            fontWeight: FontWeight.w600,
-                            height: 1.4,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
+  @override
+  void dispose() {
+    _scannerController.dispose();
+    _ipCtrl.dispose();
+    super.dispose();
   }
 
   @override
@@ -281,15 +196,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // ── Logo mark ──────────────────────────────────────────
+                  // ── Logo Section ──────────────────────────────────────────
                   Image.asset(
                     'assets/images/logo_app.png',
                     width: 72,
                     height: 72,
                     fit: BoxFit.contain,
                   ),
-                  const SizedBox(height: 20),
-
+                  const SizedBox(height: 16),
                   const Text(
                     'Daynisc ERP',
                     style: TextStyle(
@@ -302,7 +216,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                   const SizedBox(height: 6),
                   const Text(
-                    'Business Automation for Indian SMEs',
+                    'Scan Web Dashboard QR Code to Login',
                     style: TextStyle(
                       fontFamily: 'Inter',
                       fontSize: 13,
@@ -311,113 +225,155 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 12),
-                  TextButton.icon(
-                    onPressed: _showDeviceSyncDialog,
-                    icon: const Icon(Icons.sync_rounded, size: 16, color: AppColors.primary),
-                    label: const Text(
-                      'Link Desktop Software',
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontWeight: FontWeight.w700,
-                        fontSize: 13,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      backgroundColor: AppColors.primaryBg,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: AppRadius.sm,
-                      ),
-                    ),
-                  ),
+                  const SizedBox(height: 28),
 
-                  const SizedBox(height: 36),
-
-                  // ── Login card ────────────────────────────────────────
+                  // ── Scanner Card or Loading state ──────────────────────────
                   Container(
-                    padding: const EdgeInsets.all(24),
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
                     decoration: cardDecoration(),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'Sign in with OTP',
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.text1,
+                        if (_isLoading) ...[
+                          const SizedBox(height: 48),
+                          const CircularProgressIndicator(
+                            strokeWidth: 3,
+                            color: AppColors.primary,
                           ),
-                        ),
-                        const SizedBox(height: 4),
-                        const Text(
-                          'Enter your registered mobile number',
-                          style: TextStyle(
-                            fontFamily: 'Inter', fontSize: 13,
-                            color: AppColors.text3,
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-
-                        // Phone input
-                        Row(children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 14, vertical: 13),
-                            decoration: BoxDecoration(
-                              color: AppColors.primaryBg,
-                              borderRadius: AppRadius.sm,
-                              border: Border.all(color: AppColors.border),
+                          const SizedBox(height: 24),
+                          const Text(
+                            'Connecting to PC & Authenticating...',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.text2,
                             ),
-                            child: const Text(
-                              '+91',
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontWeight: FontWeight.w700,
-                                color: AppColors.primary,
-                                fontSize: 14,
+                          ),
+                          const SizedBox(height: 48),
+                        ] else ...[
+                          // Scanner Frame
+                          ClipRRect(
+                            borderRadius: AppRadius.md,
+                            child: SizedBox(
+                              height: 260,
+                              width: double.infinity,
+                              child: Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  MobileScanner(
+                                    controller: _scannerController,
+                                    onDetect: (capture) {
+                                      final List<Barcode> barcodes = capture.barcodes;
+                                      if (barcodes.isNotEmpty) {
+                                        final String? code = barcodes.first.rawValue;
+                                        if (code != null) {
+                                          _handleScannedData(code);
+                                        }
+                                      }
+                                    },
+                                  ),
+                                  // Viewing Window Overlay
+                                  Container(
+                                    width: 180,
+                                    height: 180,
+                                    decoration: BoxDecoration(
+                                      border: Border.all(
+                                        color: AppColors.primary,
+                                        width: 3,
+                                      ),
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: TextField(
-                              controller: _phoneCtrl,
-                              keyboardType: TextInputType.phone,
-                              maxLength: 10,
-                              style: AppTextStyles.body.copyWith(
-                                  color: AppColors.text1,
-                                  fontWeight: FontWeight.w600),
-                              decoration: const InputDecoration(
-                                counterText: '',
-                                hintText: '9876543210',
+                          const SizedBox(height: 16),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              TextButton.icon(
+                                onPressed: _pickGalleryQr,
+                                icon: const Icon(Icons.photo_library_outlined, size: 16),
+                                label: const Text('Scan Image'),
                               ),
-                              onSubmitted: (_) => _sendOtp(),
-                            ),
+                              TextButton.icon(
+                                onPressed: () {
+                                  setState(() => _showManualInput = !_showManualInput);
+                                },
+                                icon: Icon(
+                                  _showManualInput ? Icons.videocam_outlined : Icons.edit_outlined,
+                                  size: 16,
+                                ),
+                                label: Text(_showManualInput ? 'Use Camera' : 'Link Manually'),
+                              ),
+                            ],
                           ),
-                        ]),
+                        ],
 
-                        if (_error.isNotEmpty) ...[
-                          const SizedBox(height: 10),
+                        // ── Manual IP Input Section ────────────────────────
+                        if (!_isLoading && _showManualInput) ...[
+                          const SizedBox(height: 12),
+                          const Divider(),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  controller: _ipCtrl,
+                                  keyboardType: TextInputType.text,
+                                  style: const TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.text1,
+                                  ),
+                                  decoration: const InputDecoration(
+                                    hintText: 'Enter PC local IP or URL',
+                                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                  ),
+                                  onSubmitted: (v) => _handleScannedData(v.trim()),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              SizedBox(
+                                height: 40,
+                                child: ElevatedButton(
+                                  onPressed: () {
+                                    final val = _ipCtrl.text.trim();
+                                    if (val.isNotEmpty) _handleScannedData(val);
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                                  ),
+                                  child: const Text('Link', style: TextStyle(fontSize: 12)),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+
+                        // ── Error Banner ─────────────────────────────────────
+                        if (_errorMessage != null) ...[
+                          const SizedBox(height: 16),
                           Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 8),
+                            padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
                               color: AppColors.redBg,
                               borderRadius: AppRadius.sm,
                               border: Border.all(
-                                  color: AppColors.red.withAlpha((0.3 * 255).round())),
+                                color: AppColors.red.withAlpha(50),
+                              ),
                             ),
                             child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Icon(Icons.error_outline,
-                                    color: AppColors.red, size: 15),
+                                const Icon(Icons.error_outline, color: AppColors.red, size: 16),
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
-                                    _error,
+                                    _errorMessage!,
                                     style: const TextStyle(
                                       fontFamily: 'Inter',
                                       color: AppColors.red,
@@ -430,272 +386,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             ),
                           ),
                         ],
-
-                        const SizedBox(height: 20),
-
-                        SizedBox(
-                          width: double.infinity,
-                          height: 48,
-                          child: ElevatedButton(
-                            onPressed: _loading ? null : _sendOtp,
-                            child: _loading
-                                ? const SizedBox(
-                                    height: 18, width: 18,
-                                    child: CircularProgressIndicator(
-                                        strokeWidth: 2, color: Colors.white),
-                                  )
-                                : const Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Text('Send OTP'),
-                                      SizedBox(width: 6),
-                                      Icon(Icons.arrow_forward, size: 16),
-                                    ],
-                                  ),
-                          ),
-                        ),
                       ],
                     ),
                   ),
 
                   const SizedBox(height: 24),
                   const Text(
-                    'By signing in you agree to our Terms of Service',
+                    'Ensure your mobile device and PC are on the same Wi-Fi network.',
                     style: TextStyle(
                       fontFamily: 'Inter',
                       fontSize: 11,
-                      color: AppColors.text4,
+                      color: AppColors.text3,
+                      height: 1.4,
                     ),
                     textAlign: TextAlign.center,
                   ),
                 ],
               ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ── OTP Screen ────────────────────────────────────────────────────────────────
-
-class OTPScreen extends ConsumerStatefulWidget {
-  final String phoneNumber;
-  const OTPScreen({super.key, required this.phoneNumber});
-
-  @override
-  ConsumerState<OTPScreen> createState() => _OTPScreenState();
-}
-
-class _OTPScreenState extends ConsumerState<OTPScreen> {
-  final List<TextEditingController> _ctrls =
-      List.generate(6, (_) => TextEditingController());
-  final List<FocusNode> _nodes = List.generate(6, (_) => FocusNode());
-  bool _loading = false;
-  String _error = '';
-  String _devOtp = '';
-
-  @override
-  void initState() {
-    super.initState();
-    _resendOtp();
-  }
-
-  Future<void> _resendOtp() async {
-    try {
-      final res = await _dio.post('/auth/send-otp',
-          data: {'phone': widget.phoneNumber});
-      if (mounted) setState(() => _devOtp = res.data['dev_otp'] ?? '');
-    } catch (_) {}
-  }
-
-  String get _code => _ctrls.map((c) => c.text).join();
-
-  Future<void> _verify() async {
-    if (_code.length < 6) return;
-    setState(() { _loading = true; _error = ''; });
-    try {
-      final res = await _dio.post('/auth/verify-otp',
-          data: {'phone': widget.phoneNumber, 'otp': _code});
-      final box = Hive.box('auth');
-      await box.put('access_token', res.data['access_token']);
-      await box.put('refresh_token', res.data['refresh_token']);
-      await box.put('user', res.data['user']);
-      if (mounted) context.go(Routes.dashboard);
-    } on DioException catch (e) {
-      setState(() {
-        _error = e.response?.data?['detail'] ?? 'Invalid OTP. Try again.';
-        for (final c in _ctrls) { c.clear(); }
-      });
-      _nodes[0].requestFocus();
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.pageBg,
-      appBar: AppBar(
-        backgroundColor: AppColors.cardBg,
-        title: const Text('Verify OTP'),
-        elevation: 0,
-        scrolledUnderElevation: 0,
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'OTP sent to +91-${widget.phoneNumber}',
-                  style: AppTextStyles.body,
-                ),
-
-                if (_devOtp.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryBg,
-                      borderRadius: AppRadius.sm,
-                      border: Border.all(
-                          color: AppColors.primary.withAlpha((0.3 * 255).round())),
-                    ),
-                    child: Row(children: [
-                      const Icon(Icons.info_outline,
-                          color: AppColors.primary, size: 16),
-                      const SizedBox(width: 8),
-                      Text('Dev OTP: ', style: AppTextStyles.bodySmall),
-                      Text(
-                        _devOtp,
-                        style: const TextStyle(
-                          fontFamily: 'Inter',
-                          color: AppColors.primary,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 6,
-                        ),
-                      ),
-                    ]),
-                  ),
-                ],
-
-                const SizedBox(height: 28),
-
-                // OTP boxes
-                Row(
-                  children: List.generate(6, (i) => Expanded(
-                    child: Padding(
-                      padding: EdgeInsets.only(right: i < 5 ? 8 : 0),
-                      child: TextField(
-                        controller: _ctrls[i],
-                        focusNode: _nodes[i],
-                        keyboardType: TextInputType.number,
-                        maxLength: 1,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontFamily: 'Inter',
-                          color: AppColors.primary,
-                          fontSize: 22,
-                          fontWeight: FontWeight.w800,
-                        ),
-                        decoration: InputDecoration(
-                          counterText: '',
-                          filled: true,
-                          fillColor: AppColors.cardBg,
-                          border: OutlineInputBorder(
-                            borderRadius: AppRadius.sm,
-                            borderSide: const BorderSide(
-                                color: AppColors.border, width: 1.5),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: AppRadius.sm,
-                            borderSide: const BorderSide(
-                                color: AppColors.primary, width: 2),
-                          ),
-                        ),
-                        onChanged: (v) {
-                          if (v.isNotEmpty && i < 5) _nodes[i + 1].requestFocus();
-                          if (v.isEmpty && i > 0) _nodes[i - 1].requestFocus();
-                          if (_code.length == 6) _verify();
-                        },
-                      ),
-                    ),
-                  )),
-                ),
-
-                if (_error.isNotEmpty) ...[
-                  const SizedBox(height: 14),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: AppColors.redBg,
-                      borderRadius: AppRadius.sm,
-                      border: Border.all(
-                          color: AppColors.red.withAlpha((0.3 * 255).round())),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.error_outline,
-                            color: AppColors.red, size: 15),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            _error,
-                            style: const TextStyle(
-                              fontFamily: 'Inter',
-                              color: AppColors.red,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-
-                const SizedBox(height: 24),
-
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: ElevatedButton(
-                    onPressed: (_loading || _code.length < 6) ? null : _verify,
-                    child: _loading
-                        ? const SizedBox(
-                            height: 18, width: 18,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.white),
-                          )
-                        : const Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text('Verify & Login'),
-                              SizedBox(width: 6),
-                              Icon(Icons.arrow_forward, size: 16),
-                            ],
-                          ),
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-                Center(
-                  child: TextButton.icon(
-                    onPressed: _resendOtp,
-                    icon: const Icon(Icons.refresh, size: 16),
-                    label: const Text('Resend OTP'),
-                  ),
-                ),
-              ],
             ),
           ),
         ),

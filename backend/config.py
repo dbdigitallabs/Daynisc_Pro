@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "change-me-in-production"
     # JSON string in env: '["https://daynisc-web.onrender.com","http://localhost:3000"]'
     # Falls back to permissive list for local dev if not set.
-    ALLOWED_ORIGINS: list[str] = [
+    ALLOWED_ORIGINS: Any = [
         "http://localhost:3000",
         "http://localhost:5173",
         "http://localhost:8000",

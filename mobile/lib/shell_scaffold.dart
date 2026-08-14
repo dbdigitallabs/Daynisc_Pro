@@ -15,6 +15,7 @@ class ShellScaffold extends ConsumerWidget {
     (icon: Icons.inventory_2_outlined,      label: 'Inventory',  route: Routes.stock),
     (icon: Icons.factory_outlined,          label: 'Production', route: Routes.production),
     (icon: Icons.receipt_long_outlined,     label: 'Sales',      route: Routes.sales),
+    (icon: Icons.person_outline,            label: 'Profile',    route: Routes.profile),
   ];
 
   @override

@@ -1,14 +1,80 @@
 // src/pages/SettingsPage.tsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "../store/authStore";
 import { T, cardStyle } from "../store/theme";
-import { IconSettings, IconLink, IconUsers, IconHardDrive, IconUser } from "../components/Icons";
+import api from "../store/apiClient";
+import { IconSettings, IconLink, IconUsers, IconHardDrive, IconUser, IconAI, IconRefresh } from "../components/Icons";
 
-type Tab = "general" | "tally" | "users" | "backup" | "device";
+type Tab = "general" | "tally" | "ai" | "users" | "backup" | "device";
 
 export default function SettingsPage() {
+  const qc = useQueryClient();
   const [tab, setTab] = useState<Tab>("general");
-  const { user, company } = useAuthStore();
+  const { user, company, token, refreshToken } = useAuthStore();
+
+  const [tallyUrl, setTallyUrl] = useState("");
+  const [tallyCompany, setTallyCompany] = useState("");
+  const [whatsappToken, setWhatsappToken] = useState("");
+  const [geminiKey, setGeminiKey] = useState("");
+  const [aiThreshold, setAiThreshold] = useState(0.85);
+  const [testingTally, setTestingTally] = useState(false);
+  const [lanUrl, setLanUrl] = useState("http://localhost:8000/api/v1");
+
+  useEffect(() => {
+    api.get("/health")
+      .then(res => {
+        if (res.data?.lan_url) {
+          setLanUrl(res.data.lan_url);
+        }
+      })
+      .catch(() => {
+        setLanUrl(`${window.location.protocol}//${window.location.hostname}:8000/api/v1`);
+      });
+  }, []);
+
+
+  const { data: settings = {}, isLoading } = useQuery({
+    queryKey: ["companySettings"],
+    queryFn: () => api.get("/settings/company").then(r => r.data || {}),
+  });
+
+  useEffect(() => {
+    if (settings) {
+      setTallyUrl(settings.tally_url || "");
+      setTallyCompany(settings.tally_company || "");
+      setWhatsappToken(settings.whatsapp_token || "");
+      setGeminiKey(settings.gemini_key || "");
+      setAiThreshold(settings.ai_threshold !== undefined ? settings.ai_threshold : 0.85);
+    }
+  }, [settings]);
+
+  const saveMutation = useMutation({
+    mutationFn: (payload: Record<string, any>) => api.patch("/settings/company", payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["companySettings"] });
+      alert("✅ Settings saved successfully!");
+    },
+    onError: (err: any) => {
+      alert(`❌ Error saving settings: ${err?.response?.data?.detail || err.message}`);
+    }
+  });
+
+  async function testTallyConnection() {
+    setTestingTally(true);
+    try {
+      const res = await api.get("/erp/connection/test/tally");
+      if (res.data?.success) {
+        alert(`✅ Connection successful!\nTally Version: ${res.data?.version || "Unknown"}\nCompany: ${res.data?.company || "None"}`);
+      } else {
+        alert(`❌ Connection failed: ${res.data?.error || "Could not connect to Tally"}`);
+      }
+    } catch (err: any) {
+      alert(`❌ Connection failed: ${err?.response?.data?.detail || err.message}`);
+    } finally {
+      setTestingTally(false);
+    }
+  }
 
   const tabBtn = (t: Tab, label: string, icon: React.ReactNode) => (
     <button onClick={() => setTab(t)} style={{
@@ -26,8 +92,9 @@ export default function SettingsPage() {
       <h1 style={{ fontSize: 22, fontWeight: 800, color: T.text1, marginBottom: 24, letterSpacing: "-0.4px" }}>Settings</h1>
 
       <div style={{ display: "flex", borderBottom: `1px solid ${T.border}`, marginBottom: 28 }}>
-        {tabBtn("general", "General",    <IconSettings size={14} color={tab === "general" ? T.primary : T.text3} />)}
-        {tabBtn("tally",   "ERP / Tally", <IconLink size={14} color={tab === "tally" ? T.primary : T.text3} />)}
+        {tabBtn("general", "General",     <IconSettings size={14} color={tab === "general" ? T.primary : T.text3} />)}
+        {tabBtn("tally",   "ERP / Tally",  <IconLink size={14} color={tab === "tally" ? T.primary : T.text3} />)}
+        {tabBtn("ai",      "AI Settings",  <IconAI size={14} color={tab === "ai" ? T.primary : T.text3} />)}
         {tabBtn("users",   "Users",        <IconUsers size={14} color={tab === "users" ? T.primary : T.text3} />)}
         {tabBtn("backup",  "Backup",       <IconHardDrive size={14} color={tab === "backup" ? T.primary : T.text3} />)}
         {tabBtn("device",  "Device Sync",  <IconLink size={14} color={tab === "device" ? T.primary : T.text3} />)}
@@ -94,32 +161,61 @@ export default function SettingsPage() {
           <div style={cardStyle({ padding: 28 })}>
             <h2 style={{ fontSize: 15, fontWeight: 700, color: T.text1, marginBottom: 6 }}>TallyPrime Integration</h2>
             <p style={{ fontSize: 13, color: T.text3, marginBottom: 24 }}>Configure connection to your local TallyPrime server</p>
-            {[
-              { label: "Tally URL",     value: "http://localhost:9000", ph: "http://localhost:9000" },
-              { label: "Company Name",  value: "",                       ph: "As in TallyPrime" },
-              { label: "Port",          value: "9000",                   ph: "9000" },
-            ].map(f => (
-              <div key={f.label} style={{ marginBottom: 18 }}>
-                <label style={{ fontSize: 12, fontWeight: 600, color: T.text2, display: "block", marginBottom: 7 }}>{f.label}</label>
-                <input defaultValue={f.value} placeholder={f.ph} style={{
+            
+            <div style={{ marginBottom: 18 }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: T.text2, display: "block", marginBottom: 7 }}>Tally URL</label>
+              <input 
+                value={tallyUrl} 
+                onChange={e => setTallyUrl(e.target.value)}
+                placeholder="http://localhost:9000" 
+                style={{
                   width: "100%", padding: "10px 14px",
                   border: `1px solid ${T.border}`, borderRadius: 8,
                   fontSize: 13, color: T.text1, outline: "none",
                   fontFamily: "'Inter',sans-serif",
-                }} />
-              </div>
-            ))}
+                }} 
+              />
+            </div>
+            <div style={{ marginBottom: 18 }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: T.text2, display: "block", marginBottom: 7 }}>Company Name</label>
+              <input 
+                value={tallyCompany} 
+                onChange={e => setTallyCompany(e.target.value)}
+                placeholder="As in TallyPrime" 
+                style={{
+                  width: "100%", padding: "10px 14px",
+                  border: `1px solid ${T.border}`, borderRadius: 8,
+                  fontSize: 13, color: T.text1, outline: "none",
+                  fontFamily: "'Inter',sans-serif",
+                }} 
+              />
+            </div>
+
             <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
-              <button style={{
-                padding: "10px 24px", background: "#f8fafc",
-                border: `1px solid ${T.border}`, borderRadius: 8,
-                color: T.text2, fontSize: 13, fontWeight: 600, cursor: "pointer",
-              }}>Test Connection</button>
-              <button style={{
-                padding: "10px 24px", background: T.primary,
-                border: "none", borderRadius: 8,
-                color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer",
-              }}>Save Settings</button>
+              <button 
+                onClick={testTallyConnection}
+                disabled={testingTally}
+                style={{
+                  padding: "10px 24px", background: "#f8fafc",
+                  border: `1px solid ${T.border}`, borderRadius: 8,
+                  color: T.text2, fontSize: 13, fontWeight: 600, cursor: "pointer",
+                  display: "flex", alignItems: "center", gap: 6
+                }}
+              >
+                {testingTally ? "⏳ Testing..." : "Test Connection"}
+              </button>
+              <button 
+                onClick={() => saveMutation.mutate({ tally_url: tallyUrl, tally_company: tallyCompany })}
+                disabled={saveMutation.isPending}
+                style={{
+                  padding: "10px 24px", background: T.primary,
+                  border: "none", borderRadius: 8,
+                  color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer",
+                  opacity: saveMutation.isPending ? 0.7 : 1
+                }}
+              >
+                {saveMutation.isPending ? "Saving..." : "Save Settings"}
+              </button>
             </div>
             <div style={{ marginTop: 24, padding: "16px 18px", background: "#f0fdf4", borderRadius: 10, border: "1px solid #bbf7d0" }}>
               <div style={{ fontSize: 13, fontWeight: 600, color: "#166534", marginBottom: 6 }}>📋 Setup Instructions</div>
@@ -130,6 +226,70 @@ export default function SettingsPage() {
                 <li>Open your company in TallyPrime</li>
                 <li>Click "Test Connection" above</li>
               </ol>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tab === "ai" && (
+        <div style={{ maxWidth: 560 }}>
+          <div style={cardStyle({ padding: 28 })}>
+            <h2 style={{ fontSize: 15, fontWeight: 700, color: T.text1, marginBottom: 6 }}>AI & OCR Settings</h2>
+            <p style={{ fontSize: 13, color: T.text3, marginBottom: 24 }}>Configure your Gemini API key and confidence threshold</p>
+            
+            <div style={{ marginBottom: 18 }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: T.text2, display: "block", marginBottom: 7 }}>Gemini API Key</label>
+              <input 
+                type="password"
+                value={geminiKey} 
+                onChange={e => setGeminiKey(e.target.value)}
+                placeholder="AIzaSy..." 
+                style={{
+                  width: "100%", padding: "10px 14px",
+                  border: `1px solid ${T.border}`, borderRadius: 8,
+                  fontSize: 13, color: T.text1, outline: "none",
+                  fontFamily: "'Inter',sans-serif",
+                }} 
+              />
+              <span style={{ fontSize: 11, color: T.text3, marginTop: 4, display: "block" }}>
+                Enter your Google AI Studio Gemini API Key.
+              </span>
+            </div>
+
+            <div style={{ marginBottom: 22 }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: T.text2, display: "block", marginBottom: 7 }}>
+                Auto-Approve Threshold: <span style={{ color: T.primary, fontWeight: 700 }}>{Math.round(aiThreshold * 100)}%</span>
+              </label>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <input 
+                  type="range" 
+                  min="0.5" 
+                  max="1.0" 
+                  step="0.05"
+                  value={aiThreshold} 
+                  onChange={e => setAiThreshold(parseFloat(e.target.value))}
+                  style={{ flex: 1, accentColor: T.primary }}
+                />
+                <span style={{ fontSize: 12, fontWeight: 600, color: T.text2, width: 36 }}>{aiThreshold.toFixed(2)}</span>
+              </div>
+              <span style={{ fontSize: 11, color: T.text3, marginTop: 4, display: "block" }}>
+                AI extractions with a confidence score above this threshold will automatically bypass human review.
+              </span>
+            </div>
+
+            <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+              <button 
+                onClick={() => saveMutation.mutate({ gemini_key: geminiKey, ai_threshold: aiThreshold })}
+                disabled={saveMutation.isPending}
+                style={{
+                  padding: "10px 24px", background: T.primary,
+                  border: "none", borderRadius: 8,
+                  color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer",
+                  opacity: saveMutation.isPending ? 0.7 : 1
+                }}
+              >
+                {saveMutation.isPending ? "Saving..." : "Save AI Settings"}
+              </button>
             </div>
           </div>
         </div>
@@ -182,7 +342,13 @@ export default function SettingsPage() {
                   marginBottom: 14,
                 }}>
                   <img
-                    src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=http://10.39.55.239:8000/api/v1"
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(
+                      JSON.stringify({
+                        url: lanUrl,
+                        token: token || "demo-jwt-token-daynisc-2025",
+                        refresh_token: refreshToken || "demo-jwt-token-daynisc-2025-refresh"
+                      })
+                    )}`}
                     alt="Daynisc Sync QR Code"
                     style={{ width: 180, height: 180, display: "block" }}
                   />
@@ -198,32 +364,11 @@ export default function SettingsPage() {
                     textTransform: "uppercase", letterSpacing: "0.8px",
                     display: "block", marginBottom: 8
                   }}>
-                    Backup Pairing Code
+                    Dynamic Session Sync
                   </label>
-                  <div style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                  }}>
-                    {"395239".split("").map((digit, idx) => (
-                      <div key={idx} style={{
-                        flex: 1,
-                        height: 52,
-                        borderRadius: 10,
-                        background: "linear-gradient(135deg, #eff6ff, #f3e8ff)",
-                        border: `1.5px solid ${T.primary}30`,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: 22,
-                        fontWeight: 800,
-                        color: T.primary,
-                        boxShadow: "0 4px 10px rgba(67, 97, 238, 0.05)",
-                      }}>
-                        {digit}
-                      </div>
-                    ))}
-                  </div>
+                  <p style={{ fontSize: 12, color: T.text3, margin: 0, lineHeight: 1.4 }}>
+                    This QR code encodes your active session token. Scanning it on the mobile app will copy the session and connect automatically.
+                  </p>
                 </div>
 
                 <div style={{
@@ -233,10 +378,10 @@ export default function SettingsPage() {
                   border: `1px solid ${T.primary}20`,
                 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: T.primary, marginBottom: 4 }}>
-                    Active Endpoint:
+                    Active PC Endpoint:
                   </div>
-                  <code style={{ fontSize: 12, color: T.text1, fontWeight: 600, fontFamily: "monospace" }}>
-                    http://10.39.55.239:8000/api/v1
+                  <code style={{ fontSize: 11, color: T.text1, fontWeight: 600, fontFamily: "monospace", wordBreak: "break-all" }}>
+                    {lanUrl}
                   </code>
                 </div>
 
@@ -265,11 +410,12 @@ export default function SettingsPage() {
               </div>
               <ul style={{ fontSize: 12, color: T.text2, lineHeight: "22px", paddingLeft: 18, margin: 0 }}>
                 <li>Download the Daynisc App on your mobile device.</li>
-                <li>Tap <strong>"Link Desktop Software"</strong> on the Login/Welcome Screen.</li>
-                <li>Scan the QR code on the left OR enter the 6-digit numeric pairing code.</li>
-                <li>Once connected, sign in with your phone and OTP to share data securely!</li>
+                <li>Ensure your phone is connected to the same Wi-Fi/local network as this PC.</li>
+                <li>Scan this QR code using the in-app scanner.</li>
+                <li>Your device will automatically configure the endpoint and log in as <strong>{user?.name || "Admin"}</strong>.</li>
               </ul>
             </div>
+
           </div>
         </div>
       )}

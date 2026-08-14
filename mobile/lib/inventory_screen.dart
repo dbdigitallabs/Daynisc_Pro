@@ -361,7 +361,10 @@ class _StockItemTile extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 3),
-            Row(
+            Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 8,
+              runSpacing: 4,
               children: [
                 Container(
                   padding: const EdgeInsets.symmetric(
@@ -378,16 +381,13 @@ class _StockItemTile extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
                 Text(
                   item.category,
                   style: AppTextStyles.bodyMuted,
                 ),
-                if (item.hsnCode != null) ...[
-                  const SizedBox(width: 6),
+                if (item.hsnCode != null)
                   Text('HSN: ${item.hsnCode}',
                       style: AppTextStyles.bodyMuted),
-                ],
               ],
             ),
             if (item.reorderLevel > 0) ...[

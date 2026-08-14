@@ -1,0 +1,1208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Academic Project Presentation — Daynisc AI-First ERP</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-gradient: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+      --slide-bg: #FFFFFF;
+      --slide-border: #E2E8F0;
+      --text-main: #0F172A;
+      --text-muted: #64748B;
+      --primary: #2563EB;
+      --primary-hover: #1D4ED8;
+      --accent: #06B6D4;
+      --accent-light: #E0F2FE;
+      --card-bg: #F8FAFC;
+      --card-border: #E2E8F0;
+      --code-bg: #0F172A;
+      --code-text: #F8FAFC;
+      --font-main: 'Inter', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    /* Themes */
+    [data-theme="navy"] {
+      --bg-gradient: linear-gradient(135deg, #0B132B 0%, #1C2541 100%);
+      --slide-bg: #FFFFFF;
+      --text-main: #0B132B;
+      --primary: #1E6091;
+      --accent: #184E77;
+    }
+    [data-theme="emerald"] {
+      --bg-gradient: linear-gradient(135deg, #064E3B 0%, #022C22 100%);
+      --slide-bg: #FFFFFF;
+      --text-main: #064E3B;
+      --primary: #059669;
+      --accent: #10B981;
+    }
+    [data-theme="dark"] {
+      --bg-gradient: linear-gradient(135deg, #090D16 0%, #111827 100%);
+      --slide-bg: #111827;
+      --slide-border: #1F2937;
+      --text-main: #F9FAFB;
+      --text-muted: #9CA3AF;
+      --card-bg: #1F2937;
+      --card-border: #374151;
+      --primary: #3B82F6;
+      --accent: #38BDF8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-main);
+      background: var(--bg-gradient);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      overflow-x: hidden;
+      padding: 20px;
+    }
+
+    /* Top Control Bar */
+    .top-controls {
+      width: 100%;
+      max-width: 1200px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 14px;
+      padding: 10px 20px;
+      margin-bottom: 16px;
+      color: #FFFFFF;
+    }
+
+    .brand-title {
+      font-weight: 700;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-badge {
+      background: rgba(6, 182, 212, 0.2);
+      color: #38BDF8;
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .btn-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn {
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #FFFFFF;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .btn:hover {
+      background: rgba(255, 255, 255, 0.25);
+      transform: translateY(-1px);
+    }
+
+    .btn-primary {
+      background: #2563EB;
+      border-color: #3B82F6;
+    }
+    .btn-primary:hover {
+      background: #1D4ED8;
+    }
+
+    .theme-select {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #FFFFFF;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    /* Main Presentation Slide Frame */
+    .presentation-container {
+      width: 100%;
+      max-width: 1200px;
+      aspect-ratio: 16 / 9;
+      position: relative;
+      perspective: 1000px;
+    }
+
+    .slide {
+      width: 100%;
+      height: 100%;
+      background: var(--slide-bg);
+      border: 1px solid var(--slide-border);
+      border-radius: 16px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      padding: 32px 40px;
+      display: none;
+      flex-direction: column;
+      justify-content: space-between;
+      animation: fadeIn 0.3s ease-in-out;
+      position: absolute;
+      top: 0;
+      left: 0;
+      overflow: hidden;
+    }
+
+    .slide.active {
+      display: flex;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.98); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    /* Slide Header Banner */
+    .slide-header {
+      border-bottom: 2px solid var(--slide-border);
+      padding-bottom: 12px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+    }
+
+    .slide-category {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .slide-title {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--text-main);
+      letter-spacing: -0.5px;
+    }
+
+    .slide-number-tag {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: var(--card-bg);
+      padding: 4px 10px;
+      border-radius: 20px;
+      border: 1px solid var(--card-border);
+    }
+
+    /* Slide Content Layouts */
+    .slide-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 16px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      height: 100%;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+      height: 100%;
+    }
+
+    .grid-6 {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 12px;
+      height: 100%;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 18px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+      transition: all 0.2s ease;
+    }
+
+    .card:hover {
+      border-color: var(--primary);
+      transform: translateY(-2px);
+    }
+
+    .card-badge {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .card-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .card-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .card-list li {
+      font-size: 12.5px;
+      color: var(--text-main);
+      line-height: 1.4;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .card-list li::before {
+      content: "•";
+      color: var(--primary);
+      font-weight: bold;
+      font-size: 16px;
+      line-height: 1;
+    }
+
+    /* Pseudocode Block */
+    .code-container {
+      background: var(--code-bg);
+      color: var(--code-text);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      padding: 20px;
+      border-radius: 12px;
+      line-height: 1.6;
+      height: 100%;
+      overflow-y: auto;
+      border: 1px solid #334155;
+    }
+
+    .code-keyword { color: #38BDF8; font-weight: 600; }
+    .code-string { color: #34D399; }
+    .code-comment { color: #64748B; font-style: italic; }
+    .code-fn { color: #F472B6; }
+
+    /* Flow Chart Diagram */
+    .flow-step {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      align-items: center;
+      text-align: center;
+    }
+    .flow-step-num {
+      background: var(--primary);
+      color: white;
+      font-size: 10px;
+      font-weight: 700;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Slide 1 Special Layout */
+    .slide-title-content {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      justify-content: center;
+      height: 100%;
+      position: relative;
+    }
+
+    .title-pill {
+      align-self: flex-start;
+      background: rgba(37, 99, 235, 0.1);
+      color: var(--primary);
+      border: 1px solid rgba(37, 99, 235, 0.3);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .hero-title {
+      font-size: 36px;
+      font-weight: 800;
+      color: var(--text-main);
+      line-height: 1.15;
+      letter-spacing: -1px;
+    }
+
+    .hero-tagline {
+      font-size: 18px;
+      color: var(--text-muted);
+      max-width: 850px;
+      line-height: 1.4;
+    }
+
+    .title-meta-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-top: 20px;
+    }
+
+    .meta-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      padding: 12px 14px;
+    }
+    .meta-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .meta-value {
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    /* Slide Footer */
+    .slide-footer {
+      border-top: 1px solid var(--slide-border);
+      padding-top: 10px;
+      margin-top: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    /* Navigation Controls Bar */
+    .bottom-controls {
+      width: 100%;
+      max-width: 1200px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 14px;
+      padding: 10px 20px;
+      margin-top: 16px;
+      color: #FFFFFF;
+    }
+
+    .progress-bar-container {
+      flex: 1;
+      max-width: 400px;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 3px;
+      overflow: hidden;
+      margin: 0 20px;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: #38BDF8;
+      width: 10%;
+      transition: width 0.3s ease;
+    }
+
+    .slide-selector {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #FFFFFF;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      outline: none;
+    }
+
+    /* Presenter Notes Panel */
+    .speaker-notes-drawer {
+      width: 100%;
+      max-width: 1200px;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      padding: 14px 20px;
+      margin-top: 12px;
+      color: #F8FAFC;
+      font-size: 13px;
+      display: none;
+    }
+
+    .speaker-notes-drawer.open {
+      display: block;
+    }
+
+    .notes-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: #38BDF8;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    /* Modal Grid Overview */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(8px);
+      z-index: 999;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+    }
+    .modal-overlay.active {
+      display: flex;
+    }
+    .modal-content {
+      background: #0F172A;
+      border: 1px solid #334155;
+      border-radius: 16px;
+      padding: 24px;
+      max-width: 1000px;
+      width: 100%;
+      max-height: 85vh;
+      overflow-y: auto;
+      color: white;
+    }
+    .grid-overview {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .overview-card {
+      background: #1E293B;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      padding: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .overview-card:hover {
+      border-color: #38BDF8;
+      background: #334155;
+    }
+
+    /* Print Styles */
+    @media print {
+      body {
+        background: white !important;
+        padding: 0 !important;
+      }
+      .top-controls, .bottom-controls, .speaker-notes-drawer, .modal-overlay {
+        display: none !important;
+      }
+      .presentation-container {
+        max-width: 100% !important;
+        aspect-ratio: auto !important;
+      }
+      .slide {
+        display: flex !important;
+        position: relative !important;
+        page-break-after: always;
+        height: 100vh !important;
+        box-shadow: none !important;
+        border: none !important;
+        border-radius: 0 !important;
+      }
+    }
+  </style>
+</head>
+<body data-theme="navy">
+
+  <!-- TOP CONTROL BAR -->
+  <div class="top-controls">
+    <div class="brand-title">
+      <span>Daynisc Presentation</span>
+      <span class="brand-badge">Academic Proposal</span>
+    </div>
+    <div class="btn-group">
+      <select class="theme-select" id="themeSelect" onchange="changeTheme(this.value)">
+        <option value="navy">Theme: Academic Navy</option>
+        <option value="emerald">Theme: Emerald Cyber</option>
+        <option value="dark">Theme: OLED Dark</option>
+      </select>
+      <button class="btn" onclick="toggleOverview()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg> Grid</button>
+      <button class="btn" onclick="toggleSpeakerNotes()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg> Notes</button>
+      <button class="btn" onclick="toggleFullscreen()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg> Fullscreen</button>
+      <button class="btn btn-primary" onclick="window.print()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Print PDF</button>
+      <a class="btn" href="Daynisc_Academic_Presentation.pptx" download><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Download .PPTX</a>
+    </div>
+  </div>
+
+  <!-- PRESENTATION CONTAINER -->
+  <div class="presentation-container">
+
+    <!-- SLIDE 1: Title Slide -->
+    <div class="slide active" id="slide-1">
+      <div class="slide-title-content">
+        <div class="title-pill">ACADEMIC PROJECT PROPOSAL PREPARATION</div>
+        <h1 class="hero-title" id="val-title">Daynisc: AI-First ERP & Business Automation Ecosystem</h1>
+        <p class="hero-tagline" id="val-tagline">Automated Document Vision OCR, Multi-Tenant Cloud Microservices & Seamless TallyPrime Integration</p>
+
+        <div class="title-meta-grid">
+          <div class="meta-card">
+            <div class="meta-label">Team Members</div>
+            <div class="meta-value" id="val-members">[STUDENT NAME 1] & [STUDENT NAME 2]</div>
+          </div>
+          <div class="meta-card">
+            <div class="meta-label">Course / Subject</div>
+            <div class="meta-value" id="val-course">Major Project Capstone</div>
+          </div>
+          <div class="meta-card">
+            <div class="meta-label">Department / College</div>
+            <div class="meta-value" id="val-college">Dept. of Computer Science & Engineering</div>
+          </div>
+          <div class="meta-card">
+            <div class="meta-label">Academic Session</div>
+            <div class="meta-value" id="val-year">2025 – 2026</div>
+          </div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Project Domain: AI / ML / Vision Processing / Cloud Full-Stack</span>
+        <span>Slide 1 of 10</span>
+      </div>
+    </div>
+
+    <!-- SLIDE 2: Problem Statement -->
+    <div class="slide" id="slide-2">
+      <div class="slide-header">
+        <div>
+          <div class="slide-category">ACADEMIC EVALUATION • MOTIVATION</div>
+          <h2 class="slide-title">Slide 2 — Problem Statement: Friction in SME ERP Entry</h2>
+        </div>
+        <span class="slide-number-tag">02 / 10</span>
+      </div>
+      <div class="slide-body">
+        <div class="grid-3">
+          <div class="card">
+            <span class="card-badge">Core Problem</span>
+            <h3 class="card-title">Manual Data Entry Bottleneck</h3>
+            <ul class="card-list">
+              <li>Manual entry of invoices, bills, and POs is slow and labor-intensive.</li>
+              <li>High human error rate in transcribing line items and GST splits.</li>
+              <li>Delayed stock updates cause inventory inaccuracies in factories.</li>
+              <li>Paper document backlogs delay monthly financial reconciliation.</li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="card-badge">Target Stakeholders</span>
+            <h3 class="card-title">Who is Affected?</h3>
+            <ul class="card-list">
+              <li>Indian Micro, Small & Medium Enterprises (MSMEs).</li>
+              <li>Factory floor managers & warehouse dispatch operators.</li>
+              <li>Accounts staff spending hours on Tally voucher entry.</li>
+              <li>Distributors handling heterogeneous vendor bill layouts.</li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="card-badge">Why New Solution?</span>
+            <h3 class="card-title">Existing ERP Limitations</h3>
+            <ul class="card-list">
+              <li>Legacy ERP systems lack native computer vision AI.</li>
+              <li>Manual transcription incurs continuous operational overhead.</li>
+              <li>Verification bottlenecks risk missed GST e-Invoice deadlines.</li>
+              <li>Need: Automated vision extraction + Seamless Tally push.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Daynisc ERP Ecosystem Proposal</span>
+        <span>Slide 2 of 10</span>
+      </div>
+    </div>
+
+    <!-- SLIDE 3: Proposed Solution / Expected Outcome -->
+    <div class="slide" id="slide-3">
+      <div class="slide-header">
+        <div>
+          <div class="slide-category">SOLUTION ARCHITECTURE</div>
+          <h2 class="slide-title">Slide 3 — Proposed Solution & System Modules</h2>
+        </div>
+        <span class="slide-number-tag">03 / 10</span>
+      </div>
+      <div class="slide-body">
+        <div class="grid-3" style="height: 40%;">
+          <div class="card" style="border-left: 4px solid #64748B;">
+            <span class="card-badge">Identify Problem</span>
+            <h3 class="card-title">1. Manual ERP Friction</h3>
+            <p style="font-size: 12px; color: var(--text-muted);">Slow invoice data entry, high human error, and delayed inventory updates.</p>
+          </div>
+          <div class="card" style="border-left: 4px solid var(--primary);">
+            <span class="card-badge">Proposed Solution</span>
+            <h3 class="card-title">2. Daynisc AI Engine</h3>
+            <p style="font-size: 12px; color: var(--text-muted);">Gemini Vision AI, FastAPI microservices, and human review fallback queue.</p>
+          </div>
+          <div class="card" style="border-left: 4px solid var(--accent);">
+            <span class="card-badge">Expected Benefit</span>
+            <h3 class="card-title">3. 85%+ Speedup & Zero Error</h3>
+            <p style="font-size: 12px; color: var(--text-muted);">Automated voucher creation, real-time Tally XML sync, and GST compliance.</p>
+          </div>
+        </div>
+
+        <div class="card" style="height: 55%;">
+          <span class="card-badge">Key System Modules</span>
+          <h3 class="card-title">Core Functional Components Overview</h3>
+          <ul class="card-list" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <li><strong>AI Vision Processing:</strong> Multimodal Gemini 1.5 extracts JSON (invoice #, GSTIN, line items).</li>
+            <li><strong>Inventory & BOM Engine:</strong> Real-time stock valuation, Bill of Materials, and production orders.</li>
+            <li><strong>Accounting & Tally Sync:</strong> Auto-generates Tally XML vouchers with retry queue handling.</li>
+            <li><strong>GST & e-Way Bill Module:</strong> GSTR data export, IRN generation, and automated e-Way bill triggers.</li>
+            <li><strong>Omnichannel Access:</strong> React web dashboard + Flutter mobile iOS/Android camera scanner app.</li>
+            <li><strong>WhatsApp Automation:</strong> Invoice forwarding webhook, payment receipt OCR, and reminder cron.</li>
+          </ul>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Problem → Proposed Solution → Expected Benefit</span>
+        <span>Slide 3 of 10</span>
+      </div>
+    </div>
+
+    <!-- SLIDE 4: System Workflow -->
+    <div class="slide" id="slide-4">
+      <div class="slide-header">
+        <div>
+          <div class="slide-category">PIPELINE DESIGN</div>
+          <h2 class="slide-title">Slide 4 — System Processing Workflow Diagram</h2>
+        </div>
+        <span class="slide-number-tag">04 / 10</span>
+      </div>
+      <div class="slide-body">
+        <div class="grid-6">
+          <div class="flow-step">
+            <div class="flow-step-num">1</div>
+            <strong style="font-size: 13px; margin-top: 4px;">User Input</strong>
+            <span style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Mobile scan, PDF upload, or WhatsApp</span>
+          </div>
+          <div class="flow-step">
+            <div class="flow-step-num">2</div>
+            <strong style="font-size: 13px; margin-top: 4px;">Storage</strong>
+            <span style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">AWS S3 raw storage & Postgres metadata</span>
+          </div>
+          <div class="flow-step">
+            <div class="flow-step-num">3</div>
+            <strong style="font-size: 13px; margin-top: 4px;">Preprocess</strong>
+            <span style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Denoise, auto-rotate & resolution check</span>
+          </div>
+          <div class="flow-step" style="border: 2px solid var(--accent);">
+            <div class="flow-step-num" style="background: var(--accent);">4</div>
+            <strong style="font-size: 13px; margin-top: 4px;">Gemini Vision</strong>
+            <span style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Structured JSON entity extraction</span>
+          </div>
+          <div class="flow-step">
+            <div class="flow-step-num">5</div>
+            <strong style="font-size: 13px; margin-top: 4px;">Decision</strong>
+            <span style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Score &ge; 0.85 ? Approve else Queue</span>
+          </div>
+          <div class="flow-step">
+            <div class="flow-step-num">6</div>
+            <strong style="font-size: 13px; margin-top: 4px;">Tally Sync</strong>
+            <span style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Push XML voucher & update inventory</span>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top: 10px;">
+          <span class="card-badge">Workflow Explanation</span>
+          <p style="font-size: 12.5px; color: var(--text-main); line-height: 1.5;">
+            The document workflow guarantees high throughput and accuracy. Documents ingested from multiple channels undergo immediate image enhancement before passing to Gemini 1.5 Vision. Extracted entity confidence is scored: high-confidence extractions automatically post to the ledger and sync with TallyPrime via HTTP XML, while lower-confidence items are queued in the Web Dashboard for 1-click human verification.
+          </p>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Input → Storage → Preprocess → AI Model → Decision Queue → Tally Output</span>
+        <span>Slide 4 of 10</span>
+      </div>
+    </div>
+
+    <!-- SLIDE 5: Technologies / Tools Planned -->
+    <div class="slide" id="slide-5">
+      <div class="slide-header">
+        <div>
+          <div class="slide-category">TECHNOLOGY STACK</div>
+          <h2 class="slide-title">Slide 5 — Planned Technologies & Development Tools</h2>
+        </div>
+        <span class="slide-number-tag">05 / 10</span>
+      </div>
+      <div class="slide-body">
+        <div class="grid-3" style="height: 48%;">
+          <div class="card">
+            <span class="card-badge">Frontend UI</span>
+            <h3 class="card-title">Web & Mobile Clients</h3>
+            <ul class="card-list">
+              <li>React 18 & TypeScript (Web Dashboard)</li>
+              <li>Vite, Zustand & TanStack Query</li>
+              <li>Flutter 3.x (iOS & Android Apps)</li>
+              <li>Recharts Data Visualization</li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="card-badge">Backend & Microservices</span>
+            <h3 class="card-title">Server Logic & Queue</h3>
+            <ul class="card-list">
+              <li>Python 3.11 & FastAPI Microservices</li>
+              <li>Celery Async Background Queue</li>
+              <li>SQLAlchemy Async ORM</li>
+              <li>Nginx API Gateway & Reverse Proxy</li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="card-badge">Database & Storage</span>
+            <h3 class="card-title">Persistence Layer</h3>
+            <ul class="card-list">
+              <li>PostgreSQL (Multi-tenant schema)</li>
+              <li>Redis (Cache & Task Message Broker)</li>
+              <li>AWS S3 (Encrypted Storage)</li>
+              <li>Alembic Database Migrations</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="grid-2" style="height: 48%; margin-top: 10px;">
+          <div class="card">
+            <span class="card-badge">AI / ML & Vision</span>
+            <h3 class="card-title">Intelligent Extraction Engine</h3>
+            <ul class="card-list">
+              <li>Google Gemini 1.5 Pro / Flash Vision API</li>
+              <li>Multimodal Text & Table Entity Extraction</li>
+              <li>Rule-Based Validation Engine & Confidence Scoring</li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="card-badge">Services & Deployment</span>
+            <h3 class="card-title">Integrations & DevOps</h3>
+            <ul class="card-list">
+              <li>TallyPrime HTTP XML Server Interface</li>
+              <li>WhatsApp Business Cloud API Webhooks</li>
+              <li>Docker, Docker-Compose & Kubernetes (EKS)</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Full-Stack Architecture Stack</span>
+        <span>Slide 5 of 10</span>
+      </div>
+    </div>
+
+    <!-- SLIDE 6: Proposed Algorithm / Pseudocode -->
+    <div class="slide" id="slide-6">
+      <div class="slide-header">
+        <div>
+          <div class="slide-category">ALGORITHM DESIGN</div>
+          <h2 class="slide-title">Slide 6 — Proposed Ingestion & Verification Pseudocode</h2>
+        </div>
+        <span class="slide-number-tag">06 / 10</span>
+      </div>
+      <div class="slide-body">
+        <div class="code-container">
+<span class="code-comment">// ALGORITHM: Daynisc_AI_Document_Ingestion_And_Tally_Sync</span>
+<span class="code-keyword">INPUT</span> : input_file (Image / PDF), tenant_id, channel_type
+<span class="code-keyword">OUTPUT</span>: Verified_Voucher_Entry, Stock_Ledger_Update, Tally_Sync_Status
+
+<span class="code-keyword">START</span>
+1.  <span class="code-fn">RECEIVE</span> input_file via (Web Dashboard / Mobile App / WhatsApp Webhook)
+2.  <span class="code-fn">UPLOAD</span> raw input_file to AWS S3 bucket and get <span class="code-string">s3_file_uri</span>
+3.  <span class="code-fn">ENQUEUE</span> async processing task to Celery worker queue with <span class="code-string">s3_file_uri</span>
+4.  <span class="code-fn">CALL</span> Gemini_Vision_API(s3_file_uri, Prompt_Schema_JSON)
+5.  <span class="code-fn">PARSE</span> AI JSON response: { invoice_num, vendor_gstin, date, line_items, total_tax, grand_total }
+6.  <span class="code-fn">COMPUTE</span> confidence_score <span class="code-keyword">C</span> = CalculateTokenConfidence(AI_response)
+
+7.  <span class="code-keyword">IF</span> <span class="code-keyword">C</span> &ge; 0.85 <span class="code-keyword">AND</span> ValidateMathRule(line_items, total_tax, grand_total) == TRUE <span class="code-keyword">THEN</span>
+        a. <span class="code-fn">INSERT</span> Voucher record into PostgreSQL with status = <span class="code-string">'APPROVED'</span>
+        b. <span class="code-fn">GENERATE</span> TallyPrime XML payload and <span class="code-fn">POST</span> to local Tally HTTP port
+        c. <span class="code-fn">UPDATE</span> stock movement inventory ledgers automatically
+    <span class="code-keyword">ELSE</span>
+        a. <span class="code-fn">INSERT</span> Voucher record into PostgreSQL with status = <span class="code-string">'NEEDS_REVIEW'</span>
+        b. <span class="code-fn">PUSH</span> alert to Web Dashboard Verification Queue for 1-click human review
+
+8.  <span class="code-fn">LOG</span> audit trail event with user_id, timestamp, and confidence_score
+<span class="code-keyword">END</span>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Deterministic Confidence-Based Flowchart & Pseudocode</span>
+        <span>Slide 6 of 10</span>
+      </div>
+    </div>
+
+    <!-- SLIDE 7: System Architecture / Module Overview -->
+    <div class="slide" id="slide-7">
+      <div class="slide-header">
+        <div>
+          <div class="slide-category">SYSTEM ARCHITECTURE</div>
+          <h2 class="slide-title">Slide 7 — High-Level Module Architecture</h2>
+        </div>
+        <span class="slide-number-tag">07 / 10</span>
+      </div>
+      <div class="slide-body">
+        <div class="grid-3">
+          <div class="card" style="border-top: 4px solid var(--primary);">
+            <span class="card-badge">Layer 1: Client Interfaces</span>
+            <h3 class="card-title">User Interaction Layer</h3>
+            <ul class="card-list">
+              <li><strong>Web Dashboard:</strong> React 18 SPA for verification & accounting.</li>
+              <li><strong>Mobile Client:</strong> Flutter app for camera OCR & stock scanning.</li>
+              <li><strong>WhatsApp Channel:</strong> Webhooks for direct document ingestion.</li>
+              <li><strong>Security:</strong> MSG91 OTP auth & JWT token refresh.</li>
+            </ul>
+          </div>
+          <div class="card" style="border-top: 4px solid var(--accent);">
+            <span class="card-badge">Layer 2: Core Microservices</span>
+            <h3 class="card-title">Business & AI Engine Layer</h3>
+            <ul class="card-list">
+              <li><strong>FastAPI Gateways:</strong> RESTful microservice API endpoints.</li>
+              <li><strong>Celery Async Queue:</strong> Background task processing.</li>
+              <li><strong>Gemini Vision Service:</strong> Multimodal document entity extraction.</li>
+              <li><strong>Validation Rules:</strong> Mathematical & GST rule verification.</li>
+            </ul>
+          </div>
+          <div class="card" style="border-top: 4px solid #10B981;">
+            <span class="card-badge">Layer 3: Data & ERP Connectors</span>
+            <h3 class="card-title">Persistence & External Sync</h3>
+            <ul class="card-list">
+              <li><strong>PostgreSQL DB:</strong> Schema-per-company tenant isolation.</li>
+              <li><strong>AWS S3:</strong> Encrypted document store.</li>
+              <li><strong>Tally Connector:</strong> Pushes XML vouchers to Tally HTTP server.</li>
+              <li><strong>GST Portal Sync:</strong> e-Invoice IRN & e-Way bill triggers.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>User Interface → FastAPI Microservices → Gemini Vision AI → PostgreSQL & Tally</span>
+        <span>Slide 7 of 10</span>
+      </div>
+    </div>
+
+    <!-- SLIDE 8: Assumptions -->
+    <div class="slide" id="slide-8">
+      <div class="slide-header">
+        <div>
+          <div class="slide-category">PROJECT FEASIBILITY</div>
+          <h2 class="slide-title">Slide 8 — Reasonable Project Assumptions</h2>
+        </div>
+        <span class="slide-number-tag">08 / 10</span>
+      </div>
+      <div class="slide-body" style="display: flex; flex-direction: column; gap: 10px;">
+        <div class="card" style="padding: 12px 18px;">
+          <span class="card-badge">Assumption 01 • Data Quality</span>
+          <h3 class="card-title" style="font-size: 14px;">Input Document Readability</h3>
+          <p style="font-size: 12px; color: var(--text-main);">Users will provide reasonably legible invoice scans or digital PDFs (minimum 300 DPI equivalent) with readable text for AI Vision processing.</p>
+        </div>
+        <div class="card" style="padding: 12px 18px;">
+          <span class="card-badge">Assumption 02 • Network</span>
+          <h3 class="card-title" style="font-size: 14px;">Internet Connectivity</h3>
+          <p style="font-size: 12px; color: var(--text-main);">Factory premises and client web/mobile devices maintain active internet connectivity for communicating with FastAPI and Gemini Cloud APIs.</p>
+        </div>
+        <div class="card" style="padding: 12px 18px;">
+          <span class="card-badge">Assumption 03 • API Services</span>
+          <h3 class="card-title" style="font-size: 14px;">Third-Party API Availability</h3>
+          <p style="font-size: 12px; color: var(--text-main);">Google Gemini API, WhatsApp Business Cloud API, and MSG91 SMS gateway remain accessible with valid quotas during execution.</p>
+        </div>
+        <div class="card" style="padding: 12px 18px;">
+          <span class="card-badge">Assumption 04 • ERP Setup</span>
+          <h3 class="card-title" style="font-size: 14px;">Tally Server Configuration</h3>
+          <p style="font-size: 12px; color: var(--text-main);">Target client instances running TallyPrime have the native HTTP XML server interface enabled on a reachable network port (port 9000).</p>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Baseline Conditions for Project Implementation</span>
+        <span>Slide 8 of 10</span>
+      </div>
+    </div>
+
+    <!-- SLIDE 9: Challenges / Risks / Queries -->
+    <div class="slide" id="slide-9">
+      <div class="slide-header">
+        <div>
+          <div class="slide-category">RISK & CHALLENGE ANALYSIS</div>
+          <h2 class="slide-title">Slide 9 — Technical Challenges & Open Queries</h2>
+        </div>
+        <span class="slide-number-tag">09 / 10</span>
+      </div>
+      <div class="slide-body">
+        <div class="grid-2">
+          <div class="card">
+            <span class="card-badge">Development Challenges</span>
+            <h3 class="card-title">Realistic Technical Risks</h3>
+            <ul class="card-list">
+              <li><strong>Image Quality & Handwriting:</strong> Damaged/handwritten bills drop OCR accuracy. <em>Mitigation: Human review queue fallback.</em></li>
+              <li><strong>AI API Response Latency:</strong> Gemini Vision API calls take 2-4 seconds. <em>Mitigation: Non-blocking Celery background workers.</em></li>
+              <li><strong>Tally Offline Connectivity:</strong> Local Tally may go offline in remote factories. <em>Mitigation: Retry queue in Redis.</em></li>
+              <li><strong>Tenant Security:</strong> SME financial data isolation. <em>Mitigation: PostgreSQL schema-per-company separation.</em></li>
+            </ul>
+          </div>
+          <div class="card">
+            <span class="card-badge">Open Questions</span>
+            <h3 class="card-title">Implementation Queries to Resolve</h3>
+            <ul class="card-list">
+              <li><strong>Regional Languages:</strong> Tuning prompts for Indian regional language invoices (Hindi, Gujarati).</li>
+              <li><strong>Confidence Threshold:</strong> Calibrating optimal cutoff (0.80 vs 0.85) to balance speed vs review load.</li>
+              <li><strong>Template Variance:</strong> Generalizing extraction rules across hundreds of unique vendor bill layouts.</li>
+              <li><strong>Mobile Caching:</strong> Strategy for offline document capture in low-connectivity factory floors.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Distinguishing Planned Mitigation vs Solved Baseline</span>
+        <span>Slide 9 of 10</span>
+      </div>
+    </div>
+
+    <!-- SLIDE 10: Conclusion / Expected Impact -->
+    <div class="slide" id="slide-10">
+      <div class="slide-header">
+        <div>
+          <div class="slide-category">SUMMARY & IMPACT</div>
+          <h2 class="slide-title">Slide 10 — Conclusion & Future Scope</h2>
+        </div>
+        <span class="slide-number-tag">10 / 10</span>
+      </div>
+      <div class="slide-body">
+        <div class="grid-2" style="height: 70%;">
+          <div class="card">
+            <span class="card-badge">Summary of Project</span>
+            <h3 class="card-title">Problem & Proposed Solution</h3>
+            <p style="font-size: 12.5px; color: var(--text-main); line-height: 1.5;">
+              Daynisc solves manual document entry bottlenecks for Indian SMEs by uniting Gemini 1.5 Vision OCR, FastAPI microservices, React web dashboard, Flutter mobile client, and automated TallyPrime HTTP XML synchronization into a single cloud ecosystem.
+            </p>
+          </div>
+          <div class="card">
+            <span class="card-badge">Expected Impact</span>
+            <h3 class="card-title">Business & Operational Value</h3>
+            <ul class="card-list">
+              <li><strong>85%+ Time Saved:</strong> Cuts invoice voucher creation from 5 minutes to seconds.</li>
+              <li><strong>Near-Zero Errors:</strong> Automated validation + human verification queue.</li>
+              <li><strong>Live Visibility:</strong> Immediate stock ledger updates & GST readiness.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="card" style="text-align: center; justify-content: center; background: var(--primary); color: white; margin-top: 10px;">
+          <h3 style="font-size: 20px; font-weight: 800;">Thank You!</h3>
+          <p style="font-size: 13px; opacity: 0.9;">Open for Questions, Feedback, and Technical Discussion</p>
+        </div>
+      </div>
+      <div class="slide-footer">
+        <span>Academic Project Proposal Final Slide</span>
+        <span>Slide 10 of 10</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- SPEAKER NOTES DRAWER -->
+  <div class="speaker-notes-drawer" id="speakerNotes">
+    <div class="notes-title">Speaker Notes / Viva Script</div>
+    <div id="notesText">Slide 1: Present your project title, team members, and guide name clearly. State that this project focuses on automating ERP entry using AI for Indian manufacturing SMEs.</div>
+  </div>
+
+  <!-- BOTTOM CONTROL BAR -->
+  <div class="bottom-controls">
+    <div class="btn-group">
+      <button class="btn" onclick="prevSlide()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg> Previous</button>
+      <button class="btn" onclick="nextSlide()">Next <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></button>
+    </div>
+
+    <div class="progress-bar-container">
+      <div class="progress-bar-fill" id="progressBar"></div>
+    </div>
+
+    <div class="btn-group">
+      <span id="slideCounter" style="font-size: 13px; font-weight: 600;">Slide 1 / 10</span>
+      <select class="slide-selector" id="slideSelect" onchange="goToSlide(parseInt(this.value))">
+        <option value="1">1. Title Slide</option>
+        <option value="2">2. Problem Statement</option>
+        <option value="3">3. Proposed Solution</option>
+        <option value="4">4. System Workflow</option>
+        <option value="5">5. Technologies Planned</option>
+        <option value="6">6. Proposed Algorithm</option>
+        <option value="7">7. System Architecture</option>
+        <option value="8">8. Project Assumptions</option>
+        <option value="9">9. Challenges & Risks</option>
+        <option value="10">10. Conclusion & Impact</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- GRID OVERVIEW MODAL -->
+  <div class="modal-overlay" id="overviewModal">
+    <div class="modal-content">
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h2>Slide Overview Grid</h2>
+        <button class="btn" onclick="toggleOverview()">Close (Esc)</button>
+      </div>
+      <div class="grid-overview">
+        <div class="overview-card" onclick="goToSlide(1); toggleOverview();"><strong>Slide 1</strong><br><small>Title Slide</small></div>
+        <div class="overview-card" onclick="goToSlide(2); toggleOverview();"><strong>Slide 2</strong><br><small>Problem Statement</small></div>
+        <div class="overview-card" onclick="goToSlide(3); toggleOverview();"><strong>Slide 3</strong><br><small>Proposed Solution</small></div>
+        <div class="overview-card" onclick="goToSlide(4); toggleOverview();"><strong>Slide 4</strong><br><small>System Workflow</small></div>
+        <div class="overview-card" onclick="goToSlide(5); toggleOverview();"><strong>Slide 5</strong><br><small>Technologies Stack</small></div>
+        <div class="overview-card" onclick="goToSlide(6); toggleOverview();"><strong>Slide 6</strong><br><small>Proposed Pseudocode</small></div>
+        <div class="overview-card" onclick="goToSlide(7); toggleOverview();"><strong>Slide 7</strong><br><small>System Architecture</small></div>
+        <div class="overview-card" onclick="goToSlide(8); toggleOverview();"><strong>Slide 8</strong><br><small>Assumptions</small></div>
+        <div class="overview-card" onclick="goToSlide(9); toggleOverview();"><strong>Slide 9</strong><br><small>Challenges & Risks</small></div>
+        <div class="overview-card" onclick="goToSlide(10); toggleOverview();"><strong>Slide 10</strong><br><small>Conclusion & Impact</small></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentSlide = 1;
+    const totalSlides = 10;
+
+    const speakerNotesScript = {
+      1: "Slide 1: Present your project title, team members, and guide name clearly. State that this project focuses on automating ERP entry using AI for Indian manufacturing SMEs.",
+      2: "Slide 2: Emphasize the core friction: manual data entry in SMEs leads to delays, typos, and inventory backlog. Highlight why existing legacy ERPs fail to address this.",
+      3: "Slide 3: Explain the 3-step value chain: Problem -> Daynisc AI Engine -> 85%+ Speedup. Briefly mention the core modules like Inventory, TallySync, GST, and WhatsApp automation.",
+      4: "Slide 4: Walk through the 6-phase pipeline step by step: Input capture, S3 upload, preprocessing, Gemini Vision extraction, confidence check, and automatic Tally XML sync.",
+      5: "Slide 5: Detail the planned technology stack: React & Flutter for clients, FastAPI & Celery for backend, Gemini 1.5 for AI, PostgreSQL & Redis for data, Docker & EKS for deployment.",
+      6: "Slide 6: Explain the ingestion algorithm logic: Show how high confidence (≥ 0.85) auto-approves vouchers while lower confidence routes to human verification queue.",
+      7: "Slide 7: Describe the 3-layer architecture: Client Interfaces -> Core Microservices -> Storage & External Sync. Emphasize multi-tenant database security.",
+      8: "Slide 8: State realistic baseline project assumptions: Document readability, reliable internet connectivity, valid API quotas, and accessible Tally XML port.",
+      9: "Slide 9: Be candid about technical risks (handwriting quality, API latency, Tally offline state) and present concrete mitigations. List open research questions.",
+      10: "Slide 10: Conclude with key takeaways: 85%+ time savings, complete auditability, and immediate stock ledger visibility. Open the floor for evaluator Q&A."
+    };
+
+    function updateSlide() {
+      document.querySelectorAll('.slide').forEach((slide, idx) => {
+        slide.classList.toggle('active', idx + 1 === currentSlide);
+      });
+      document.getElementById('slideSelect').value = currentSlide;
+      document.getElementById('slideCounter').textContent = `Slide ${currentSlide} / ${totalSlides}`;
+      document.getElementById('progressBar').style.width = `${(currentSlide / totalSlides) * 100}%`;
+      document.getElementById('notesText').textContent = speakerNotesScript[currentSlide] || "";
+    }
+
+    function nextSlide() {
+      if (currentSlide < totalSlides) {
+        currentSlide++;
+        updateSlide();
+      }
+    }
+
+    function prevSlide() {
+      if (currentSlide > 1) {
+        currentSlide--;
+        updateSlide();
+      }
+    }
+
+    function goToSlide(n) {
+      if (n >= 1 && n <= totalSlides) {
+        currentSlide = n;
+        updateSlide();
+      }
+    }
+
+    function changeTheme(theme) {
+      document.body.setAttribute('data-theme', theme);
+    }
+
+    function toggleSpeakerNotes() {
+      document.getElementById('speakerNotes').classList.toggle('open');
+    }
+
+    function toggleOverview() {
+      document.getElementById('overviewModal').classList.toggle('active');
+    }
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        }
+      }
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+        nextSlide();
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        prevSlide();
+      } else if (e.key === 'f' || e.key === 'F') {
+        toggleFullscreen();
+      } else if (e.key === 'n' || e.key === 'N') {
+        toggleSpeakerNotes();
+      } else if (e.key === 'g' || e.key === 'G' || e.key === 'Escape') {
+        if (e.key === 'Escape' && document.getElementById('overviewModal').classList.contains('active')) {
+          toggleOverview();
+        } else if (e.key !== 'Escape') {
+          toggleOverview();
+        }
+      }
+    });
+
+    updateSlide();
+  </script>
+</body>
+</html>

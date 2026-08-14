@@ -43,7 +43,7 @@ class DashboardData {
           .map((a) => PendingAction.fromJson(a as Map<String, dynamic>))
           .toList(),
       lowStockItems: ((json['low_stock'] as List?) ?? [])
-          .map((a) => LowStockItem.fromJson(a as Map<String, dynamic>))
+          .map((a) => a is LowStockItem ? a : LowStockItem.fromJson(a as Map<String, dynamic>))
           .toList(),
     );
   }

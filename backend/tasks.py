@@ -115,7 +115,7 @@ async def _process_document(
     extraction_id, s3_key, mime_type,
     document_type, language, company_id, schema
 ):
-    from services.document_service.ai_extractor import ai_extractor
+    from ai_extractor import ai_extractor
     from shared.storage import download_from_s3
     from shared.database import AsyncSessionFactory
     from sqlalchemy import text
@@ -124,12 +124,38 @@ async def _process_document(
     # 1. Download from S3
     file_bytes = await download_from_s3(s3_key)
 
+    # 1.5 Fetch past verified document mappings for context (AI Learning)
+    history_context = ""
+    try:
+        async with AsyncSessionFactory() as session:
+            await session.execute(text(f"SET search_path TO {schema}, public"))
+            hist_res = await session.execute(text("""
+                SELECT filename, document_type::text, extracted_data
+                FROM document_extractions
+                WHERE status = 'pushed'
+                  AND extracted_data IS NOT NULL
+                ORDER BY updated_at DESC
+                LIMIT 5
+            """))
+            rows = hist_res.fetchall()
+            if rows:
+                hist_items = []
+                for r in rows:
+                    data_dict = r.extracted_data or {}
+                    party = data_dict.get("party_name") or "Unknown"
+                    items = [it.get("item_name") for it in data_dict.get("line_items", []) if it.get("item_name")]
+                    hist_items.append(f"- Doc: {r.filename}, Type: {r[1]}, Party: {party}, Mapped Items: {', '.join(items[:3])}")
+                history_context = "\n".join(hist_items)
+    except Exception as e:
+        logger.warning(f"Failed to fetch history context: {e}")
+
     # 2. Run AI extraction
     extracted = await ai_extractor.extract(
         image_bytes=file_bytes,
         mime_type=mime_type,
         language_hint=language,
         document_type_hint=document_type,
+        history_context=history_context
     )
 
     confidence = extracted.get("confidence", {}).get("overall", 0)
