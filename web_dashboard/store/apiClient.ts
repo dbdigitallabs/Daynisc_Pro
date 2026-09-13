@@ -41,7 +41,11 @@ api.interceptors.response.use(
   (res) => res,
   async (error) => {
     if (error.response?.status === 401) {
-      const refresh = useAuthStore.getState().refreshToken;
+      const state = useAuthStore.getState();
+      if (state.token?.startsWith("demo-token")) {
+        return Promise.resolve({ data: {} });
+      }
+      const refresh = state.refreshToken;
       if (refresh) {
         try {
           const res = await axios.post(`${BASE_URL}/auth/refresh`, {

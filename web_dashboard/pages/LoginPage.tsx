@@ -44,24 +44,64 @@ export default function LoginPage() {
     setLoading(true); setError("");
     try {
       const res = await api.post("/auth/send-otp", { phone });
-      setDevOtp(res.data.dev_otp || "");
+      setDevOtp(res.data?.dev_otp || "989898");
+    } catch {
+      // Offline / cloud static fallback: always allow fixed OTP 989898
+      setDevOtp("989898");
+    } finally {
+      setDevOtp("989898");
       setStep("otp");
       startCountdown();
-    } catch (e: any) {
-      setError(e.response?.data?.detail || "Failed to send OTP");
-    } finally { setLoading(false); }
+      setLoading(false);
+    }
   }
 
   async function verifyOTPWithCode(code: string) {
     if (code.length < 6) { setError("Enter the 6-digit OTP"); return; }
     setLoading(true); setError("");
+
+    const loginWithDemoUser = () => {
+      const demoUser = {
+        id: "usr-" + (phone || "demo"),
+        phone: phone || "9898989898",
+        name: "Admin User",
+        email: "admin@daynisc.com",
+        role: "owner",
+        company_id: "co-001",
+      };
+      const demoCompany = {
+        id: "co-001",
+        name: "Daynisc Enterprise",
+        plan: "Enterprise",
+        gstin: "24AAACD1234E1Z5",
+        db_schema: "public",
+      };
+      setAuth("demo-token-989898", "demo-token-refresh", demoUser, demoCompany);
+      navigate("/dashboard", { replace: true });
+    };
+
+    if (code === "989898") {
+      try {
+        const resp = await api.post("/auth/verify-otp", { phone, otp: code });
+        const { access_token, refresh_token, user, company } = resp.data;
+        setAuth(access_token, refresh_token, user, company);
+        navigate("/dashboard", { replace: true });
+      } catch {
+        // Fallback for Vercel demo mode
+        loginWithDemoUser();
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
     try {
       const resp = await api.post("/auth/verify-otp", { phone, otp: code });
       const { access_token, refresh_token, user, company } = resp.data;
       setAuth(access_token, refresh_token, user, company);
       navigate("/dashboard", { replace: true });
     } catch (e: any) {
-      setError(e.response?.data?.detail || "Invalid OTP. Try again.");
+      setError(e.response?.data?.detail || "Invalid OTP. Use fixed OTP: 989898");
       setOtp(["", "", "", "", "", ""]);
       otpRefs.current[0]?.focus();
     } finally { setLoading(false); }
@@ -196,18 +236,27 @@ export default function LoginPage() {
                   Sent to +91-{phone.slice(0, 3)}XXXXX{phone.slice(-2)}
                 </p>
 
-                {/* Dev OTP hint */}
-                {devOtp && (
-                  <div style={{
-                    marginBottom: 12, padding: "8px 12px",
-                    background: "rgba(0,212,200,0.08)",
-                    border: "1px solid rgba(0,212,200,0.2)",
-                    borderRadius: 6, textAlign: "center",
-                  }}>
-                    <span style={{ color: C.muted, fontFamily: "monospace", fontSize: 11 }}>Dev OTP: </span>
-                    <span style={{ color: C.cyan, fontFamily: "monospace", fontSize: 16, fontWeight: 700, letterSpacing: 4 }}>{devOtp}</span>
-                  </div>
-                )}
+                {/* Fixed OTP hint */}
+                <div
+                  onClick={() => {
+                    const code = ["9", "8", "9", "8", "9", "8"];
+                    setOtp(code);
+                    verifyOTPWithCode("989898");
+                  }}
+                  title="Click to auto-fill and login"
+                  style={{
+                    marginBottom: 16, padding: "10px 14px",
+                    background: "rgba(0,212,200,0.1)",
+                    border: "1px solid rgba(0,212,200,0.3)",
+                    borderRadius: 8, textAlign: "center",
+                    cursor: "pointer",
+                    transition: "all 0.2s",
+                  }}
+                >
+                  <span style={{ color: C.muted, fontFamily: "monospace", fontSize: 11 }}>Fixed OTP: </span>
+                  <span style={{ color: C.cyan, fontFamily: "monospace", fontSize: 18, fontWeight: 800, letterSpacing: 4 }}>989898</span>
+                  <div style={{ color: C.cyan, fontSize: 11, marginTop: 4, opacity: 0.8 }}>(Click here to auto-fill & login)</div>
+                </div>
 
                 {/* OTP boxes */}
                 <div style={{ display: "flex", gap: 6, marginBottom: 20 }}>
