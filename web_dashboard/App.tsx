@@ -8,11 +8,13 @@ import AIVerificationPage from "./pages/AIVerificationPage";
 import ERPSyncPage from "./pages/ERPSyncPage";
 import BankReconciliationPage from "./pages/BankReconciliationPage";
 
+import ErrorBoundary from "./components/ErrorBoundary";
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 30_000,
-      retry: 2,
+      retry: 1,
       refetchOnWindowFocus: false,
     },
   },
@@ -25,8 +27,9 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <HashRouter>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <HashRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route
@@ -47,7 +50,8 @@ export default function App() {
           </Route>
           <Route path="*" element={<Navigate to="/ai-verification" replace />} />
         </Routes>
-      </HashRouter>
-    </QueryClientProvider>
+        </HashRouter>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }

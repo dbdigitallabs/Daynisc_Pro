@@ -36,14 +36,26 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Handle 401 — attempt token refresh then logout
+import { getMockDataForUrl } from "./mockData";
+
+// Handle responses & error fallbacks
 api.interceptors.response.use(
-  (res) => res,
+  (res) => {
+    // If Vercel SPA rewrite returned index.html for an API route:
+    if (typeof res.data === "string" && (res.data.includes("<!doctype html>") || res.data.includes("<html"))) {
+      const url = res.config.url || "";
+      return { ...res, data: getMockDataForUrl(url, res.config.params) };
+    }
+    return res;
+  },
   async (error) => {
+    const state = useAuthStore.getState();
+    const isDemo = state.token?.startsWith("demo-token") || !import.meta.env.VITE_API_URL;
+    const url = error.config?.url || "";
+
     if (error.response?.status === 401) {
-      const state = useAuthStore.getState();
-      if (state.token?.startsWith("demo-token")) {
-        return Promise.resolve({ data: {} });
+      if (isDemo) {
+        return Promise.resolve({ data: getMockDataForUrl(url, error.config?.params) });
       }
       const refresh = state.refreshToken;
       if (refresh) {
@@ -52,7 +64,6 @@ api.interceptors.response.use(
             refresh_token: refresh,
           });
           const { access_token } = res.data;
-          const state = useAuthStore.getState();
           if (state.user && state.company) {
             state.setAuth(access_token, refresh, state.user, state.company);
           }
@@ -60,7 +71,6 @@ api.interceptors.response.use(
           return api(error.config);
         } catch {
           useAuthStore.getState().logout();
-          // Use hash navigation — works in both browser and Electron (HashRouter)
           window.location.hash = "#/login";
         }
       } else {
@@ -68,6 +78,12 @@ api.interceptors.response.use(
         window.location.hash = "#/login";
       }
     }
+
+    // In demo / preview mode, if any API fails (e.g. 404 on Vercel), return mock fallback gracefully
+    if (isDemo && (error.code === "ERR_NETWORK" || error.response?.status === 404 || !error.response)) {
+      return Promise.resolve({ data: getMockDataForUrl(url, error.config?.params) });
+    }
+
     return Promise.reject(error);
   }
 );

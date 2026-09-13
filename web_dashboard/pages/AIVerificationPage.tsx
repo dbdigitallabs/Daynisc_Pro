@@ -771,13 +771,19 @@ export default function AIVerificationPage() {
   const [uploadDocType, setUploadDocType] = useState("purchase");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { data: extractions = [], isLoading } = useQuery<Extraction[]>({
+  const { data: extractionsRaw, isLoading } = useQuery<any>({
     queryKey: ["extractions", filterStatus],
-    queryFn: () => api.get("/documents", { params: { status: filterStatus, limit: 50 } }).then(r => r.data.items || r.data),
+    queryFn: () => api.get("/documents", { params: { status: filterStatus, limit: 50 } }).then(r => r.data?.items || r.data),
   });
 
+  const extractions: Extraction[] = Array.isArray(extractionsRaw)
+    ? extractionsRaw
+    : (extractionsRaw?.items && Array.isArray(extractionsRaw.items))
+    ? extractionsRaw.items
+    : [];
+
   const navigate = useNavigate();
-  const selectedExtraction = extractions.find(e => e.id === selected);
+  const selectedExtraction = Array.isArray(extractions) ? extractions.find(e => e.id === selected) : undefined;
 
   const approveMutation = useMutation({
     mutationFn: ({ id, corrections }: { id: string; corrections?: Record<string, unknown> }) =>
