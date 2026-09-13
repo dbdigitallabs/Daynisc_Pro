@@ -8,6 +8,8 @@
 *.pem
 *.key
 deployment/certs/
+.vercel
+web_dashboard/.vercel
 
 # ── Python ────────────────────────────────────────────────────────────────────
 __pycache__/
