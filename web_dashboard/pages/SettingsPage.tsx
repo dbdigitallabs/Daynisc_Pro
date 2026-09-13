@@ -5,9 +5,9 @@ import { useAuthStore } from "../store/authStore";
 import { T, cardStyle } from "../store/theme";
 import api from "../store/apiClient";
 import { toast } from "react-hot-toast";
-import { IconSettings, IconLink, IconUsers, IconHardDrive, IconUser, IconAI, IconRefresh } from "../components/Icons";
+import { IconSettings, IconLink } from "../components/Icons";
 
-type Tab = "general" | "tally" | "ai" | "users" | "backup" | "device";
+type Tab = "general" | "tally" | "device";
 
 export default function SettingsPage() {
   const qc = useQueryClient();
@@ -21,9 +21,6 @@ export default function SettingsPage() {
   const [odooUsername, setOdooUsername] = useState("");
   const [odooPassword, setOdooPassword] = useState("");
   const [testingOdoo, setTestingOdoo] = useState(false);
-  const [whatsappToken, setWhatsappToken] = useState("");
-  const [geminiKey, setGeminiKey] = useState("");
-  const [aiThreshold, setAiThreshold] = useState(0.85);
   const [testingTally, setTestingTally] = useState(false);
   const [lanUrl, setLanUrl] = useState("http://localhost:8000/api/v1");
 
@@ -55,9 +52,6 @@ export default function SettingsPage() {
     if (settings.odoo_db !== undefined) setOdooDb(settings.odoo_db || "");
     if (settings.odoo_username !== undefined) setOdooUsername(settings.odoo_username || "");
     if (settings.odoo_password !== undefined) setOdooPassword(settings.odoo_password || "");
-    if (settings.whatsapp_token !== undefined) setWhatsappToken(settings.whatsapp_token || "");
-    if (settings.gemini_key !== undefined) setGeminiKey(settings.gemini_key || "");
-    if (settings.ai_threshold !== undefined) setAiThreshold(settings.ai_threshold);
   }, [settings]);
 
   const saveMutation = useMutation({
@@ -128,9 +122,6 @@ export default function SettingsPage() {
       <div style={{ display: "flex", borderBottom: `1px solid ${T.border}`, marginBottom: 28 }}>
         {tabBtn("general", "General",     <IconSettings size={14} color={tab === "general" ? T.primary : T.text3} />)}
         {tabBtn("tally",   "ERP (Tally & Odoo)",  <IconLink size={14} color={tab === "tally" ? T.primary : T.text3} />)}
-        {tabBtn("ai",      "AI Settings",  <IconAI size={14} color={tab === "ai" ? T.primary : T.text3} />)}
-        {tabBtn("users",   "Users",        <IconUsers size={14} color={tab === "users" ? T.primary : T.text3} />)}
-        {tabBtn("backup",  "Backup",       <IconHardDrive size={14} color={tab === "backup" ? T.primary : T.text3} />)}
         {tabBtn("device",  "Device Sync",  <IconLink size={14} color={tab === "device" ? T.primary : T.text3} />)}
       </div>
 
@@ -426,85 +417,6 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {tab === "ai" && (
-        <div style={{ maxWidth: 560 }}>
-          <div style={cardStyle({ padding: 28 })}>
-            <h2 style={{ fontSize: 15, fontWeight: 700, color: T.text1, marginBottom: 6 }}>AI & OCR Settings</h2>
-            <p style={{ fontSize: 13, color: T.text3, marginBottom: 24 }}>Configure your Gemini API key and confidence threshold</p>
-            
-            <div style={{ marginBottom: 18 }}>
-              <label style={{ fontSize: 12, fontWeight: 600, color: T.text2, display: "block", marginBottom: 7 }}>Gemini API Key</label>
-              <input 
-                type="password"
-                value={geminiKey} 
-                onChange={e => setGeminiKey(e.target.value)}
-                placeholder="AIzaSy..." 
-                style={{
-                  width: "100%", padding: "10px 14px",
-                  border: `1px solid ${T.border}`, borderRadius: 8,
-                  fontSize: 13, color: T.text1, outline: "none",
-                  fontFamily: "'Inter',sans-serif",
-                }} 
-              />
-              <span style={{ fontSize: 11, color: T.text3, marginTop: 4, display: "block" }}>
-                Enter your Google AI Studio Gemini API Key.
-              </span>
-            </div>
-
-            <div style={{ marginBottom: 22 }}>
-              <label style={{ fontSize: 12, fontWeight: 600, color: T.text2, display: "block", marginBottom: 7 }}>
-                Auto-Approve Threshold: <span style={{ color: T.primary, fontWeight: 700 }}>{Math.round(aiThreshold * 100)}%</span>
-              </label>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <input 
-                  type="range" 
-                  min="0.5" 
-                  max="1.0" 
-                  step="0.05"
-                  value={aiThreshold} 
-                  onChange={e => setAiThreshold(parseFloat(e.target.value))}
-                  style={{ flex: 1, accentColor: T.primary }}
-                />
-                <span style={{ fontSize: 12, fontWeight: 600, color: T.text2, width: 36 }}>{aiThreshold.toFixed(2)}</span>
-              </div>
-              <span style={{ fontSize: 11, color: T.text3, marginTop: 4, display: "block" }}>
-                AI extractions with a confidence score above this threshold will automatically bypass human review.
-              </span>
-            </div>
-
-            <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
-              <button 
-                onClick={() => saveMutation.mutate({ gemini_key: geminiKey, ai_threshold: aiThreshold })}
-                disabled={saveMutation.isPending}
-                style={{
-                  padding: "10px 24px", background: T.primary,
-                  border: "none", borderRadius: 8,
-                  color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer",
-                  opacity: saveMutation.isPending ? 0.7 : 1
-                }}
-              >
-                {saveMutation.isPending ? "Saving..." : "Save AI Settings"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {tab === "users" && (
-        <div style={cardStyle({ padding: 40, textAlign: "center" })}>
-          <div style={{ marginBottom: 16, opacity: 0.3 }}><IconUsers size={40} color={T.text2} /></div>
-          <div style={{ fontSize: 15, fontWeight: 600, color: T.text1, marginBottom: 8 }}>User Management</div>
-          <div style={{ fontSize: 13, color: T.text3 }}>Manage team members and roles</div>
-        </div>
-      )}
-
-      {tab === "backup" && (
-        <div style={cardStyle({ padding: 40, textAlign: "center" })}>
-          <div style={{ marginBottom: 16, opacity: 0.3 }}><IconHardDrive size={40} color={T.text2} /></div>
-          <div style={{ fontSize: 15, fontWeight: 600, color: T.text1, marginBottom: 8 }}>Backup & Restore</div>
-          <div style={{ fontSize: 13, color: T.text3 }}>Manage your data backups</div>
-        </div>
-      )}
 
       {tab === "device" && (
         <div style={{ maxWidth: 640 }}>
