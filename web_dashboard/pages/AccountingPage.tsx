@@ -1201,10 +1201,10 @@ export default function AccountingPage() {
 
           {/* Export Report Actions Toolbar */}
           <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-            <button onClick={() => toast.success("Exported registry ledger to PDF")} style={{ padding: "4px 8px", background: "#fff", border: `1px solid ${T.border}`, borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer" }} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><IconFileText size={11} /> PDF</button>
-            <button onClick={() => toast.success("Exported registry data to Excel sheet")} style={{ padding: "4px 8px", background: "#fff", border: `1px solid ${T.border}`, borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer" }} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><IconBarChart size={11} /> Excel</button>
-            <button onClick={() => window.print()} style={{ padding: "4px 8px", background: "#fff", border: `1px solid ${T.border}`, borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer" }} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><IconPrinter size={11} /> Print</button>
-            <button onClick={() => toast.success("Audit statement dispatched to email.")} style={{ padding: "4px 8px", background: "#fff", border: `1px solid ${T.border}`, borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer" }} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><IconMail size={11} /> Email</button>
+            <button onClick={() => toast.success("Exported registry ledger to PDF")} style={{ padding: "4px 8px", background: "#fff", border: `1px solid ${T.border}`, borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4 }}><IconFileText size={11} /> PDF</button>
+            <button onClick={() => toast.success("Exported registry data to Excel sheet")} style={{ padding: "4px 8px", background: "#fff", border: `1px solid ${T.border}`, borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4 }}><IconBarChart size={11} /> Excel</button>
+            <button onClick={() => window.print()} style={{ padding: "4px 8px", background: "#fff", border: `1px solid ${T.border}`, borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4 }}><IconPrinter size={11} /> Print</button>
+            <button onClick={() => toast.success("Audit statement dispatched to email.")} style={{ padding: "4px 8px", background: "#fff", border: `1px solid ${T.border}`, borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4 }}><IconMail size={11} /> Email</button>
           </div>
 
           {/* Smart filters */}

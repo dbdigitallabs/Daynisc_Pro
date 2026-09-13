@@ -4,6 +4,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useAuthStore } from "./store/authStore";
 import DashboardLayout from "./components/layout/DashboardLayout";
 import LoginPage from "./pages/LoginPage";
+import DashboardPage from "./pages/DashboardPage";
+import AccountingPage from "./pages/AccountingPage";
+import InventoryPage from "./pages/InventoryPage";
 import AIVerificationPage from "./pages/AIVerificationPage";
 import ERPSyncPage from "./pages/ERPSyncPage";
 import BankReconciliationPage from "./pages/BankReconciliationPage";
@@ -40,15 +43,18 @@ export default function App() {
               </ProtectedRoute>
             }
           >
-            <Route index element={<Navigate to="/ai-verification" replace />} />
+            <Route index element={<Navigate to="/dashboard" replace />} />
+            <Route path="dashboard" element={<DashboardPage />} />
+            <Route path="bank" element={<BankReconciliationPage />} />
+            <Route path="accounting" element={<AccountingPage />} />
+            <Route path="inventory" element={<InventoryPage />} />
             <Route path="ai-verification" element={<AIVerificationPage />} />
             <Route path="tally-sync" element={<ERPSyncPage />} />
-            <Route path="bank-recon" element={<BankReconciliationPage />} />
-            <Route path="bank-reconciliation" element={<Navigate to="/bank-recon" replace />} />
+            <Route path="bank-recon" element={<Navigate to="/bank" replace />} />
+            <Route path="bank-reconciliation" element={<Navigate to="/bank" replace />} />
             <Route path="tally-integration" element={<Navigate to="/tally-sync" replace />} />
-            <Route path="dashboard" element={<Navigate to="/ai-verification" replace />} />
           </Route>
-          <Route path="*" element={<Navigate to="/ai-verification" replace />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
         </HashRouter>
       </QueryClientProvider>

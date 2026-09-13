@@ -17,6 +17,8 @@ class Routes {
   static const extractionReview = '/scan/review/:id';
   // Fallbacks / aliases pointing to scan or login
   static const dashboard = '/scan';
+  static const bank = '/scan';
+  static const accounting = '/scan';
   static const otp = '/login';
   static const stock = '/scan';
   static const stockMovement = '/scan';

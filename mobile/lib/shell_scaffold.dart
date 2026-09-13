@@ -10,12 +10,10 @@ class ShellScaffold extends ConsumerWidget {
   const ShellScaffold({super.key, required this.child});
 
   static const _tabs = [
-    (icon: Icons.dashboard_outlined,        label: 'Dashboard',  route: Routes.dashboard),
-    (icon: Icons.document_scanner_outlined, label: 'Scan',       route: Routes.scan),
-    (icon: Icons.inventory_2_outlined,      label: 'Inventory',  route: Routes.stock),
-    (icon: Icons.factory_outlined,          label: 'Production', route: Routes.production),
-    (icon: Icons.receipt_long_outlined,     label: 'Sales',      route: Routes.sales),
-    (icon: Icons.person_outline,            label: 'Profile',    route: Routes.profile),
+    (icon: Icons.home_outlined,            label: 'Home',        route: Routes.dashboard),
+    (icon: Icons.account_balance_outlined, label: 'Bank',        route: Routes.bank),
+    (icon: Icons.menu_book_outlined,       label: 'Accounting',  route: Routes.accounting),
+    (icon: Icons.inventory_2_outlined,     label: 'Inventory',   route: Routes.stock),
   ];
 
   @override
