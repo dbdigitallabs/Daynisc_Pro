@@ -9,6 +9,17 @@ import ERPSyncPage from "./pages/ERPSyncPage";
 import BankReconciliationPage from "./pages/BankReconciliationPage";
 
 import ErrorBoundary from "./components/ErrorBoundary";
+import DownloadLandingPage from "./pages/DownloadLandingPage";
+
+const isElectron = (): boolean => {
+  if (typeof window === "undefined") return false;
+  return (
+    window.location.protocol === "file:" ||
+    navigator.userAgent.toLowerCase().includes(" electron/") ||
+    Boolean((window as any).electron) ||
+    Boolean((window as any).process?.versions?.electron)
+  );
+};
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -30,26 +41,37 @@ export default function App() {
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <HashRouter>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <DashboardLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<Navigate to="/ai-verification" replace />} />
-            <Route path="ai-verification" element={<AIVerificationPage />} />
-            <Route path="tally-sync" element={<ERPSyncPage />} />
-            <Route path="bank-recon" element={<BankReconciliationPage />} />
-            <Route path="bank-reconciliation" element={<Navigate to="/bank-recon" replace />} />
-            <Route path="tally-integration" element={<Navigate to="/tally-sync" replace />} />
-            <Route path="dashboard" element={<Navigate to="/ai-verification" replace />} />
-          </Route>
-          <Route path="*" element={<Navigate to="/ai-verification" replace />} />
-        </Routes>
+          <Routes>
+            {/* Landing page for web visitors; Electron loads app directly */}
+            <Route
+              path="/"
+              element={
+                isElectron() ? <Navigate to="/dashboard" replace /> : <DownloadLandingPage />
+              }
+            />
+            <Route path="/download" element={<DownloadLandingPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route path="ai-verification" element={<AIVerificationPage />} />
+              <Route path="tally-sync" element={<ERPSyncPage />} />
+              <Route path="bank-recon" element={<BankReconciliationPage />} />
+              <Route path="bank-reconciliation" element={<Navigate to="/bank-recon" replace />} />
+              <Route path="tally-integration" element={<Navigate to="/tally-sync" replace />} />
+              <Route path="dashboard" element={<Navigate to="/ai-verification" replace />} />
+            </Route>
+            <Route
+              path="*"
+              element={
+                isElectron() ? <Navigate to="/ai-verification" replace /> : <Navigate to="/" replace />
+              }
+            />
+          </Routes>
         </HashRouter>
       </QueryClientProvider>
     </ErrorBoundary>
