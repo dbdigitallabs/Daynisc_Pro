@@ -54,6 +54,25 @@ export class ErrorBoundary extends Component<Props, State> {
             <p style={{ fontSize: 13, color: "#8892a4", lineHeight: 1.6, marginBottom: 20 }}>
               An unexpected render issue was safely intercepted.
             </p>
+            {this.state.error && (
+              <pre style={{
+                color: "#f87171",
+                background: "#0d1117",
+                border: "1px solid #30363d",
+                padding: 12,
+                borderRadius: 8,
+                fontSize: 11,
+                textAlign: "left",
+                overflowX: "auto",
+                maxHeight: 180,
+                marginBottom: 18,
+                whiteSpace: "pre-wrap",
+                fontFamily: "monospace",
+              }}>
+                {this.state.error.toString()}{"\n\n"}
+                {this.state.error.stack}
+              </pre>
+            )}
             <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
               <button
                 onClick={() => {

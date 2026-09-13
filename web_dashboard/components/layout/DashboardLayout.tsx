@@ -112,6 +112,7 @@ export default function DashboardLayout() {
       setOdooStatus({ connected: false, message: "Odoo offline" });
     }
   };
+  const checkTally = checkErpConnections;
 
   useEffect(() => {
     checkErpConnections();
