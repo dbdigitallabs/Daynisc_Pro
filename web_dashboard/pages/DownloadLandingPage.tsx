@@ -5,16 +5,16 @@ import { useNavigate } from "react-router-dom";
 export default function DownloadLandingPage() {
   const navigate = useNavigate();
   const [downloading, setDownloading] = useState(false);
-  const [downloadType, setDownloadType] = useState<"exe" | "zip">("exe");
+  const [downloadType, setDownloadType] = useState<"zip" | "exe">("zip");
   const [showDemoModal, setShowDemoModal] = useState(false);
   const [showDownloadModal, setShowDownloadModal] = useState(false);
   const [activePreviewTab, setActivePreviewTab] = useState<"ai" | "erp" | "recon">("ai");
   const exploreRef = useRef<HTMLDivElement>(null);
 
-  const handleDownload = (type: "exe" | "zip" = "exe") => {
+  const handleDownload = (type: "zip" | "exe" = "zip") => {
     setDownloading(true);
     setDownloadType(type);
-    const fileName = type === "exe" ? "Daynisc-Pro-Setup.exe" : "Daynisc-Pro-Windows.zip";
+    const fileName = type === "zip" ? "Daynisc-Pro-Windows.zip" : "Daynisc-Pro-Setup.exe";
     const downloadUrl = `/downloads/${fileName}`;
     const link = document.createElement("a");
     link.href = downloadUrl;
@@ -242,7 +242,7 @@ export default function DownloadLandingPage() {
           </button>
 
           <button
-            onClick={() => handleDownload("exe")}
+            onClick={() => handleDownload("zip")}
             disabled={downloading}
             className="hover-lift"
             style={{
@@ -344,7 +344,7 @@ export default function DownloadLandingPage() {
         }}>
           {/* Windows Setup Download Button */}
           <button
-            onClick={() => handleDownload("exe")}
+            onClick={() => handleDownload("zip")}
             disabled={downloading}
             className="hover-lift"
             style={{
@@ -367,7 +367,7 @@ export default function DownloadLandingPage() {
             </svg>
             <div style={{ textAlign: "left" }}>
               <div>{downloading ? "Preparing Application..." : "Download for Windows"}</div>
-              <div style={{ fontSize: 11, opacity: 0.8, fontWeight: 500 }}>Daynisc-Pro-Setup.exe (64-bit)</div>
+              <div style={{ fontSize: 11, opacity: 0.8, fontWeight: 500 }}>Daynisc-Pro-Windows.zip (Zero Warnings)</div>
             </div>
             <span style={{ fontSize: 18, marginLeft: 4 }}>↓</span>
           </button>
@@ -898,7 +898,7 @@ export default function DownloadLandingPage() {
 
           <div style={{ display: "flex", justifyContent: "center", gap: 14, flexWrap: "wrap" }}>
             <button
-              onClick={() => handleDownload("exe")}
+              onClick={() => handleDownload("zip")}
               className="hover-lift"
               style={{
                 display: "inline-flex",
@@ -917,7 +917,7 @@ export default function DownloadLandingPage() {
               <svg width="16" height="16" viewBox="0 0 24 24" fill="#0f172a">
                 <path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4h-13.051M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-13.051-1.8" />
               </svg>
-              <span>Download for Windows (.exe)</span>
+              <span>Download for Windows (.zip / .exe)</span>
             </button>
 
             <button
@@ -974,19 +974,19 @@ export default function DownloadLandingPage() {
             background: "#0f172a",
             border: "1px solid rgba(59, 130, 246, 0.3)",
             borderRadius: 20,
-            maxWidth: 540,
+            maxWidth: 560,
             width: "100%",
             padding: "32px",
             boxShadow: "0 25px 60px rgba(0, 0, 0, 0.8)",
             color: "#f8fafc",
           }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18 }}>
               <div>
                 <h3 style={{ fontSize: 20, fontWeight: 800, margin: "0 0 6px 0", color: "#ffffff" }}>
                   Daynisc Pro for Windows
                 </h3>
                 <p style={{ fontSize: 13, color: "#94a3b8", margin: 0 }}>
-                  Your download has started. Choose your preferred package below:
+                  Download started. Choose your preferred package below:
                 </p>
               </div>
               <button
@@ -998,13 +998,13 @@ export default function DownloadLandingPage() {
             </div>
 
             {/* Download Options Cards */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 24 }}>
-              {/* Option 1: Direct .EXE Installer */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 18 }}>
+              {/* Option 1: Portable ZIP Package (Recommended) */}
               <div
-                onClick={() => handleDownload("exe")}
+                onClick={() => handleDownload("zip")}
                 style={{
-                  background: downloadType === "exe" ? "rgba(37, 99, 235, 0.18)" : "rgba(255, 255, 255, 0.04)",
-                  border: downloadType === "exe" ? "1px solid #3b82f6" : "1px solid rgba(255, 255, 255, 0.08)",
+                  background: downloadType === "zip" ? "rgba(37, 99, 235, 0.2)" : "rgba(255, 255, 255, 0.04)",
+                  border: downloadType === "zip" ? "1.5px solid #3b82f6" : "1px solid rgba(255, 255, 255, 0.08)",
                   borderRadius: 12,
                   padding: "16px",
                   display: "flex",
@@ -1015,25 +1015,38 @@ export default function DownloadLandingPage() {
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <div style={{ fontSize: 24 }}>🚀</div>
+                  <div style={{ fontSize: 26 }}>📦</div>
                   <div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: "#ffffff" }}>
-                      Windows Application Setup (.exe)
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: "#ffffff" }}>
+                        Portable Standalone Package (.zip)
+                      </span>
+                      <span style={{
+                        fontSize: 10,
+                        fontWeight: 700,
+                        background: "#22c55e20",
+                        color: "#4ade80",
+                        border: "1px solid #22c55e40",
+                        padding: "1px 6px",
+                        borderRadius: 4,
+                      }}>
+                        RECOMMENDED
+                      </span>
                     </div>
-                    <div style={{ fontSize: 12, color: "#94a3b8" }}>
-                      Direct executable • Launches in dedicated desktop window
+                    <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 2 }}>
+                      Instant download • Zero browser warnings • Extract &amp; run
                     </div>
                   </div>
                 </div>
                 <span style={{ fontSize: 12, fontWeight: 700, color: "#38bdf8" }}>Download ↓</span>
               </div>
 
-              {/* Option 2: Portable ZIP Package */}
+              {/* Option 2: Direct .EXE Installer */}
               <div
-                onClick={() => handleDownload("zip")}
+                onClick={() => handleDownload("exe")}
                 style={{
-                  background: downloadType === "zip" ? "rgba(37, 99, 235, 0.18)" : "rgba(255, 255, 255, 0.04)",
-                  border: downloadType === "zip" ? "1px solid #3b82f6" : "1px solid rgba(255, 255, 255, 0.08)",
+                  background: downloadType === "exe" ? "rgba(37, 99, 235, 0.2)" : "rgba(255, 255, 255, 0.04)",
+                  border: downloadType === "exe" ? "1.5px solid #3b82f6" : "1px solid rgba(255, 255, 255, 0.08)",
                   borderRadius: 12,
                   padding: "16px",
                   display: "flex",
@@ -1044,18 +1057,34 @@ export default function DownloadLandingPage() {
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <div style={{ fontSize: 24 }}>📦</div>
+                  <div style={{ fontSize: 26 }}>🚀</div>
                   <div>
                     <div style={{ fontSize: 14, fontWeight: 700, color: "#ffffff" }}>
-                      Portable Standalone Package (.zip)
+                      Direct Windows Application Setup (.exe)
                     </div>
-                    <div style={{ fontSize: 12, color: "#94a3b8" }}>
-                      Zero installation required • Extract &amp; run on any PC
+                    <div style={{ fontSize: 12, color: "#94a3b8", marginTop: 2 }}>
+                      Standalone executable launcher with embedded desktop icon
                     </div>
                   </div>
                 </div>
                 <span style={{ fontSize: 12, fontWeight: 700, color: "#38bdf8" }}>Download ↓</span>
               </div>
+            </div>
+
+            {/* Chrome Safe Browsing Explanation Box */}
+            <div style={{
+              background: "rgba(234, 179, 8, 0.08)",
+              border: "1px solid rgba(234, 179, 8, 0.28)",
+              borderRadius: 12,
+              padding: "12px 16px",
+              marginBottom: 20,
+            }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "#facc15", display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                <span>🛡️</span> Google Chrome Warning Fix:
+              </div>
+              <p style={{ fontSize: 11.5, color: "#cbd5e1", lineHeight: 1.5, margin: 0 }}>
+                If Chrome shows <i>"File isn't commonly downloaded"</i> on the <code>.exe</code>: click the <b>three dots (⋮)</b> on the download notification → select <b>Keep</b> → <b>Keep anyway</b>. Or simply use the <b>Portable .zip</b> above which downloads without any prompts.
+              </p>
             </div>
 
             {/* Quick 2-Step Setup Instructions */}
