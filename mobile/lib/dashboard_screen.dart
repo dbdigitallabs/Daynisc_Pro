@@ -41,17 +41,18 @@ class DashboardScreen extends ConsumerWidget {
                     children: [
                       Row(
                         children: [
-                          Container(
-                            width: 28, height: 28,
-                            decoration: BoxDecoration(
-                              color: AppColors.primaryBg,
-                              borderRadius: BorderRadius.circular(7),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.asset(
+                              'assets/images/logo_app.png',
+                              width: 30,
+                              height: 30,
+                              fit: BoxFit.contain,
                             ),
-                            child: const Icon(Icons.bolt, color: AppColors.primary, size: 18),
                           ),
                           const SizedBox(width: 8),
                           const Text(
-                            'Daynisc',
+                            'Daynisc ERP',
                             style: TextStyle(
                               fontFamily: 'Inter',
                               fontSize: 16,

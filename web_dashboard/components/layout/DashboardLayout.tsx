@@ -178,7 +178,7 @@ export default function DashboardLayout() {
                   lineHeight: 1.2,
                 }}
               >
-                Daynisc AI
+                Daynisc ERP
               </div>
               <div
                 style={{
