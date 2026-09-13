@@ -810,6 +810,13 @@ export default function AIVerificationPage() {
     refetchInterval: 25000,
   });
 
+  // Live Odoo connection test
+  const { data: odooData, refetch: testOdooConnection } = useQuery<any>({
+    queryKey: ["odoo-status-live"],
+    queryFn: () => api.get("/erp/connection/test/odoo").then(r => r.data).catch(() => ({ connected: false })),
+    refetchInterval: 25000,
+  });
+
   const extractions: Extraction[] = Array.isArray(extractionsRaw)
     ? extractionsRaw
     : (extractionsRaw?.items && Array.isArray(extractionsRaw.items))
@@ -976,8 +983,8 @@ export default function AIVerificationPage() {
           </div>
         </div>
 
-        {/* Right: Tally Pill, Mobile Upload, Go to Tally Sync */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        {/* Right: Tally Pill, Odoo Pill, Mobile Upload, Go to ERP Sync */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
           {/* Tally Live Status Pill */}
           <div
             onClick={() => testTallyConnection()}
@@ -1005,6 +1012,33 @@ export default function AIVerificationPage() {
             Tally: {currentTallyCompany}
           </div>
 
+          {/* Odoo Live Status Pill */}
+          <div
+            onClick={() => testOdooConnection()}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "5px 14px",
+              borderRadius: 20,
+              cursor: "pointer",
+              fontSize: 12,
+              fontWeight: 600,
+              background: odooData?.connected ? "#f5f3ff" : "#fef2f2",
+              color: odooData?.connected ? "#6d28d9" : "#b91c1c",
+              border: `1px solid ${odooData?.connected ? "#c4b5fd" : "#fca5a5"}`,
+            }}
+            title="Click to test Odoo ERP connection"
+          >
+            <span style={{
+              width: 7,
+              height: 7,
+              borderRadius: "50%",
+              background: odooData?.connected ? "#7c3aed" : "#ef4444",
+            }} />
+            Odoo: {odooData?.connected ? (odooData?.company_name || "Online") : "Offline"}
+          </div>
+
           {/* Mobile Upload Button */}
           <button
             onClick={() => setShowMobileModal(true)}
@@ -1027,7 +1061,7 @@ export default function AIVerificationPage() {
             Mobile Upload
           </button>
 
-          {/* Go to Tally Sync Button */}
+          {/* Go to ERP Sync Button */}
           <button
             onClick={() => navigate("/tally-sync")}
             style={{
@@ -1035,7 +1069,7 @@ export default function AIVerificationPage() {
               alignItems: "center",
               gap: 6,
               padding: "8px 18px",
-              background: "#4361ee",
+              background: "linear-gradient(135deg, #4361ee, #7c3aed)",
               color: "#ffffff",
               border: "none",
               borderRadius: 8,
@@ -1045,7 +1079,7 @@ export default function AIVerificationPage() {
               boxShadow: "0 2px 8px rgba(67,97,238,0.28)",
             }}
           >
-            Go to Tally Sync →
+            ERP Sync Hub →
           </button>
         </div>
       </div>

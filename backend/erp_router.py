@@ -11,6 +11,7 @@ from sqlalchemy import text
 from shared.database import get_db
 from shared.auth import get_current_user, CurrentUser
 from tally_connector import TallyConnector
+from odoo_connector import OdooConnector
 from config import settings
 
 router = APIRouter()
@@ -277,3 +278,70 @@ async def erp_sync_status(
         stats = {"pending": 0, "synced": 0, "errors": 0}
 
     return stats
+
+
+# ── Odoo ERP Routes ───────────────────────────────────────────────────────────
+
+@router.get("/connection/test/odoo")
+@router.post("/connection/test/odoo")
+async def test_odoo_connection(body: dict | None = None):
+    """Test connectivity and authentication with Odoo ERP."""
+    creds = body or {}
+    url = creds.get("odoo_url") or getattr(settings, "ODOO_URL", "http://localhost:8069")
+    db = creds.get("odoo_db") or getattr(settings, "ODOO_DB", "")
+    username = creds.get("odoo_username") or getattr(settings, "ODOO_USERNAME", "")
+    password = creds.get("odoo_password") or getattr(settings, "ODOO_PASSWORD", "")
+
+    connector = OdooConnector(url=url, db=db, username=username, password=password)
+    return connector.test_connection()
+
+
+@router.post("/sync/odoo/{voucher_id}")
+async def sync_voucher_to_odoo(
+    voucher_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: CurrentUser = Depends(get_current_user),
+):
+    """Push a single accounting voucher to Odoo ERP."""
+    voucher = await _get_voucher(db, voucher_id, user.db_schema)
+    if not voucher:
+        raise HTTPException(status_code=404, detail="Voucher not found")
+
+    line_items = await _get_line_items(db, voucher_id)
+
+    url = getattr(settings, "ODOO_URL", "http://localhost:8069")
+    odoo_db = getattr(settings, "ODOO_DB", "")
+    username = getattr(settings, "ODOO_USERNAME", "")
+    password = getattr(settings, "ODOO_PASSWORD", "")
+
+    connector = OdooConnector(url=url, db=odoo_db, username=username, password=password)
+    conn = connector.test_connection()
+    if not conn.get("connected") or not conn.get("authenticated"):
+        raise HTTPException(status_code=502, detail="Cannot connect to Odoo. Check credentials in Settings.")
+
+    payload = {
+        "voucher_number": voucher.get("voucher_number", ""),
+        "reference_number": voucher.get("reference_number") or voucher.get("voucher_number", ""),
+        "voucher_date": str(voucher.get("voucher_date", "")),
+        "party_name": voucher.get("party_name", "Valued Partner"),
+        "party_gstin": voucher.get("party_gstin", ""),
+        "narration": voucher.get("narration", ""),
+        "total": float(voucher.get("total") or 0),
+        "subtotal": float(voucher.get("subtotal") or voucher.get("total") or 0),
+        "line_items": [
+            {
+                "name": item.get("item_name") or item.get("name") or "General Item",
+                "quantity": float(item.get("qty") or item.get("quantity") or 1.0),
+                "rate": float(item.get("rate") or 0),
+            }
+            for item in line_items
+        ],
+    }
+
+    try:
+        res = connector.sync_voucher(payload, voucher.get("voucher_type"))
+        await _mark_synced(db, voucher_id)
+        return {"success": True, "odoo_response": res}
+    except Exception as e:
+        await _mark_synced(db, voucher_id, error=str(e))
+        raise HTTPException(status_code=502, detail=f"Odoo sync failed: {str(e)}")

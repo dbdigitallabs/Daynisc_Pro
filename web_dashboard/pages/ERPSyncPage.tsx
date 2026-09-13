@@ -25,21 +25,24 @@ interface SyncVoucher {
   total: number;
   tally_synced: boolean;
   tally_error?: string | null;
+  odoo_synced?: boolean;
+  odoo_ref?: string | null;
+  odoo_error?: string | null;
   narration?: string;
 }
 
-function SyncBadge({ synced, error }: { synced: boolean; error?: string | null }) {
-  if (synced) return <span style={{ ...badge(T.green, T.greenBg), display: "inline-flex", alignItems: "center", gap: 3 }}><IconCheck size={11} /> Synced</span>;
+function SyncBadge({ synced, error, label = "Tally" }: { synced: boolean; error?: string | null; label?: string }) {
+  if (synced) return <span style={{ ...badge(T.green, T.greenBg), display: "inline-flex", alignItems: "center", gap: 3 }}><IconCheckCircle size={11} color={T.green} /> {label}: Synced</span>;
   if (error)
     return (
       <span
         style={badge(T.red, T.redBg)}
         title={error}
       >
-        Error
+        {label}: Error
       </span>
     );
-  return <span style={{ ...badge(T.amber, T.amberBg), display: "inline-flex", alignItems: "center", gap: 3 }}><IconClock size={11} /> Pending</span>;
+  return <span style={{ ...badge(T.amber, T.amberBg), display: "inline-flex", alignItems: "center", gap: 3 }}><IconClock size={11} color={T.amber} /> {label}: Pending</span>;
 }
 
 const VTYPE_C: Record<string, { color: string; bg: string }> = {
@@ -55,21 +58,31 @@ export default function ERPSyncPage() {
   const navigate = useNavigate();
 
   const [syncingId, setSyncingId] = useState<string | null>(null);
+  const [syncingOdooId, setSyncingOdooId] = useState<string | null>(null);
   const [bulkSyncing, setBulkSyncing] = useState(false);
-  const [connStatus, setConnStatus] = useState<{ connected: boolean; message?: string; error?: string } | null>(null);
+  const [bulkSyncingOdoo, setBulkSyncingOdoo] = useState(false);
+  const [connStatus, setConnStatus] = useState<{ connected: boolean; message?: string; error?: string; tally_online?: boolean; company_open?: boolean; company_name?: string } | null>(null);
+  const [odooStatus, setOdooStatus] = useState<{ connected: boolean; authenticated?: boolean; server_version?: string; company_name?: string; message?: string; error?: string } | null>(null);
   const [testingConn, setTestingConn] = useState(false);
+  const [testingOdoo, setTestingOdoo] = useState(false);
   const [activeTab, setActiveTab] = useState<"pending" | "history">("pending");
+  const [activeErpFilter, setActiveErpFilter] = useState<"all" | "tally" | "odoo">("all");
   const [bulkResult, setBulkResult] = useState<{ synced: number; failed: number } | null>(null);
 
   // Filters & Search
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
 
-  // Tally Config
+  // Config State
   const [tallyUrl, setTallyUrl] = useState("http://localhost:9000");
   const [tallyCompany, setTallyCompany] = useState("DB Digital Labs");
+  const [odooUrl, setOdooUrl] = useState("http://localhost:8069");
+  const [odooDb, setOdooDb] = useState("");
+  const [odooUsername, setOdooUsername] = useState("");
+  const [odooPassword, setOdooPassword] = useState("");
   const [savingSettings, setSavingSettings] = useState(false);
   const [showConfig, setShowConfig] = useState(false);
+  const [configTab, setConfigTab] = useState<"tally" | "odoo">("tally");
 
   const { data: pendingData, isLoading: pendingLoading, refetch: refetchPending } = useQuery({
     queryKey: ["tally-pending"],
@@ -99,7 +112,11 @@ export default function ERPSyncPage() {
       (v.voucher_number || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       (v.party_name || "").toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = typeFilter === "all" || v.voucher_type === typeFilter;
-    return matchesSearch && matchesType;
+    const matchesErp =
+      activeErpFilter === "all" ||
+      (activeErpFilter === "tally" && !v.tally_synced) ||
+      (activeErpFilter === "odoo" && !v.odoo_synced);
+    return matchesSearch && matchesType && matchesErp;
   });
 
   const totalPendingValue = rawPending.reduce((s, v) => s + Number(v.total || 0), 0);
@@ -119,18 +136,51 @@ export default function ERPSyncPage() {
     } catch (e: any) {
       const msg = e.response?.data?.detail || e.message || "Cannot reach backend";
       setConnStatus({ connected: false, error: msg });
-      toast.error(`Connection failed: ${msg}`);
     } finally {
       setTestingConn(false);
+    }
+  }
+
+  async function testOdooConnection() {
+    setTestingOdoo(true);
+    try {
+      const res = await api.post("/erp/connection/test/odoo", {
+        odoo_url: odooUrl,
+        odoo_db: odooDb,
+        odoo_username: odooUsername,
+        odoo_password: odooPassword,
+      });
+      setOdooStatus(res.data);
+      if (res.data.connected && res.data.authenticated) {
+        toast.success(`Connected to Odoo ERP (v${res.data.server_version || "17/18"})`);
+      } else if (res.data.connected && !res.data.authenticated) {
+        toast.error("Odoo reachable, but authentication failed. Check credentials.");
+      } else {
+        toast.error(`Odoo offline: ${res.data.error || "Cannot reach Odoo server"}`);
+      }
+    } catch (e: any) {
+      const msg = e.response?.data?.detail || e.message || "Cannot reach Odoo";
+      setOdooStatus({ connected: false, error: msg });
+      toast.error(`Odoo connection failed: ${msg}`);
+    } finally {
+      setTestingOdoo(false);
     }
   }
 
   async function saveSettings() {
     setSavingSettings(true);
     try {
-      await api.patch("/settings/company", { tally_url: tallyUrl, tally_company: tallyCompany });
-      toast.success("Tally settings saved!");
+      await api.patch("/settings/company", {
+        tally_url: tallyUrl,
+        tally_company: tallyCompany,
+        odoo_url: odooUrl,
+        odoo_db: odooDb,
+        odoo_username: odooUsername,
+        odoo_password: odooPassword,
+      });
+      toast.success("ERP settings saved!");
       await testConnection();
+      await testOdooConnection();
       setShowConfig(false);
     } catch (e: any) {
       toast.error("Failed to save settings");
@@ -145,9 +195,14 @@ export default function ERPSyncPage() {
       .then((res) => {
         if (res.data?.tally_url) setTallyUrl(res.data.tally_url);
         if (res.data?.tally_company) setTallyCompany(res.data.tally_company);
+        if (res.data?.odoo_url) setOdooUrl(res.data.odoo_url);
+        if (res.data?.odoo_db) setOdooDb(res.data.odoo_db);
+        if (res.data?.odoo_username) setOdooUsername(res.data.odoo_username);
+        if (res.data?.odoo_password) setOdooPassword(res.data.odoo_password);
       })
       .catch(() => {});
     testConnection();
+    testOdooConnection();
   }, []);
 
   async function syncSingle(id: string, voucherNum: string) {
@@ -163,6 +218,22 @@ export default function ERPSyncPage() {
       await refetchPending();
     } finally {
       setSyncingId(null);
+    }
+  }
+
+  async function syncSingleOdoo(id: string, voucherNum: string) {
+    setSyncingOdooId(id);
+    try {
+      const res = await api.post(`/erp/sync/odoo/${id}`);
+      toast.success(`Voucher ${voucherNum} synced to Odoo (${res.data?.odoo_response?.odoo_ref || "Success"})!`);
+      await refetchPending();
+      qc.invalidateQueries({ queryKey: ["tally-history"] });
+    } catch (e: any) {
+      const errMsg = e.response?.data?.detail || e.message || "Odoo sync failed";
+      toast.error(`Odoo sync error: ${errMsg}`);
+      await refetchPending();
+    } finally {
+      setSyncingOdooId(null);
     }
   }
 
@@ -189,10 +260,31 @@ export default function ERPSyncPage() {
     }
   }
 
+  async function bulkSyncOdoo() {
+    setBulkSyncingOdoo(true);
+    try {
+      const res = await api.post("/erp/sync/odoo/bulk");
+      if (res.data.synced > 0) {
+        toast.success(`Synced ${res.data.synced} vouchers to Odoo ERP!`);
+      }
+      if (res.data.failed > 0) {
+        toast.error(`${res.data.failed} vouchers failed to sync to Odoo.`);
+      }
+      await refetchPending();
+      qc.invalidateQueries({ queryKey: ["tally-history"] });
+    } catch (e: any) {
+      const errMsg = e.response?.data?.detail || e.message || "Odoo bulk sync failed";
+      toast.error(`Odoo bulk sync failed: ${errMsg}`);
+      await refetchPending();
+    } finally {
+      setBulkSyncingOdoo(false);
+    }
+  }
+
   return (
     <div style={{ padding: "24px 28px", fontFamily: "'Inter',sans-serif", background: T.pageBg, minHeight: "100%" }}>
       {/* ── Page Header ─────────────────────────────────────────────────── */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20, flexWrap: "wrap", gap: 16 }}>
         <div>
           <h1
             style={{
@@ -206,14 +298,14 @@ export default function ERPSyncPage() {
               gap: 10,
             }}
           >
-            <IconLink size={24} color={T.primary} /> Tally Prime Sync
+            <IconLink size={24} color={T.primary} /> ERP Sync Hub (Tally &amp; Odoo)
           </h1>
           <p style={{ fontSize: 13, color: T.text3 }}>
-            Synchronize verified accounting entries into TallyPrime via its built-in XML HTTP server
+            Synchronize verified invoices, bills, and vouchers to TallyPrime (Port 9000) or Odoo ERP (XML-RPC)
           </p>
         </div>
 
-        <div style={{ display: "flex", gap: 10 }}>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
           <button
             onClick={() => setShowConfig(!showConfig)}
             style={{
@@ -227,13 +319,15 @@ export default function ERPSyncPage() {
               fontWeight: 600,
             }}
           >
-            Settings
+            Configure ERPs
           </button>
+
+          {/* Tally Connection Pill */}
           <button
             onClick={testConnection}
             disabled={testingConn}
             style={{
-              padding: "9px 16px",
+              padding: "9px 14px",
               background: connStatus?.connected
                 ? T.greenBg
                 : connStatus?.tally_online && !connStatus?.company_open
@@ -259,60 +353,147 @@ export default function ERPSyncPage() {
                 : connStatus && !connStatus.connected
                 ? T.red
                 : T.text2,
-              fontSize: 13,
+              fontSize: 12.5,
               fontWeight: 600,
               display: "flex",
               alignItems: "center",
-              gap: 8,
+              gap: 6,
             }}
           >
             {testingConn ? (
               <>
-                <IconClock size={14} color={T.text3} /> Testing…
+                <IconClock size={13} color={T.text3} /> Testing Tally…
               </>
             ) : connStatus?.connected ? (
               <>
-                <IconCheckCircle size={14} color={T.green} /> Tally: {connStatus.company_name || "Connected"}
+                <IconCheckCircle size={13} color={T.green} /> Tally: {connStatus.company_name || "Connected"}
               </>
             ) : connStatus?.tally_online && !connStatus?.company_open ? (
               <>
-                <IconClock size={14} color="#b45309" /> Open Company in Tally
+                <IconClock size={13} color="#b45309" /> Tally: Open Co.
               </>
             ) : (
               <>
-                <IconPlug size={14} color={T.text3} /> Test Connection
+                <IconPlug size={13} color={T.text3} /> Tally Offline
               </>
             )}
           </button>
+
+          {/* Odoo Connection Pill */}
+          <button
+            onClick={testOdooConnection}
+            disabled={testingOdoo}
+            style={{
+              padding: "9px 14px",
+              background: odooStatus?.connected && odooStatus?.authenticated
+                ? "#f5f3ff"
+                : odooStatus?.connected && !odooStatus?.authenticated
+                ? "#fef3c7"
+                : odooStatus && !odooStatus.connected
+                ? T.redBg
+                : "#fff",
+              border: `1.5px solid ${
+                odooStatus?.connected && odooStatus?.authenticated
+                  ? "#7c3aed"
+                  : odooStatus?.connected && !odooStatus?.authenticated
+                  ? "#f59e0b"
+                  : odooStatus && !odooStatus.connected
+                  ? "#f87171"
+                  : T.border
+              }`,
+              borderRadius: 8,
+              cursor: "pointer",
+              color: odooStatus?.connected && odooStatus?.authenticated
+                ? "#6d28d9"
+                : odooStatus?.connected && !odooStatus?.authenticated
+                ? "#b45309"
+                : odooStatus && !odooStatus.connected
+                ? T.red
+                : T.text2,
+              fontSize: 12.5,
+              fontWeight: 600,
+              display: "flex",
+              alignItems: "center",
+              gap: 6,
+            }}
+          >
+            {testingOdoo ? (
+              <>
+                <IconClock size={13} color={T.text3} /> Testing Odoo…
+              </>
+            ) : odooStatus?.connected && odooStatus?.authenticated ? (
+              <>
+                <span style={{ fontSize: 13 }}>🟣</span> Odoo: {odooStatus.server_version ? `v${odooStatus.server_version}` : "Connected"}
+              </>
+            ) : odooStatus?.connected && !odooStatus?.authenticated ? (
+              <>
+                <IconClock size={13} color="#b45309" /> Odoo: Check Auth
+              </>
+            ) : (
+              <>
+                <span style={{ fontSize: 13 }}>🟣</span> Odoo Offline
+              </>
+            )}
+          </button>
+
           {rawPending.length > 0 && (
-            <button
-              onClick={bulkSync}
-              disabled={bulkSyncing}
-              style={{
-                padding: "9px 20px",
-                background: bulkSyncing ? T.amberBg : T.primary,
-                border: "none",
-                borderRadius: 8,
-                color: bulkSyncing ? T.amber : "#fff",
-                cursor: bulkSyncing ? "default" : "pointer",
-                fontSize: 13,
-                fontWeight: 700,
-                boxShadow: bulkSyncing ? "none" : "0 4px 12px rgba(67,97,238,0.3)",
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-              }}
-            >
-              {bulkSyncing ? (
-                <>
-                  <IconRefresh size={14} color={T.amber} /> Syncing…
-                </>
-              ) : (
-                <>
-                  <IconZap size={14} color="#fff" /> Sync All to Tally ({rawPending.length})
-                </>
-              )}
-            </button>
+            <>
+              <button
+                onClick={bulkSync}
+                disabled={bulkSyncing}
+                style={{
+                  padding: "9px 16px",
+                  background: bulkSyncing ? T.amberBg : T.primary,
+                  border: "none",
+                  borderRadius: 8,
+                  color: bulkSyncing ? T.amber : "#fff",
+                  cursor: bulkSyncing ? "default" : "pointer",
+                  fontSize: 12.5,
+                  fontWeight: 700,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                }}
+              >
+                {bulkSyncing ? (
+                  <>
+                    <IconRefresh size={13} color={T.amber} /> Syncing…
+                  </>
+                ) : (
+                  <>
+                    <IconZap size={13} color="#fff" /> Bulk to Tally ({rawPending.length})
+                  </>
+                )}
+              </button>
+
+              <button
+                onClick={bulkSyncOdoo}
+                disabled={bulkSyncingOdoo}
+                style={{
+                  padding: "9px 16px",
+                  background: bulkSyncingOdoo ? "#f5f3ff" : "#7c3aed",
+                  border: "none",
+                  borderRadius: 8,
+                  color: bulkSyncingOdoo ? "#7c3aed" : "#fff",
+                  cursor: bulkSyncingOdoo ? "default" : "pointer",
+                  fontSize: 12.5,
+                  fontWeight: 700,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                }}
+              >
+                {bulkSyncingOdoo ? (
+                  <>
+                    <IconRefresh size={13} color="#7c3aed" /> Syncing…
+                  </>
+                ) : (
+                  <>
+                    <span style={{ fontSize: 13 }}>🟣</span> Bulk to Odoo ({rawPending.length})
+                  </>
+                )}
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -321,79 +502,211 @@ export default function ERPSyncPage() {
       {showConfig && (
         <div
           style={{
-            ...cardStyle({ padding: "16px 20px", marginBottom: 20 }),
+            ...cardStyle({ padding: "18px 22px", marginBottom: 20 }),
             background: "#ffffff",
-            border: `1.5px solid ${T.primary}`,
+            border: `1.5px solid ${configTab === "odoo" ? "#7c3aed" : T.primary}`,
           }}
         >
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-            <h3 style={{ fontSize: 14, fontWeight: 700, color: T.text1 }}>TallyPrime HTTP Server Configuration</h3>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+            <div style={{ display: "flex", gap: 6, background: "#f1f5f9", padding: 3, borderRadius: 6 }}>
+              <button
+                type="button"
+                onClick={() => setConfigTab("tally")}
+                style={{
+                  padding: "5px 12px", border: "none", borderRadius: 4,
+                  fontSize: 12, fontWeight: 700, cursor: "pointer",
+                  background: configTab === "tally" ? T.primary : "transparent",
+                  color: configTab === "tally" ? "#fff" : T.text2,
+                }}
+              >
+                TallyPrime Configuration
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfigTab("odoo")}
+                style={{
+                  padding: "5px 12px", border: "none", borderRadius: 4,
+                  fontSize: 12, fontWeight: 700, cursor: "pointer",
+                  background: configTab === "odoo" ? "#7c3aed" : "transparent",
+                  color: configTab === "odoo" ? "#fff" : T.text2,
+                }}
+              >
+                Odoo ERP Configuration
+              </button>
+            </div>
             <button
               onClick={() => setShowConfig(false)}
-              style={{ background: "none", border: "none", color: T.text3, cursor: "pointer", fontSize: 16 }}
-            ><IconX size={14} /></button>
+              style={{ background: "none", border: "none", color: T.text3, cursor: "pointer", fontSize: 13, fontWeight: 600 }}
+            >Close ✕</button>
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 12 }}>
+
+          {configTab === "tally" ? (
             <div>
-              <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: T.text2, marginBottom: 4 }}>
-                Tally Server URL / Port
-              </label>
-              <input
-                type="text"
-                value={tallyUrl}
-                onChange={(e) => setTallyUrl(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: "8px 12px",
-                  borderRadius: 6,
-                  border: `1px solid ${T.border}`,
-                  fontSize: 13,
-                  outline: "none",
-                }}
-              />
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 12 }}>
+                <div>
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: T.text2, marginBottom: 4 }}>
+                    Tally Server URL / Port
+                  </label>
+                  <input
+                    type="text"
+                    value={tallyUrl}
+                    onChange={(e) => setTallyUrl(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "8px 12px",
+                      borderRadius: 6,
+                      border: `1px solid ${T.border}`,
+                      fontSize: 13,
+                      outline: "none",
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: T.text2, marginBottom: 4 }}>
+                    Target Company Name in Tally
+                  </label>
+                  <input
+                    type="text"
+                    value={tallyCompany}
+                    onChange={(e) => setTallyCompany(e.target.value)}
+                    placeholder="e.g. DB Digital Labs"
+                    style={{
+                      width: "100%",
+                      padding: "8px 12px",
+                      borderRadius: 6,
+                      border: `1px solid ${T.border}`,
+                      fontSize: 13,
+                      outline: "none",
+                    }}
+                  />
+                </div>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ fontSize: 12, color: T.text3 }}>
+                  <b>How to enable in TallyPrime:</b> Press <b>F12</b> → <b>Advanced Configuration</b> → Set{" "}
+                  <b>Enable HTTP Server</b> to <em>Yes</em> and Port to <em>9000</em>.
+                </div>
+                <button
+                  onClick={saveSettings}
+                  disabled={savingSettings}
+                  style={{
+                    padding: "8px 18px",
+                    background: T.primary,
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: 6,
+                    fontWeight: 700,
+                    fontSize: 12,
+                    cursor: "pointer",
+                  }}
+                >
+                  {savingSettings ? "Saving…" : "Save Tally Settings"}
+                </button>
+              </div>
             </div>
+          ) : (
             <div>
-              <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: T.text2, marginBottom: 4 }}>
-                Target Company Name in Tally
-              </label>
-              <input
-                type="text"
-                value={tallyCompany}
-                onChange={(e) => setTallyCompany(e.target.value)}
-                placeholder="e.g. DB Digital Labs"
-                style={{
-                  width: "100%",
-                  padding: "8px 12px",
-                  borderRadius: 6,
-                  border: `1px solid ${T.border}`,
-                  fontSize: 13,
-                  outline: "none",
-                }}
-              />
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 12 }}>
+                <div>
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: T.text2, marginBottom: 4 }}>
+                    Odoo Server URL
+                  </label>
+                  <input
+                    type="text"
+                    value={odooUrl}
+                    onChange={(e) => setOdooUrl(e.target.value)}
+                    placeholder="http://localhost:8069 or https://..."
+                    style={{
+                      width: "100%",
+                      padding: "8px 12px",
+                      borderRadius: 6,
+                      border: `1px solid ${T.border}`,
+                      fontSize: 13,
+                      outline: "none",
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: T.text2, marginBottom: 4 }}>
+                    Database Name
+                  </label>
+                  <input
+                    type="text"
+                    value={odooDb}
+                    onChange={(e) => setOdooDb(e.target.value)}
+                    placeholder="e.g. odoo, daynisc_db"
+                    style={{
+                      width: "100%",
+                      padding: "8px 12px",
+                      borderRadius: 6,
+                      border: `1px solid ${T.border}`,
+                      fontSize: 13,
+                      outline: "none",
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: T.text2, marginBottom: 4 }}>
+                    Username / Email
+                  </label>
+                  <input
+                    type="text"
+                    value={odooUsername}
+                    onChange={(e) => setOdooUsername(e.target.value)}
+                    placeholder="admin / user@odoo.com"
+                    style={{
+                      width: "100%",
+                      padding: "8px 12px",
+                      borderRadius: 6,
+                      border: `1px solid ${T.border}`,
+                      fontSize: 13,
+                      outline: "none",
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: T.text2, marginBottom: 4 }}>
+                    API Key / Password
+                  </label>
+                  <input
+                    type="password"
+                    value={odooPassword}
+                    onChange={(e) => setOdooPassword(e.target.value)}
+                    placeholder="••••••••"
+                    style={{
+                      width: "100%",
+                      padding: "8px 12px",
+                      borderRadius: 6,
+                      border: `1px solid ${T.border}`,
+                      fontSize: 13,
+                      outline: "none",
+                    }}
+                  />
+                </div>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ fontSize: 12, color: T.text3 }}>
+                  <b>Odoo API Key:</b> Open Odoo → Preferences → Account Security → <b>New API Key</b>.
+                </div>
+                <button
+                  onClick={saveSettings}
+                  disabled={savingSettings}
+                  style={{
+                    padding: "8px 18px",
+                    background: "#7c3aed",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: 6,
+                    fontWeight: 700,
+                    fontSize: 12,
+                    cursor: "pointer",
+                  }}
+                >
+                  {savingSettings ? "Saving…" : "Save Odoo Settings"}
+                </button>
+              </div>
             </div>
-          </div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ fontSize: 12, color: T.text3 }}>
-              <b>How to enable in TallyPrime:</b> Press <b>F12</b> → <b>Advanced Configuration</b> → Set{" "}
-              <b>Enable HTTP Server</b> to <em>Yes</em> and Port to <em>9000</em>.
-            </div>
-            <button
-              onClick={saveSettings}
-              disabled={savingSettings}
-              style={{
-                padding: "8px 18px",
-                background: T.primary,
-                color: "#fff",
-                border: "none",
-                borderRadius: 6,
-                fontWeight: 700,
-                fontSize: 12,
-                cursor: "pointer",
-              }}
-            >
-              {savingSettings ? "Saving…" : "Save Configuration"}
-            </button>
-          </div>
+          )}
         </div>
       )}
 
@@ -612,7 +925,34 @@ export default function ERPSyncPage() {
 
         {/* Search & Filters */}
         {activeTab === "pending" && (
-          <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 6 }}>
+          <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 6, flexWrap: "wrap" }}>
+            {/* ERP System Filter */}
+            <div style={{ display: "flex", background: "#f1f5f9", padding: 2, borderRadius: 6, gap: 2 }}>
+              {[
+                { key: "all", label: "All ERPs" },
+                { key: "tally", label: "Tally Queue" },
+                { key: "odoo", label: "Odoo Queue" },
+              ].map(item => (
+                <button
+                  key={item.key}
+                  type="button"
+                  onClick={() => setActiveErpFilter(item.key as any)}
+                  style={{
+                    padding: "4px 10px",
+                    border: "none",
+                    borderRadius: 4,
+                    fontSize: 11,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    background: activeErpFilter === item.key ? (item.key === "odoo" ? "#7c3aed" : T.primary) : "transparent",
+                    color: activeErpFilter === item.key ? "#fff" : T.text2,
+                  }}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+
             <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
@@ -727,59 +1067,73 @@ export default function ERPSyncPage() {
                       <td style={{ ...tdStyle, fontWeight: 600, color: T.text1 }}>{v.party_name || "—"}</td>
                       <td style={{ ...tdStyle, fontWeight: 700, color: T.amber }}>{inr(v.total)}</td>
                       <td style={tdStyle}>
-                        <SyncBadge synced={v.tally_synced} error={v.tally_error} />
-                        {v.tally_error && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                          <SyncBadge synced={v.tally_synced} error={v.tally_error} label="Tally" />
+                          <SyncBadge synced={Boolean(v.odoo_synced)} error={v.odoo_error} label="Odoo" />
+                        </div>
+                        {(v.tally_error || v.odoo_error) && (
                           <div
                             style={{
                               fontSize: 10,
                               color: T.red,
-                              marginTop: 3,
+                              marginTop: 4,
                               maxWidth: 200,
                               whiteSpace: "normal",
                               lineHeight: 1.3,
                             }}
-                            title={v.tally_error}
+                            title={v.tally_error || v.odoo_error || ""}
                           >
-                            {v.tally_error
+                            {(v.tally_error || v.odoo_error || "")
                               .replace(/<[^>]+>/g, " ")
-                              .replace(/&apos;/g, "'")
-                              .replace(/&quot;/g, '"')
-                              .replace(/&amp;/g, "&")
-                              .replace(/&lt;/g, "<")
-                              .replace(/&gt;/g, ">")
                               .replace(/\s+/g, " ")
-                              .trim()}
+                              .trim().slice(0, 100)}
                           </div>
                         )}
                       </td>
                       <td style={tdStyle}>
-                        <button
-                          onClick={() => syncSingle(v.id, v.voucher_number)}
-                          disabled={syncingId === v.id}
-                          style={{
-                            padding: "6px 14px",
-                            borderRadius: 6,
-                            background: syncingId === v.id ? "#f8fafc" : T.primary,
-                            border: `1px solid ${syncingId === v.id ? T.border : T.primary}`,
-                            color: syncingId === v.id ? T.text3 : "#fff",
-                            cursor: syncingId === v.id ? "default" : "pointer",
-                            fontSize: 12,
-                            fontWeight: 700,
-                            transition: "all 0.15s",
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: 4,
-                          }}
-                        >
-                          {syncingId === v.id ? (
-                            "Syncing…"
-                          ) : (
-                            <>
-                              <IconZap size={12} color="#fff" />
-                              Sync to Tally
-                            </>
-                          )}
-                        </button>
+                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                          <button
+                            onClick={() => syncSingle(v.id, v.voucher_number)}
+                            disabled={syncingId === v.id || v.tally_synced}
+                            style={{
+                              padding: "5px 10px",
+                              borderRadius: 6,
+                              background: v.tally_synced ? "#f1f5f9" : syncingId === v.id ? "#f8fafc" : T.primary,
+                              border: `1px solid ${v.tally_synced ? "#cbd5e1" : syncingId === v.id ? T.border : T.primary}`,
+                              color: v.tally_synced ? "#64748b" : syncingId === v.id ? T.text3 : "#fff",
+                              cursor: v.tally_synced || syncingId === v.id ? "default" : "pointer",
+                              fontSize: 11.5,
+                              fontWeight: 700,
+                              transition: "all 0.15s",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 4,
+                            }}
+                          >
+                            {syncingId === v.id ? "Syncing…" : v.tally_synced ? "✓ Tally" : "→ Tally"}
+                          </button>
+
+                          <button
+                            onClick={() => syncSingleOdoo(v.id, v.voucher_number)}
+                            disabled={syncingOdooId === v.id || v.odoo_synced}
+                            style={{
+                              padding: "5px 10px",
+                              borderRadius: 6,
+                              background: v.odoo_synced ? "#f5f3ff" : syncingOdooId === v.id ? "#f8fafc" : "#7c3aed",
+                              border: `1px solid ${v.odoo_synced ? "#c4b5fd" : syncingOdooId === v.id ? T.border : "#7c3aed"}`,
+                              color: v.odoo_synced ? "#6d28d9" : syncingOdooId === v.id ? T.text3 : "#fff",
+                              cursor: v.odoo_synced || syncingOdooId === v.id ? "default" : "pointer",
+                              fontSize: 11.5,
+                              fontWeight: 700,
+                              transition: "all 0.15s",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 4,
+                            }}
+                          >
+                            {syncingOdooId === v.id ? "Syncing…" : v.odoo_synced ? "✓ Odoo" : "→ Odoo"}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );

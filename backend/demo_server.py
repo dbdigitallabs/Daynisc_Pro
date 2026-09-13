@@ -1857,8 +1857,14 @@ async def super_admin_create_users_bulk(body: CreateUsersBulkReq):
 # ── Settings ──────────────────────────────────────────────────────────────────
 
 SAVED_COMPANY_SETTINGS: dict = {
+    "active_erp": "tally",  # "tally" | "odoo" | "both"
     "tally_url": "http://localhost:9000",
     "tally_company": "DB Digital Labs",
+    "odoo_url": "http://localhost:8069",
+    "odoo_db": "",
+    "odoo_username": "",
+    "odoo_password": "",
+    "odoo_auto_post": True,
     "whatsapp_token": "",
     "gemini_key": "",
     "ai_threshold": 0.85,
@@ -2027,6 +2033,181 @@ async def sync_bulk_vouchers():
         "total": len(pending),
         "errors": errors[:5],
         "message": f"Sync completed. Synced: {synced_count}, Failed: {failed_count}"
+    }
+
+# ── Odoo ERP Integration Endpoints ──────────────────────────────────────────
+
+@app.get("/api/v1/erp/connection/test/odoo")
+@app.post("/api/v1/erp/connection/test/odoo")
+async def test_odoo_connection(body: dict = None):
+    try:
+        from odoo_connector import OdooConnector
+        creds = body or {}
+        o_url = creds.get("odoo_url") or SAVED_COMPANY_SETTINGS.get("odoo_url") or "http://localhost:8069"
+        o_db = creds.get("odoo_db") or SAVED_COMPANY_SETTINGS.get("odoo_db") or ""
+        o_user = creds.get("odoo_username") or SAVED_COMPANY_SETTINGS.get("odoo_username") or ""
+        o_pass = creds.get("odoo_password") or SAVED_COMPANY_SETTINGS.get("odoo_password") or ""
+        
+        connector = OdooConnector(url=o_url, db=o_db, username=o_user, password=o_pass)
+        return connector.test_connection()
+    except Exception as e:
+        return {"connected": False, "error": str(e), "message": f"Odoo test failed: {str(e)}"}
+
+@app.post("/api/v1/erp/sync/odoo/{voucher_id}")
+async def sync_single_voucher_odoo(voucher_id: str):
+    found = None
+    for v in SEED_VOUCHERS:
+        if v["id"] == voucher_id or v["voucher_number"] == voucher_id:
+            found = v
+            break
+    if not found:
+        raise HTTPException(404, detail="Voucher not found")
+
+    from odoo_connector import OdooConnector
+    o_url = SAVED_COMPANY_SETTINGS.get("odoo_url") or "http://localhost:8069"
+    o_db = SAVED_COMPANY_SETTINGS.get("odoo_db") or ""
+    o_user = SAVED_COMPANY_SETTINGS.get("odoo_username") or ""
+    o_pass = SAVED_COMPANY_SETTINGS.get("odoo_password") or ""
+
+    connector = OdooConnector(url=o_url, db=o_db, username=o_user, password=o_pass)
+    conn_res = connector.test_connection()
+    if not conn_res.get("connected") or not conn_res.get("authenticated"):
+        err_msg = conn_res.get("error") or conn_res.get("message") or "Cannot authenticate with Odoo. Check Settings."
+        found["odoo_synced"] = False
+        found["odoo_error"] = err_msg
+        raise HTTPException(status_code=502, detail=err_msg)
+
+    items = found.get("line_items") or [
+        {
+            "name": f"Accounting Entry {found.get('voucher_number')}",
+            "quantity": 1.0,
+            "rate": float(found.get("subtotal") or found.get("total") or 0.0),
+        }
+    ]
+
+    payload = {
+        "voucher_number": found.get("voucher_number", ""),
+        "reference_number": found.get("reference_number") or found.get("voucher_number", ""),
+        "voucher_date": str(found.get("voucher_date", "")),
+        "party_name": found.get("party_name", "Valued Partner"),
+        "party_gstin": found.get("party_gstin", ""),
+        "narration": found.get("narration", ""),
+        "total": float(found.get("total") or 0.0),
+        "subtotal": float(found.get("subtotal") or found.get("total") or 0.0),
+        "line_items": items,
+    }
+
+    try:
+        res = connector.sync_voucher(payload, found.get("voucher_type"))
+        found["odoo_synced"] = True
+        found["odoo_ref"] = res.get("odoo_ref")
+        found["odoo_error"] = None
+        return {
+            "success": True,
+            "voucher": found,
+            "odoo_response": res,
+            "message": f"Voucher {found['voucher_number']} synced to Odoo ({res.get('odoo_ref')})!"
+        }
+    except Exception as e:
+        err_msg = str(e).strip()
+        found["odoo_synced"] = False
+        found["odoo_error"] = err_msg
+        raise HTTPException(status_code=502, detail=f"Odoo sync failed: {err_msg}")
+
+@app.post("/api/v1/erp/sync/odoo/bulk")
+async def sync_bulk_vouchers_odoo():
+    from odoo_connector import OdooConnector
+    o_url = SAVED_COMPANY_SETTINGS.get("odoo_url") or "http://localhost:8069"
+    o_db = SAVED_COMPANY_SETTINGS.get("odoo_db") or ""
+    o_user = SAVED_COMPANY_SETTINGS.get("odoo_username") or ""
+    o_pass = SAVED_COMPANY_SETTINGS.get("odoo_password") or ""
+
+    connector = OdooConnector(url=o_url, db=o_db, username=o_user, password=o_pass)
+    conn_res = connector.test_connection()
+    if not conn_res.get("connected") or not conn_res.get("authenticated"):
+        err_msg = conn_res.get("error") or conn_res.get("message") or "Cannot authenticate with Odoo. Check Settings."
+        raise HTTPException(status_code=502, detail=err_msg)
+
+    synced_count = 0
+    failed_count = 0
+    errors = []
+
+    pending = [v for v in SEED_VOUCHERS if not v.get("odoo_synced")]
+    for v in pending:
+        items = v.get("line_items") or [
+            {
+                "name": f"Accounting Entry {v.get('voucher_number')}",
+                "quantity": 1.0,
+                "rate": float(v.get("subtotal") or v.get("total") or 0.0),
+            }
+        ]
+        payload = {
+            "voucher_number": v.get("voucher_number", ""),
+            "reference_number": v.get("reference_number") or v.get("voucher_number", ""),
+            "voucher_date": str(v.get("voucher_date", "")),
+            "party_name": v.get("party_name", "Valued Partner"),
+            "party_gstin": v.get("party_gstin", ""),
+            "narration": v.get("narration", ""),
+            "total": float(v.get("total") or 0.0),
+            "subtotal": float(v.get("subtotal") or v.get("total") or 0.0),
+            "line_items": items,
+        }
+        try:
+            res = connector.sync_voucher(payload, v.get("voucher_type"))
+            v["odoo_synced"] = True
+            v["odoo_ref"] = res.get("odoo_ref")
+            v["odoo_error"] = None
+            synced_count += 1
+        except Exception as e:
+            failed_count += 1
+            err_msg = str(e).strip()
+            v["odoo_error"] = err_msg
+            errors.append({"voucher_number": v.get("voucher_number"), "error": err_msg[:200]})
+
+    return {
+        "success": True,
+        "synced": synced_count,
+        "failed": failed_count,
+        "total": len(pending),
+        "errors": errors[:5],
+        "message": f"Odoo sync completed. Synced: {synced_count}, Failed: {failed_count}"
+    }
+
+@app.post("/api/v1/erp/sync/auto/{voucher_id}")
+async def sync_auto_voucher(voucher_id: str):
+    active_erp = (SAVED_COMPANY_SETTINGS.get("active_erp") or "tally").lower()
+    results = {}
+    if active_erp in ("tally", "both"):
+        try:
+            t_res = await sync_single_voucher(voucher_id)
+            results["tally"] = t_res
+        except Exception as e:
+            results["tally"] = {"success": False, "error": str(e)}
+    if active_erp in ("odoo", "both"):
+        try:
+            o_res = await sync_single_voucher_odoo(voucher_id)
+            results["odoo"] = o_res
+        except Exception as e:
+            results["odoo"] = {"success": False, "error": str(e)}
+    return {"success": True, "active_erp": active_erp, "results": results}
+
+@app.get("/api/v1/erp/status")
+async def get_erp_overall_status():
+    tally_pending = len([v for v in SEED_VOUCHERS if not v.get("tally_synced")])
+    tally_synced = len([v for v in SEED_VOUCHERS if v.get("tally_synced")])
+    tally_errors = len([v for v in SEED_VOUCHERS if v.get("tally_error")])
+
+    odoo_pending = len([v for v in SEED_VOUCHERS if not v.get("odoo_synced")])
+    odoo_synced = len([v for v in SEED_VOUCHERS if v.get("odoo_synced")])
+    odoo_errors = len([v for v in SEED_VOUCHERS if v.get("odoo_error")])
+
+    return {
+        "active_erp": SAVED_COMPANY_SETTINGS.get("active_erp", "tally"),
+        "tally": {"pending": tally_pending, "synced": tally_synced, "errors": tally_errors},
+        "odoo": {"pending": odoo_pending, "synced": odoo_synced, "errors": odoo_errors},
+        "pending": tally_pending if SAVED_COMPANY_SETTINGS.get("active_erp") != "odoo" else odoo_pending,
+        "synced": tally_synced if SAVED_COMPANY_SETTINGS.get("active_erp") != "odoo" else odoo_synced,
+        "errors": tally_errors if SAVED_COMPANY_SETTINGS.get("active_erp") != "odoo" else odoo_errors,
     }
 
 # ── Banking Endpoints ─────────────────────────────────────────────────────────

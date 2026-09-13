@@ -46,10 +46,10 @@ const NAV_ITEMS = [
   },
   {
     path: "/tally-sync",
-    label: "Tally Prime Sync",
+    label: "ERP Sync Hub",
     badge: "SYNC",
     icon: "M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71 M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71",
-    desc: "Push approved entries to TallyPrime",
+    desc: "Push entries to TallyPrime & Odoo ERP",
   },
   {
     path: "/bank-recon",
@@ -88,12 +88,13 @@ export default function DashboardLayout() {
   const location = useLocation();
 
   const [tallyStatus, setTallyStatus] = useState<{ connected: boolean; message?: string } | null>(null);
+  const [odooStatus, setOdooStatus] = useState<{ connected: boolean; message?: string } | null>(null);
   const [testingTally, setTestingTally] = useState(false);
   const [showSyncModal, setShowSyncModal] = useState(false);
   const [lanUrl, setLanUrl] = useState("http://localhost:8000/api/v1");
 
-  // Check Tally connection periodically & on mount
-  const checkTally = async () => {
+  // Check Tally & Odoo connections periodically & on mount
+  const checkErpConnections = async () => {
     setTestingTally(true);
     try {
       const res = await api.get("/erp/connection/test/tally");
@@ -103,11 +104,18 @@ export default function DashboardLayout() {
     } finally {
       setTestingTally(false);
     }
+
+    try {
+      const oRes = await api.get("/erp/connection/test/odoo");
+      setOdooStatus(oRes.data);
+    } catch {
+      setOdooStatus({ connected: false, message: "Odoo offline" });
+    }
   };
 
   useEffect(() => {
-    checkTally();
-    const interval = setInterval(checkTally, 25000);
+    checkErpConnections();
+    const interval = setInterval(checkErpConnections, 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -491,6 +499,45 @@ export default function DashboardLayout() {
               >
                 Ctrl + K
               </span>
+            </div>
+
+            {/* ERP Live Indicator Pill */}
+            <div
+              onClick={() => navigate("/tally-sync")}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "4px 12px",
+                background: "#ffffff",
+                border: "1px solid #e2e8f0",
+                borderRadius: 20,
+                cursor: "pointer",
+                fontSize: 11.5,
+                fontWeight: 600,
+                boxShadow: "0 1px 2px rgba(0,0,0,0.03)",
+              }}
+              title="Click to open ERP Sync Hub (Tally & Odoo)"
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <span style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: "50%",
+                  background: tallyStatus?.connected ? "#16a34a" : "#cbd5e1"
+                }} />
+                <span style={{ color: tallyStatus?.connected ? "#15803d" : "#94a3b8" }}>Tally</span>
+              </div>
+              <span style={{ color: "#cbd5e1" }}>|</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <span style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: "50%",
+                  background: odooStatus?.connected ? "#7c3aed" : "#cbd5e1"
+                }} />
+                <span style={{ color: odooStatus?.connected ? "#6d28d9" : "#94a3b8" }}>Odoo</span>
+              </div>
             </div>
 
             {/* Notification Bell */}
