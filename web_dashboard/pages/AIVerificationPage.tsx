@@ -1280,7 +1280,7 @@ export default function AIVerificationPage() {
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <IconSparkles size={16} color="#3b82f6" />
           <span>
-            <b>Workflow:</b> 1. Upload bill → 2. AI extracts details → 3. Verify &amp; Approve below → 4. Sync in Tally Prime!
+            <b>Workflow:</b> 1. Upload bill → 2. AI extracts details → 3. Verify &amp; Approve below → 4. Sync in {activeErp === "odoo" ? "Odoo ERP" : "Tally Prime"}!
           </span>
         </div>
         <button
@@ -1363,7 +1363,7 @@ export default function AIVerificationPage() {
             }}
           >
             <IconSync size={13} color="#0f172a" />
-            View Tally Queue
+            View {activeErp === "odoo" ? "Odoo" : "Tally"} Queue
           </button>
           <button
             onClick={() => { setShowUpload(true); setUploadStatus("idle"); setUploadMsg(""); }}
