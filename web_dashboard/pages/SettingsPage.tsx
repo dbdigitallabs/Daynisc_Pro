@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "../store/authStore";
 import { T, cardStyle } from "../store/theme";
 import api from "../store/apiClient";
+import { toast } from "react-hot-toast";
 import { IconSettings, IconLink, IconUsers, IconHardDrive, IconUser, IconAI, IconRefresh } from "../components/Icons";
 
 type Tab = "general" | "tally" | "ai" | "users" | "backup" | "device";
@@ -38,35 +39,35 @@ export default function SettingsPage() {
       });
   }, []);
 
-
-  const { data: settings = {}, isLoading } = useQuery({
+  const { data: settings } = useQuery({
     queryKey: ["companySettings"],
     queryFn: () => api.get("/settings/company").then(r => r.data || {}),
   });
 
   useEffect(() => {
-    if (settings) {
-      setTallyUrl(settings.tally_url || "");
-      setTallyCompany(settings.tally_company || "");
-      setActiveErp(settings.active_erp || "tally");
-      setOdooUrl(settings.odoo_url || "http://localhost:8069");
-      setOdooDb(settings.odoo_db || "");
-      setOdooUsername(settings.odoo_username || "");
-      setOdooPassword(settings.odoo_password || "");
-      setWhatsappToken(settings.whatsapp_token || "");
-      setGeminiKey(settings.gemini_key || "");
-      setAiThreshold(settings.ai_threshold !== undefined ? settings.ai_threshold : 0.85);
+    if (!settings) return;
+    if (settings.tally_url !== undefined) setTallyUrl(settings.tally_url || "");
+    if (settings.tally_company !== undefined) setTallyCompany(settings.tally_company || "");
+    if (settings.active_erp && settings.active_erp !== activeErp) {
+      setActiveErp(settings.active_erp);
     }
+    if (settings.odoo_url !== undefined) setOdooUrl(settings.odoo_url || "http://localhost:8069");
+    if (settings.odoo_db !== undefined) setOdooDb(settings.odoo_db || "");
+    if (settings.odoo_username !== undefined) setOdooUsername(settings.odoo_username || "");
+    if (settings.odoo_password !== undefined) setOdooPassword(settings.odoo_password || "");
+    if (settings.whatsapp_token !== undefined) setWhatsappToken(settings.whatsapp_token || "");
+    if (settings.gemini_key !== undefined) setGeminiKey(settings.gemini_key || "");
+    if (settings.ai_threshold !== undefined) setAiThreshold(settings.ai_threshold);
   }, [settings]);
 
   const saveMutation = useMutation({
     mutationFn: (payload: Record<string, any>) => api.patch("/settings/company", payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["companySettings"] });
-      alert("Settings saved successfully!");
+      toast.success("Settings saved successfully!");
     },
     onError: (err: any) => {
-      alert(`Error saving settings: ${err?.response?.data?.detail || err.message}`);
+      toast.error(`Error saving settings: ${err?.response?.data?.detail || err.message}`);
     }
   });
 
@@ -75,12 +76,12 @@ export default function SettingsPage() {
     try {
       const res = await api.get("/erp/connection/test/tally");
       if (res.data?.connected || res.data?.success) {
-        alert(`Connection successful!\n${res.data?.message || "TallyPrime is reachable and responding."}`);
+        toast.success(`Connection successful!\n${res.data?.message || "TallyPrime is reachable and responding."}`);
       } else {
-        alert(`Connection failed: ${res.data?.error || "Could not connect to Tally"}`);
+        toast.error(`Connection failed: ${res.data?.error || "Could not connect to Tally"}`);
       }
     } catch (err: any) {
-      alert(`Connection failed: ${err?.response?.data?.detail || err.message}`);
+      toast.error(`Connection failed: ${err?.response?.data?.detail || err.message}`);
     } finally {
       setTestingTally(false);
     }
@@ -96,14 +97,14 @@ export default function SettingsPage() {
         odoo_password: odooPassword
       });
       if (res.data?.connected && res.data?.authenticated) {
-        alert(`Odoo Connection Successful!\n${res.data?.message || "Connected to Odoo ERP."}`);
+        toast.success(`Odoo Connection Successful!\n${res.data?.message || "Connected to Odoo ERP."}`);
       } else if (res.data?.connected && !res.data?.authenticated) {
-        alert(`Odoo Server Reached (v${res.data?.server_version}), but credentials failed.\n${res.data?.message || "Check Database Name, Username, and Password/API Key."}`);
+        toast.error(`Odoo Server Reached (v${res.data?.server_version}), but credentials failed.`);
       } else {
-        alert(`Odoo Connection Failed: ${res.data?.error || res.data?.message || "Could not reach Odoo server."}`);
+        toast.error(`Odoo Connection Failed: ${res.data?.error || res.data?.message || "Could not reach Odoo server."}`);
       }
     } catch (err: any) {
-      alert(`Odoo Connection Failed: ${err?.response?.data?.detail || err.message}`);
+      toast.error(`Odoo Connection Failed: ${err?.response?.data?.detail || err.message}`);
     } finally {
       setTestingOdoo(false);
     }
