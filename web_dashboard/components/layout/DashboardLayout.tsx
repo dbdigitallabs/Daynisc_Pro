@@ -31,25 +31,53 @@ const Ic = ({ d, size = 18 }: { d: string; size?: number }) => (
 
 const NAV_ITEMS = [
   {
+    path: "/dashboard",
+    label: "Dashboard",
+    badge: "",
+    icon: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6",
+    desc: "Overview & Insights",
+  },
+  {
     path: "/ai-verification",
     label: "AI Upload & Verification",
     badge: "AI",
     icon: "M12 2a4 4 0 014 4v1h1a3 3 0 013 3v6a3 3 0 01-3 3H7a3 3 0 01-3-3V10a3 3 0 013-3h1V6a4 4 0 014-4z M9 14h.01 M15 14h.01 M9.5 17.5s1 1 2.5 1 2.5-1 2.5-1",
-    desc: "Extract & verify invoices, bills, receipts",
+    desc: "Extract & verify invoices, bills, rece...",
   },
   {
     path: "/tally-sync",
     label: "Tally Prime Sync",
     badge: "SYNC",
     icon: "M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71 M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71",
-    desc: "Push approved entries to TallyPrime XML HTTP",
+    desc: "Push approved entries to TallyPrime",
   },
   {
     path: "/bank-recon",
     label: "Bank Automation & BRS",
     badge: "BRS",
     icon: "M3 21h18 M3 10h18 M5 10v11 M9 10v11 M15 10v11 M19 10v11 M12 2L2 7h20L12 2z",
-    desc: "Import statements, auto-vouchers & certified BRS",
+    desc: "Import statements, auto-vouchers:...",
+  },
+  {
+    path: "/reports",
+    label: "Reports & Analytics",
+    badge: "MIS",
+    icon: "M18 20V10 M12 20V4 M6 20v-6",
+    desc: "Business insights & MIS",
+  },
+  {
+    path: "/masters",
+    label: "Masters",
+    badge: "",
+    icon: "M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2 M9 7a4 4 0 100-8 4 4 0 000 8z M23 21v-2a4 4 0 00-3-3.87 M16 3.13a4 4 0 010 7.75",
+    desc: "Manage your data",
+  },
+  {
+    path: "/settings",
+    label: "Settings",
+    badge: "",
+    icon: "M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z M15 12a3 3 0 11-6 0 3 3 0 016 0z",
+    desc: "App configuration",
   },
 ];
 
@@ -404,136 +432,140 @@ export default function DashboardLayout() {
             boxShadow: "0 1px 3px rgba(0,0,0,0.03)",
           }}
         >
-          {/* Active section title */}
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: 14, fontWeight: 700, color: "#0f172a" }}>
-              {currentNav?.label || "Workspace"}
+          {/* Breadcrumbs */}
+          <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
+            <span
+              onClick={() => navigate("/dashboard")}
+              style={{ color: "#64748b", fontWeight: 500, cursor: "pointer" }}
+            >
+              Home
             </span>
-            <span style={{ fontSize: 11, color: "#64748b" }}>
-              — {currentNav?.desc}
+            <span style={{ color: "#cbd5e1", fontSize: 12 }}>&gt;</span>
+            <span style={{ color: "#0f172a", fontWeight: 700 }}>
+              {currentNav?.label || "AI Upload & Verification"}
             </span>
           </div>
 
-          {/* Quick Actions & Tally Status Indicator */}
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            {/* Tally live indicator */}
+          {/* Search, Notifications & User Profile */}
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            {/* Global Search Bar */}
             <div
-              onClick={checkTally}
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: 6,
-                padding: "5px 10px",
-                borderRadius: 20,
-                cursor: "pointer",
-                fontSize: 11,
-                fontWeight: 600,
-                background: tallyStatus?.connected
-                  ? "#dcfce7"
-                  : (tallyStatus as any)?.tally_online && !(tallyStatus as any)?.company_open
-                  ? "#fef3c7"
-                  : "#fee2e2",
-                color: tallyStatus?.connected
-                  ? "#15803d"
-                  : (tallyStatus as any)?.tally_online && !(tallyStatus as any)?.company_open
-                  ? "#b45309"
-                  : "#b91c1c",
-                border: `1px solid ${
-                  tallyStatus?.connected
-                    ? "#86efac"
-                    : (tallyStatus as any)?.tally_online && !(tallyStatus as any)?.company_open
-                    ? "#f59e0b"
-                    : "#fca5a5"
-                }`,
+                gap: 8,
+                background: "#f8fafc",
+                border: "1px solid #e2e8f0",
+                borderRadius: 8,
+                padding: "6px 12px",
+                width: 250,
               }}
-              title="Click to test Tally connection"
             >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <input
+                type="text"
+                placeholder="Search anything..."
+                style={{
+                  border: "none",
+                  background: "transparent",
+                  outline: "none",
+                  fontSize: 12,
+                  color: "#0f172a",
+                  width: "100%",
+                }}
+              />
               <span
                 style={{
+                  fontSize: 10,
+                  color: "#94a3b8",
+                  background: "#f1f5f9",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: 4,
+                  padding: "1px 5px",
+                  fontWeight: 600,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                Ctrl + K
+              </span>
+            </div>
+
+            {/* Notification Bell */}
+            <button
+              style={{
+                background: "none",
+                border: "none",
+                position: "relative",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#64748b",
+                padding: 6,
+                borderRadius: 6,
+              }}
+              title="Notifications"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+              </svg>
+              <span
+                style={{
+                  position: "absolute",
+                  top: 5,
+                  right: 5,
                   width: 7,
                   height: 7,
                   borderRadius: "50%",
-                  background: tallyStatus?.connected
-                    ? "#16a34a"
-                    : (tallyStatus as any)?.tally_online && !(tallyStatus as any)?.company_open
-                    ? "#d97706"
-                    : "#dc2626",
+                  background: "#ef4444",
+                  border: "1.5px solid #ffffff",
                 }}
               />
-              {testingTally
-                ? "Testing Tally…"
-                : tallyStatus?.connected
-                ? `Tally: ${(tallyStatus as any)?.company_name || "Connected"}`
-                : (tallyStatus as any)?.tally_online && !(tallyStatus as any)?.company_open
-                ? "Open Company in Tally"
-                : "TallyPrime Offline"}
-            </div>
+            </button>
 
-            {/* Mobile upload QR code */}
-            <button
-              onClick={() => setShowSyncModal(true)}
+            {/* User Avatar Badge */}
+            <div
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: 6,
-                padding: "6px 12px",
-                background: "#f1f5f9",
-                border: "1px solid #cbd5e1",
-                borderRadius: 8,
-                fontSize: 12,
-                fontWeight: 600,
-                color: "#334155",
+                gap: 9,
                 cursor: "pointer",
+                padding: "4px 6px",
+                borderRadius: 8,
               }}
-              title="Upload bills from mobile camera"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
-                <line x1="12" y1="18" x2="12.01" y2="18" />
+              <div
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: "50%",
+                  background: "#3b82f6",
+                  color: "#ffffff",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontWeight: 700,
+                  fontSize: 13,
+                }}
+              >
+                {user?.name ? user.name[0].toUpperCase() : "D"}
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", lineHeight: 1.2 }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: "#0f172a" }}>
+                  {user?.name || "Demo User"}
+                </span>
+                <span style={{ fontSize: 10, color: "#64748b", textTransform: "capitalize" }}>
+                  {user?.role || "Owner"}
+                </span>
+              </div>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="6 9 12 15 18 9" />
               </svg>
-              Mobile Upload
-            </button>
-
-            {/* Fast navigation switch */}
-            {location.pathname.includes("ai-verification") ? (
-              <button
-                onClick={() => navigate("/tally-sync")}
-                style={{
-                  padding: "6px 14px",
-                  background: "#4361ee",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: 8,
-                  fontSize: 12,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                }}
-              >
-                Go to Tally Sync →
-              </button>
-            ) : (
-              <button
-                onClick={() => navigate("/ai-verification")}
-                style={{
-                  padding: "6px 14px",
-                  background: "#4361ee",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: 8,
-                  fontSize: 12,
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                }}
-              >
-                + Upload New Bill
-              </button>
-            )}
+            </div>
           </div>
         </header>
 

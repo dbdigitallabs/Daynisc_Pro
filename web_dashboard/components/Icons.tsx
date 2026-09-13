@@ -128,8 +128,9 @@ export const IconGlobe = ic(<><circle cx="12" cy="12" r="10" /><line x1="2" y1="
 export const IconArrowRight = ic(<><line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" /></>);
 export const IconArrowLeft = ic(<><line x1="19" y1="12" x2="5" y2="12" /><polyline points="12 19 5 12 12 5" /></>);
 export const IconSparkles = ic(<><path d="M12 3l1.912 5.885L20 10.8l-5.088 1.915L13 18.6l-1.912-5.885L6 10.8l5.088-1.915L12 3z" /></>);
-export const IconHandshake = ic(<><path d="M11 17l-5-5a2 2 0 0 1 0-2.83l1.41-1.41a2 2 0 0 1 2.83 0L12 9.5l3.76-3.76a2 2 0 0 1 2.83 0l1.41 1.41a2 2 0 0 1 0 2.83l-7 7a2 2 0 0 1-2 .02z" /></>);
 export const IconStatusDot = ({ color = "#10b981", size = 8 }: { color?: string; size?: number }) => (
   <span style={{ display: "inline-block", width: size, height: size, borderRadius: "50%", backgroundColor: color, flexShrink: 0 }} />
 );
+export const IconFilter = ic(<polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />);
+export const IconInfo = ic(<><circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" /></>);
 

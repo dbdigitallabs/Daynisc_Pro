@@ -10,6 +10,10 @@ import BankReconciliationPage from "./pages/BankReconciliationPage";
 
 import ErrorBoundary from "./components/ErrorBoundary";
 import DownloadLandingPage from "./pages/DownloadLandingPage";
+import DashboardPage from "./pages/DashboardPage";
+import ReportsPage from "./pages/ReportsPage";
+import MastersPage from "./pages/MastersPage";
+import SettingsPage from "./pages/SettingsPage";
 
 const isElectron = (): boolean => {
   if (typeof window === "undefined") return false;
@@ -58,12 +62,15 @@ export default function App() {
                 </ProtectedRoute>
               }
             >
+              <Route path="dashboard" element={<DashboardPage />} />
               <Route path="ai-verification" element={<AIVerificationPage />} />
               <Route path="tally-sync" element={<ERPSyncPage />} />
               <Route path="bank-recon" element={<BankReconciliationPage />} />
+              <Route path="reports" element={<ReportsPage />} />
+              <Route path="masters" element={<MastersPage />} />
+              <Route path="settings" element={<SettingsPage />} />
               <Route path="bank-reconciliation" element={<Navigate to="/bank-recon" replace />} />
               <Route path="tally-integration" element={<Navigate to="/tally-sync" replace />} />
-              <Route path="dashboard" element={<Navigate to="/ai-verification" replace />} />
             </Route>
             <Route
               path="*"
