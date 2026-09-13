@@ -11,11 +11,10 @@ type Tab = "general" | "tally" | "ai" | "users" | "backup" | "device";
 export default function SettingsPage() {
   const qc = useQueryClient();
   const [tab, setTab] = useState<Tab>("general");
-  const { user, company, token, refreshToken } = useAuthStore();
+  const { user, company, token, refreshToken, activeErp, setActiveErp } = useAuthStore();
 
   const [tallyUrl, setTallyUrl] = useState("");
   const [tallyCompany, setTallyCompany] = useState("");
-  const [activeErp, setActiveErp] = useState<"tally" | "odoo" | "both">("tally");
   const [odooUrl, setOdooUrl] = useState("http://localhost:8069");
   const [odooDb, setOdooDb] = useState("");
   const [odooUsername, setOdooUsername] = useState("");
@@ -231,8 +230,9 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(420px, 1fr))", gap: 20 }}>
-            {/* TallyPrime Integration Card */}
+          <div style={{ display: "grid", gridTemplateColumns: activeErp === "both" ? "repeat(auto-fit, minmax(420px, 1fr))" : "1fr", gap: 20 }}>
+            {/* TallyPrime Integration Card (shown only when Tally or Both selected) */}
+            {(activeErp === "tally" || activeErp === "both") && (
             <div style={cardStyle({ padding: 24 })}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                 <span style={{ fontSize: 16 }}>📊</span>
@@ -305,8 +305,10 @@ export default function SettingsPage() {
                 </ol>
               </div>
             </div>
+            )}
 
-            {/* Odoo ERP Integration Card */}
+            {/* Odoo ERP Integration Card (shown only when Odoo or Both selected) */}
+            {(activeErp === "odoo" || activeErp === "both") && (
             <div style={cardStyle({ padding: 24 })}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                 <span style={{ fontSize: 16 }}>🟣</span>
@@ -418,6 +420,7 @@ export default function SettingsPage() {
                 </ol>
               </div>
             </div>
+            )}
           </div>
         </div>
       )}

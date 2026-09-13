@@ -62,12 +62,12 @@ const NAV_ITEMS = [
 
 export default function DashboardLayout() {
   const [collapsed, setCollapsed] = useState(false);
-  const { user, logout } = useAuthStore();
+  const { user, logout, activeErp = "tally" } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
 
   const [tallyStatus, setTallyStatus] = useState<{ connected: boolean; message?: string } | null>(null);
-  const [odooStatus, setOdooStatus] = useState<{ connected: boolean; message?: string } | null>(null);
+  const [odooStatus, setOdooStatus] = useState<{ connected: boolean; message?: string; server_version?: string } | null>(null);
   const [testingTally, setTestingTally] = useState(false);
   const [showSyncModal, setShowSyncModal] = useState(false);
   const [lanUrl, setLanUrl] = useState("http://localhost:8000/api/v1");
@@ -178,7 +178,7 @@ export default function DashboardLayout() {
                   marginTop: 2,
                 }}
               >
-                AI → TALLY SYNC
+                {activeErp === "odoo" ? "AI → ODOO SYNC" : activeErp === "both" ? "AI → ERP SYNC" : "AI → TALLY SYNC"}
               </div>
             </div>
           )}
@@ -222,7 +222,7 @@ export default function DashboardLayout() {
             </div>
             <div style={{ fontSize: 11, color: "rgba(255,255,255,0.75)", lineHeight: 1.4 }}>
               1. <b>AI Upload & Verify</b> invoices<br />
-              2. <b>Sync directly</b> into Tally Prime
+              2. <b>Sync directly</b> into {activeErp === "odoo" ? "Odoo ERP" : activeErp === "both" ? "Tally & Odoo" : "Tally Prime"}
             </div>
           </div>
         )}
@@ -292,50 +292,82 @@ export default function DashboardLayout() {
           ))}
         </nav>
 
-        {/* Tally Connectivity Box */}
+        {/* ERP Connectivity Box (Dynamic based on selected ERP) */}
         {!collapsed && (
           <div
             style={{
               margin: "12px 14px",
               padding: "10px 12px",
-              background: tallyStatus?.connected ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.12)",
-              border: `1px solid ${tallyStatus?.connected ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.3)"}`,
+              background: activeErp === "odoo"
+                ? (odooStatus?.connected ? "rgba(124,58,237,0.12)" : "rgba(239,68,68,0.12)")
+                : (tallyStatus?.connected ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.12)"),
+              border: `1px solid ${
+                activeErp === "odoo"
+                  ? (odooStatus?.connected ? "rgba(124,58,237,0.3)" : "rgba(239,68,68,0.3)")
+                  : (tallyStatus?.connected ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.3)")
+              }`,
               borderRadius: 8,
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span
-                  style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: "50%",
-                    background: tallyStatus?.connected ? "#22c55e" : "#ef4444",
-                    boxShadow: tallyStatus?.connected ? "0 0 8px #22c55e" : "none",
-                  }}
-                />
-                <span style={{ fontSize: 11, fontWeight: 700, color: "#fff" }}>
-                  TallyPrime HTTP
-                </span>
-              </div>
-              <button
-                onClick={checkTally}
-                disabled={testingTally}
-                style={{
-                  background: "none",
-                  border: "none",
-                  color: S.textMuted,
-                  cursor: "pointer",
-                  fontSize: 10,
-                  textDecoration: "underline",
-                }}
-              >
-                {testingTally ? "Ping..." : "Check"}
-              </button>
-            </div>
-            <div style={{ fontSize: 10, color: tallyStatus?.connected ? "#86efac" : "#fca5a5", fontFamily: "monospace" }}>
-              {tallyStatus?.connected ? "Ready on Port 9000" : "Port 9000 Offline"}
-            </div>
+            {activeErp === "odoo" ? (
+              <>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: "50%",
+                        background: odooStatus?.connected ? "#a855f7" : "#ef4444",
+                        boxShadow: odooStatus?.connected ? "0 0 8px #a855f7" : "none",
+                      }}
+                    />
+                    <span style={{ fontSize: 11, fontWeight: 700, color: "#fff" }}>
+                      Odoo XML-RPC
+                    </span>
+                  </div>
+                  <button
+                    onClick={checkErpConnections}
+                    disabled={testingTally}
+                    style={{ background: "none", border: "none", color: S.textMuted, cursor: "pointer", fontSize: 10, textDecoration: "underline" }}
+                  >
+                    Check
+                  </button>
+                </div>
+                <div style={{ fontSize: 10, color: odooStatus?.connected ? "#d8b4fe" : "#fca5a5", fontFamily: "monospace" }}>
+                  {odooStatus?.connected ? (odooStatus.server_version ? `Odoo v${odooStatus.server_version} Ready` : "Odoo Online") : "Odoo Offline"}
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: "50%",
+                        background: tallyStatus?.connected ? "#22c55e" : "#ef4444",
+                        boxShadow: tallyStatus?.connected ? "0 0 8px #22c55e" : "none",
+                      }}
+                    />
+                    <span style={{ fontSize: 11, fontWeight: 700, color: "#fff" }}>
+                      TallyPrime HTTP
+                    </span>
+                  </div>
+                  <button
+                    onClick={checkTally}
+                    disabled={testingTally}
+                    style={{ background: "none", border: "none", color: S.textMuted, cursor: "pointer", fontSize: 10, textDecoration: "underline" }}
+                  >
+                    {testingTally ? "Ping..." : "Check"}
+                  </button>
+                </div>
+                <div style={{ fontSize: 10, color: tallyStatus?.connected ? "#86efac" : "#fca5a5", fontFamily: "monospace" }}>
+                  {tallyStatus?.connected ? "Ready on Port 9000" : "Port 9000 Offline"}
+                </div>
+              </>
+            )}
           </div>
         )}
 
@@ -497,27 +529,31 @@ export default function DashboardLayout() {
                 fontWeight: 600,
                 boxShadow: "0 1px 2px rgba(0,0,0,0.03)",
               }}
-              title="Click to open ERP Sync Hub (Tally & Odoo)"
+              title={activeErp === "odoo" ? "Odoo ERP Status" : activeErp === "both" ? "ERP Status (Tally & Odoo)" : "TallyPrime Status"}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <span style={{
-                  width: 6,
-                  height: 6,
-                  borderRadius: "50%",
-                  background: tallyStatus?.connected ? "#16a34a" : "#cbd5e1"
-                }} />
-                <span style={{ color: tallyStatus?.connected ? "#15803d" : "#94a3b8" }}>Tally</span>
-              </div>
-              <span style={{ color: "#cbd5e1" }}>|</span>
-              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <span style={{
-                  width: 6,
-                  height: 6,
-                  borderRadius: "50%",
-                  background: odooStatus?.connected ? "#7c3aed" : "#cbd5e1"
-                }} />
-                <span style={{ color: odooStatus?.connected ? "#6d28d9" : "#94a3b8" }}>Odoo</span>
-              </div>
+              {(activeErp === "tally" || activeErp === "both") && (
+                <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <span style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: "50%",
+                    background: tallyStatus?.connected ? "#16a34a" : "#cbd5e1"
+                  }} />
+                  <span style={{ color: tallyStatus?.connected ? "#15803d" : "#94a3b8" }}>Tally</span>
+                </div>
+              )}
+              {activeErp === "both" && <span style={{ color: "#cbd5e1" }}>|</span>}
+              {(activeErp === "odoo" || activeErp === "both") && (
+                <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <span style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: "50%",
+                    background: odooStatus?.connected ? "#7c3aed" : "#cbd5e1"
+                  }} />
+                  <span style={{ color: odooStatus?.connected ? "#6d28d9" : "#94a3b8" }}>Odoo</span>
+                </div>
+              )}
             </div>
 
             {/* Notification Bell */}

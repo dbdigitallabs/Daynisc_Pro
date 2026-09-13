@@ -17,11 +17,15 @@ interface Company {
   db_schema?: string;
 }
 
+export type ActiveErp = "tally" | "odoo" | "both";
+
 interface AuthState {
   token: string | null;
   refreshToken: string | null;
   user: User | null;
   company: Company | null;
+  activeErp: ActiveErp;
+  setActiveErp: (erp: ActiveErp) => void;
   // Primary setter used by LoginPage
   setAuth: (token: string, refresh: string, user: User, company: Company) => void;
   // Legacy setters kept for compatibility
@@ -37,6 +41,8 @@ export const useAuthStore = create<AuthState>()(
       refreshToken: null,
       user: null,
       company: null,
+      activeErp: "tally",
+      setActiveErp: (activeErp) => set({ activeErp }),
       setAuth: (token, refreshToken, user, company) =>
         set({ token, refreshToken, user, company }),
       setToken: (token) => set({ token }),

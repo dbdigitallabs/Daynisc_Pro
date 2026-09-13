@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import api from "../store/apiClient";
 import { T, inr, cardStyle, badge, thStyle, tdStyle } from "../store/theme";
+import { useAuthStore } from "../store/authStore";
 import {
   IconRefresh,
   IconPlug,
@@ -56,6 +57,7 @@ const VTYPE_C: Record<string, { color: string; bg: string }> = {
 export default function ERPSyncPage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
+  const { activeErp = "tally" } = useAuthStore();
 
   const [syncingId, setSyncingId] = useState<string | null>(null);
   const [syncingOdooId, setSyncingOdooId] = useState<string | null>(null);
@@ -298,16 +300,29 @@ export default function ERPSyncPage() {
               gap: 10,
             }}
           >
-            <IconLink size={24} color={T.primary} /> ERP Sync Hub (Tally &amp; Odoo)
+            <IconLink size={24} color={activeErp === "odoo" ? "#7c3aed" : T.primary} />
+            {activeErp === "odoo"
+              ? "ERP Sync Hub (Odoo ERP)"
+              : activeErp === "both"
+              ? "ERP Sync Hub (Tally & Odoo)"
+              : "ERP Sync Hub (TallyPrime)"}
           </h1>
           <p style={{ fontSize: 13, color: T.text3 }}>
-            Synchronize verified invoices, bills, and vouchers to TallyPrime (Port 9000) or Odoo ERP (XML-RPC)
+            {activeErp === "odoo"
+              ? "Synchronize verified invoices, bills, and vouchers to Odoo ERP (XML-RPC)"
+              : activeErp === "both"
+              ? "Synchronize verified invoices, bills, and vouchers to TallyPrime (Port 9000) or Odoo ERP (XML-RPC)"
+              : "Synchronize verified invoices, bills, and vouchers to TallyPrime (Port 9000)"}
           </p>
         </div>
 
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
           <button
-            onClick={() => setShowConfig(!showConfig)}
+            onClick={() => {
+              setShowConfig(!showConfig);
+              if (activeErp === "odoo") setConfigTab("odoo");
+              else if (activeErp === "tally") setConfigTab("tally");
+            }}
             style={{
               padding: "9px 14px",
               background: "#fff",
@@ -319,10 +334,11 @@ export default function ERPSyncPage() {
               fontWeight: 600,
             }}
           >
-            Configure ERPs
+            {activeErp === "odoo" ? "Configure Odoo" : activeErp === "both" ? "Configure ERPs" : "Configure Tally"}
           </button>
 
-          {/* Tally Connection Pill */}
+          {/* Tally Connection Pill (only shown if Tally or Both active) */}
+          {(activeErp === "tally" || activeErp === "both") && (
           <button
             onClick={testConnection}
             disabled={testingConn}
@@ -378,8 +394,10 @@ export default function ERPSyncPage() {
               </>
             )}
           </button>
+          )}
 
-          {/* Odoo Connection Pill */}
+          {/* Odoo Connection Pill (only shown if Odoo or Both active) */}
+          {(activeErp === "odoo" || activeErp === "both") && (
           <button
             onClick={testOdooConnection}
             disabled={testingOdoo}
@@ -435,9 +453,11 @@ export default function ERPSyncPage() {
               </>
             )}
           </button>
+          )}
 
           {rawPending.length > 0 && (
             <>
+              {(activeErp === "tally" || activeErp === "both") && (
               <button
                 onClick={bulkSync}
                 disabled={bulkSyncing}
@@ -465,7 +485,9 @@ export default function ERPSyncPage() {
                   </>
                 )}
               </button>
+              )}
 
+              {(activeErp === "odoo" || activeErp === "both") && (
               <button
                 onClick={bulkSyncOdoo}
                 disabled={bulkSyncingOdoo}
@@ -493,6 +515,7 @@ export default function ERPSyncPage() {
                   </>
                 )}
               </button>
+              )}
             </>
           )}
         </div>
@@ -509,6 +532,7 @@ export default function ERPSyncPage() {
         >
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
             <div style={{ display: "flex", gap: 6, background: "#f1f5f9", padding: 3, borderRadius: 6 }}>
+              {(activeErp === "tally" || activeErp === "both") && (
               <button
                 type="button"
                 onClick={() => setConfigTab("tally")}
@@ -521,6 +545,8 @@ export default function ERPSyncPage() {
               >
                 TallyPrime Configuration
               </button>
+              )}
+              {(activeErp === "odoo" || activeErp === "both") && (
               <button
                 type="button"
                 onClick={() => setConfigTab("odoo")}
@@ -533,6 +559,7 @@ export default function ERPSyncPage() {
               >
                 Odoo ERP Configuration
               </button>
+              )}
             </div>
             <button
               onClick={() => setShowConfig(false)}
@@ -710,8 +737,8 @@ export default function ERPSyncPage() {
         </div>
       )}
 
-      {/* ── Connection Banner ────────────────────────────────────────────── */}
-      {connStatus && (
+      {/* ── Connection Banner (Tally) ────────────────────────────────────────────── */}
+      {(activeErp === "tally" || activeErp === "both") && connStatus && (
         <div
           style={{
             borderRadius: 10,
@@ -800,6 +827,80 @@ export default function ERPSyncPage() {
               <strong>Enable HTTP Server: Yes</strong> (Port <strong>9000</strong>)
             </div>
           ) : null}
+        </div>
+      )}
+
+      {/* ── Connection Banner (Odoo) ────────────────────────────────────────────── */}
+      {(activeErp === "odoo" || activeErp === "both") && odooStatus && (
+        <div
+          style={{
+            borderRadius: 10,
+            padding: "12px 18px",
+            marginBottom: 20,
+            background: odooStatus.connected && odooStatus.authenticated
+              ? "#f5f3ff"
+              : odooStatus.connected && !odooStatus.authenticated
+              ? "#fef3c7"
+              : T.redBg,
+            border: `1px solid ${
+              odooStatus.connected && odooStatus.authenticated
+                ? "#c4b5fd"
+                : odooStatus.connected && !odooStatus.authenticated
+                ? "#f59e0b"
+                : "#fca5a5"
+            }`,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            fontSize: 13,
+            flexWrap: "wrap",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ display: "flex" }}>
+              {odooStatus.connected && odooStatus.authenticated ? (
+                <IconCheckCircle size={20} color="#7c3aed" />
+              ) : (
+                <IconXCircle size={20} color={T.red} />
+              )}
+            </span>
+            <div>
+              <div
+                style={{
+                  fontWeight: 700,
+                  color: odooStatus.connected && odooStatus.authenticated
+                    ? "#6d28d9"
+                    : "#b91c1c",
+                }}
+              >
+                {odooStatus.connected && odooStatus.authenticated
+                  ? `Odoo ERP Connected (${odooStatus.company_name || "Online"})`
+                  : odooStatus.connected && !odooStatus.authenticated
+                  ? "Odoo Online, but Authentication Failed! Check username/API key in Configure Odoo."
+                  : "Odoo ERP is currently offline or unreachable"}
+              </div>
+              {!odooStatus.connected && odooStatus.error && (
+                <div style={{ fontSize: 12, color: "#991b1b", marginTop: 2 }}>
+                  {odooStatus.error}
+                </div>
+              )}
+            </div>
+          </div>
+          {!odooStatus.connected && (
+            <div
+              style={{
+                color: "#7f1d1d",
+                fontSize: 12,
+                background: "rgba(255,255,255,0.75)",
+                padding: "6px 12px",
+                borderRadius: 6,
+                fontWeight: 500,
+              }}
+            >
+              Quick fix: Check your Odoo server URL, database name, and user API Key in <strong>Configure Odoo</strong>.
+            </div>
+          )}
         </div>
       )}
 
@@ -926,7 +1027,8 @@ export default function ERPSyncPage() {
         {/* Search & Filters */}
         {activeTab === "pending" && (
           <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 6, flexWrap: "wrap" }}>
-            {/* ERP System Filter */}
+            {/* ERP System Filter (shown only when Dual Sync is active) */}
+            {activeErp === "both" && (
             <div style={{ display: "flex", background: "#f1f5f9", padding: 2, borderRadius: 6, gap: 2 }}>
               {[
                 { key: "all", label: "All ERPs" },
@@ -952,6 +1054,7 @@ export default function ERPSyncPage() {
                 </button>
               ))}
             </div>
+            )}
 
             <select
               value={typeFilter}
@@ -1068,10 +1171,14 @@ export default function ERPSyncPage() {
                       <td style={{ ...tdStyle, fontWeight: 700, color: T.amber }}>{inr(v.total)}</td>
                       <td style={tdStyle}>
                         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                          <SyncBadge synced={v.tally_synced} error={v.tally_error} label="Tally" />
-                          <SyncBadge synced={Boolean(v.odoo_synced)} error={v.odoo_error} label="Odoo" />
+                          {(activeErp === "tally" || activeErp === "both") && (
+                            <SyncBadge synced={v.tally_synced} error={v.tally_error} label="Tally" />
+                          )}
+                          {(activeErp === "odoo" || activeErp === "both") && (
+                            <SyncBadge synced={Boolean(v.odoo_synced)} error={v.odoo_error} label="Odoo" />
+                          )}
                         </div>
-                        {(v.tally_error || v.odoo_error) && (
+                        {((activeErp === "tally" && v.tally_error) || (activeErp === "odoo" && v.odoo_error) || (activeErp === "both" && (v.tally_error || v.odoo_error))) && (
                           <div
                             style={{
                               fontSize: 10,
@@ -1081,9 +1188,9 @@ export default function ERPSyncPage() {
                               whiteSpace: "normal",
                               lineHeight: 1.3,
                             }}
-                            title={v.tally_error || v.odoo_error || ""}
+                            title={activeErp === "odoo" ? v.odoo_error || "" : v.tally_error || v.odoo_error || ""}
                           >
-                            {(v.tally_error || v.odoo_error || "")
+                            {(activeErp === "odoo" ? v.odoo_error || "" : v.tally_error || v.odoo_error || "")
                               .replace(/<[^>]+>/g, " ")
                               .replace(/\s+/g, " ")
                               .trim().slice(0, 100)}
@@ -1092,6 +1199,7 @@ export default function ERPSyncPage() {
                       </td>
                       <td style={tdStyle}>
                         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                          {(activeErp === "tally" || activeErp === "both") && (
                           <button
                             onClick={() => syncSingle(v.id, v.voucher_number)}
                             disabled={syncingId === v.id || v.tally_synced}
@@ -1112,7 +1220,9 @@ export default function ERPSyncPage() {
                           >
                             {syncingId === v.id ? "Syncing…" : v.tally_synced ? "✓ Tally" : "→ Tally"}
                           </button>
+                          )}
 
+                          {(activeErp === "odoo" || activeErp === "both") && (
                           <button
                             onClick={() => syncSingleOdoo(v.id, v.voucher_number)}
                             disabled={syncingOdooId === v.id || v.odoo_synced}
@@ -1133,6 +1243,7 @@ export default function ERPSyncPage() {
                           >
                             {syncingOdooId === v.id ? "Syncing…" : v.odoo_synced ? "✓ Odoo" : "→ Odoo"}
                           </button>
+                          )}
                         </div>
                       </td>
                     </tr>
