@@ -8,19 +8,26 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     char args[512];
     snprintf(args, sizeof(args), "--app=%s --window-size=1440,900", appUrl);
 
-    // Try Edge first (preinstalled on all modern Windows 10/11 PCs)
-    HINSTANCE res = ShellExecuteA(NULL, "open", "msedge.exe", args, NULL, SW_SHOWNORMAL);
-    if ((INT_PTR)res > 32) {
-        return 0;
+    // List of known browser paths for native App Mode window on Windows
+    const char* paths[] = {
+        "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+        "C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe",
+        "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+        "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
+        NULL
+    };
+
+    for (int i = 0; paths[i] != NULL; i++) {
+        DWORD attrib = GetFileAttributesA(paths[i]);
+        if (attrib != INVALID_FILE_ATTRIBUTES && !(attrib & FILE_ATTRIBUTE_DIRECTORY)) {
+            HINSTANCE res = ShellExecuteA(NULL, "open", paths[i], args, NULL, SW_SHOWNORMAL);
+            if ((INT_PTR)res > 32) {
+                return 0;
+            }
+        }
     }
 
-    // Try Chrome
-    res = ShellExecuteA(NULL, "open", "chrome.exe", args, NULL, SW_SHOWNORMAL);
-    if ((INT_PTR)res > 32) {
-        return 0;
-    }
-
-    // Fallback: Default browser
+    // Fallback: Default Browser
     ShellExecuteA(NULL, "open", appUrl, NULL, NULL, SW_SHOWNORMAL);
     return 0;
 }

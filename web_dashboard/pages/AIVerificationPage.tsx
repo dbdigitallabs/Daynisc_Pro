@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-hot-toast";
 import api from "../store/apiClient";
+import { useAuthStore } from "../store/authStore";
 import { T, inr, cardStyle, badge, thStyle, tdStyle } from "../store/theme";
 import {
   IconUpload, IconInbox, IconFile, IconAI, IconCheckCircle, IconXCircle, IconRefresh,
@@ -94,6 +95,7 @@ function ExtractionDetail({ extraction, onApprove, onReject, approving }: {
   approving: boolean;
 }) {
   const d = extraction.extracted_data;
+  const activeErp = useAuthStore((s) => s.activeErp) || "tally";
   const [corrections, setCorrections] = useState<Record<string, string>>({});
   const [txList, setTxList] = useState<any[]>([]);
 
@@ -688,7 +690,7 @@ function ExtractionDetail({ extraction, onApprove, onReject, approving }: {
         </div>
       )}
 
-      {/* Tally Connection Banner */}
+      {/* ERP Connection Banner */}
       <div style={{
         marginTop: 20, padding: "12px 16px", background: "#f8fafc",
         border: `1px solid ${T.border}`, borderRadius: 10,
@@ -696,11 +698,15 @@ function ExtractionDetail({ extraction, onApprove, onReject, approving }: {
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span style={{ width: 8, height: 8, borderRadius: "50%", background: T.green }} />
-          <span style={{ fontSize: 12, fontWeight: 700, color: T.text1 }}>TallyPrime HTTP Integration:</span>
-          <span style={{ fontSize: 12, color: T.text2, fontFamily: "monospace" }}>http://localhost:9000</span>
+          <span style={{ fontSize: 12, fontWeight: 700, color: T.text1 }}>
+            {activeErp === "odoo" ? "Odoo ERP XML-RPC Integration:" : "TallyPrime HTTP Integration:"}
+          </span>
+          <span style={{ fontSize: 12, color: T.text2, fontFamily: "monospace" }}>
+            {activeErp === "odoo" ? "http://localhost:8069" : "http://localhost:9000"}
+          </span>
         </div>
         <span style={{ fontSize: 10, fontWeight: 700, color: T.green, background: T.greenBg, padding: "2px 8px", borderRadius: 4 }}>
-          READY FOR XML SYNC
+          {activeErp === "odoo" ? "READY FOR ODOO SYNC" : "READY FOR XML SYNC"}
         </span>
       </div>
 
@@ -741,7 +747,15 @@ function ExtractionDetail({ extraction, onApprove, onReject, approving }: {
               display: "flex", alignItems: "center", justifyContent: "center", gap: 6
             }}
           >
-            {approving ? <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><IconHourglass size={13} /> Creating ERP & Tally Entry…</span> : <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><IconZap size={13} color="#f59e0b" /> Approve & Sync directly to Tally</span>}
+            {approving ? (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                <IconHourglass size={13} /> Creating {activeErp === "odoo" ? "Odoo" : "Tally"} Entry…
+              </span>
+            ) : (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}>
+                <IconZap size={13} color="#f59e0b" /> Approve &amp; Sync directly to {activeErp === "odoo" ? "Odoo" : "Tally"}
+              </span>
+            )}
           </button>
           <button
             onClick={onReject}
@@ -764,6 +778,7 @@ function ExtractionDetail({ extraction, onApprove, onReject, approving }: {
 export default function AIVerificationPage() {
   const qc = useQueryClient();
   const navigate = useNavigate();
+  const activeErp = useAuthStore((s) => s.activeErp) || "tally";
   const [selected, setSelected] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState("extracted");
   const [searchTerm, setSearchTerm] = useState("");
@@ -848,7 +863,12 @@ export default function AIVerificationPage() {
       qc.invalidateQueries({ queryKey: ["extractions-all"] });
       qc.invalidateQueries({ queryKey: ["tally-pending"] });
       setSelected(null);
-      toast.success("Document verified! Entry created for Tally Prime.", { duration: 4000 });
+      toast.success(
+        activeErp === "odoo"
+          ? "Document verified! Entry created for Odoo ERP."
+          : "Document verified! Entry created for Tally Prime.",
+        { duration: 4000 }
+      );
     },
   });
 
@@ -978,7 +998,7 @@ export default function AIVerificationPage() {
               AI Upload &amp; Verification
             </h1>
             <p style={{ fontSize: 12.5, color: "#64748b", margin: 0 }}>
-              Upload invoices, bills or receipts, verify AI-extracted fields, and push to Tally Prime.
+              Upload invoices, bills or receipts, verify AI-extracted fields, and push to {activeErp === "odoo" ? "Odoo ERP" : activeErp === "both" ? "TallyPrime & Odoo ERP" : "Tally Prime"}.
             </p>
           </div>
         </div>
@@ -986,58 +1006,62 @@ export default function AIVerificationPage() {
         {/* Right: Tally Pill, Odoo Pill, Mobile Upload, Go to ERP Sync */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
           {/* Tally Live Status Pill */}
-          <div
-            onClick={() => testTallyConnection()}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              padding: "5px 14px",
-              borderRadius: 20,
-              cursor: "pointer",
-              fontSize: 12,
-              fontWeight: 600,
-              background: "#dcfce7",
-              color: "#15803d",
-              border: "1px solid #86efac",
-            }}
-            title="Click to test Tally connection"
-          >
-            <span style={{
-              width: 7,
-              height: 7,
-              borderRadius: "50%",
-              background: "#16a34a",
-            }} />
-            Tally: {currentTallyCompany}
-          </div>
+          {(activeErp === "tally" || activeErp === "both") && (
+            <div
+              onClick={() => testTallyConnection()}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "5px 14px",
+                borderRadius: 20,
+                cursor: "pointer",
+                fontSize: 12,
+                fontWeight: 600,
+                background: "#dcfce7",
+                color: "#15803d",
+                border: "1px solid #86efac",
+              }}
+              title="Click to test Tally connection"
+            >
+              <span style={{
+                width: 7,
+                height: 7,
+                borderRadius: "50%",
+                background: "#16a34a",
+              }} />
+              Tally: {currentTallyCompany}
+            </div>
+          )}
 
           {/* Odoo Live Status Pill */}
-          <div
-            onClick={() => testOdooConnection()}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 6,
-              padding: "5px 14px",
-              borderRadius: 20,
-              cursor: "pointer",
-              fontSize: 12,
-              fontWeight: 600,
-              background: odooData?.connected ? "#f5f3ff" : "#fef2f2",
-              color: odooData?.connected ? "#6d28d9" : "#b91c1c",
-              border: `1px solid ${odooData?.connected ? "#c4b5fd" : "#fca5a5"}`,
-            }}
-            title="Click to test Odoo ERP connection"
-          >
-            <span style={{
-              width: 7,
-              height: 7,
-              borderRadius: "50%",
-              background: odooData?.connected ? "#7c3aed" : "#ef4444",
-            }} />
-            Odoo: {odooData?.connected ? (odooData?.company_name || "Online") : "Offline"}
-          </div>
+          {(activeErp === "odoo" || activeErp === "both") && (
+            <div
+              onClick={() => testOdooConnection()}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "5px 14px",
+                borderRadius: 20,
+                cursor: "pointer",
+                fontSize: 12,
+                fontWeight: 600,
+                background: odooData?.connected ? "#f5f3ff" : "#fef2f2",
+                color: odooData?.connected ? "#6d28d9" : "#b91c1c",
+                border: `1px solid ${odooData?.connected ? "#c4b5fd" : "#fca5a5"}`,
+              }}
+              title="Click to test Odoo ERP connection"
+            >
+              <span style={{
+                width: 7,
+                height: 7,
+                borderRadius: "50%",
+                background: odooData?.connected ? "#7c3aed" : "#ef4444",
+              }} />
+              Odoo: {odooData?.connected ? (odooData?.company_name || "Online") : "Offline"}
+            </div>
+          )}
 
           {/* Mobile Upload Button */}
           <button
