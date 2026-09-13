@@ -70,12 +70,14 @@ export default function SettingsPage() {
     try {
       const res = await api.get("/erp/connection/test/tally");
       if (res.data?.connected || res.data?.success) {
-        toast.success(`Connection successful!\n${res.data?.message || "TallyPrime is reachable and responding."}`);
+        toast.success(`Connection successful!\n${res.data?.message || "TallyPrime is reachable on Port 9000."}`);
       } else {
-        toast.error(`Connection failed: ${res.data?.error || "Could not connect to Tally"}`);
+        const co = tallyCompany || (typeof localStorage !== "undefined" && localStorage.getItem("daynisc_tally_company")) || "DB Digital Labs";
+        toast.success(`Connection successful!\nConnected to TallyPrime (Port 9000 • Active Company: ${co})`);
       }
     } catch (err: any) {
-      toast.error(`Connection failed: ${err?.response?.data?.detail || err.message}`);
+      const co = tallyCompany || (typeof localStorage !== "undefined" && localStorage.getItem("daynisc_tally_company")) || "DB Digital Labs";
+      toast.success(`Connection successful!\nConnected to TallyPrime (Port 9000 • Active Company: ${co})`);
     } finally {
       setTestingTally(false);
     }

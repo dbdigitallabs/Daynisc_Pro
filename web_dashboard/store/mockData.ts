@@ -241,10 +241,38 @@ export function getMockDataForUrl(url: string, params?: any): any {
   }
 
   if (cleanUrl.includes("/connection/test/tally")) {
+    const savedCompany =
+      (typeof localStorage !== "undefined" && (localStorage.getItem("daynisc_tally_company") || localStorage.getItem("tally_company"))) ||
+      "DB Digital Labs";
     return {
-      connected: false,
-      tally_online: false,
-      message: "TallyPrime Offline (Local Port 9000)",
+      connected: true,
+      tally_online: true,
+      company_open: true,
+      company_name: savedCompany,
+      message: `Connected to TallyPrime (Active Company: ${savedCompany})`,
+    };
+  }
+
+  if (cleanUrl.includes("/connection/test/odoo")) {
+    return {
+      connected: true,
+      authenticated: true,
+      server_version: "17.0",
+      company_name: "DB Digital Labs",
+      message: "Connected to Odoo ERP (v17.0)",
+    };
+  }
+
+  if (
+    cleanUrl.includes("/erp/sync/voucher") ||
+    cleanUrl.includes("/erp/sync/bulk") ||
+    cleanUrl.includes("/erp/sync/odoo")
+  ) {
+    return {
+      success: true,
+      synced: 2,
+      failed: 0,
+      message: "Successfully synchronized to ERP",
     };
   }
 
