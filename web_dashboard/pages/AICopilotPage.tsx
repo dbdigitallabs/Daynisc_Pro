@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import api from "../store/apiClient";
 import { T, cardStyle, badge, inr } from "../store/theme";
-import { IconAI, IconSync, IconMoney, IconBox, IconScale, IconClock } from "../components/Icons";
+import { IconAI, IconSync, IconMoney, IconBox, IconScale, IconClock, IconLightbulb, IconZap } from "../components/Icons";
 
 function Card({ children, style = {} }: { children: React.ReactNode; style?: React.CSSProperties }) {
   return <div style={{ background: T.cardBg, borderRadius: 12, border: `1px solid ${T.border}`, boxShadow: T.shadow, padding: 20, ...style }}>{children}</div>;

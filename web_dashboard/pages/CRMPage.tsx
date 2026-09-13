@@ -7,10 +7,11 @@ import toast from "react-hot-toast";
 import {
   Download, Copy, Share2, Mail, FileSpreadsheet,
   Settings, Landmark, FileText, CheckCircle2,
-  AlertTriangle, Calendar as IconCal, Info, Printer, ShieldAlert,
+  AlertTriangle, Calendar, Info, Printer, ShieldAlert,
   Check, X, Eye, HelpCircle, ShieldCheck, ChevronRight, Activity, Clock,
   ArrowRightLeft, AlertCircle, RefreshCw, Send, Plus, Award, Star,
-  TrendingUp, Users, ShoppingBag, AlertOctagon, FileCheck, Clipboard, Play, Moon, Sun, MessageSquare, Phone
+  TrendingUp, Users, User, ShoppingBag, AlertOctagon, FileCheck, Clipboard, Play, Moon, Sun, MessageSquare, Phone,
+  Sparkles, Box, Receipt
 } from "lucide-react";
 import { AreaChart, Area, ResponsiveContainer } from "recharts";
 
@@ -353,7 +354,7 @@ export default function CRMPage() {
         <KpiCard label="Quotations Sent" value="5 Sent" icon={<FileText size={15} />} accent="blue" trend="Avg value ₹3.40L" isDark={isDark} />
         <KpiCard label="Won Deals" value="₹18.50L" icon={<CheckCircle2 size={15} />} accent="green" trend="▲ +22% MoM" isDark={isDark} />
         <KpiCard label="Lost Opportunities" value="2 Deals" icon={<AlertCircle size={15} />} accent="red" trend="Lost to price margin" isDark={isDark} />
-        <KpiCard label="Follow-ups Today" value="14 Agenda" icon={<IconCal size={15} />} accent="orange" trend="9 phone, 5 site visits" isDark={isDark} />
+        <KpiCard label="Follow-ups Today" value="14 Agenda" icon={<Calendar size={15} />} accent="orange" trend="9 phone, 5 site visits" isDark={isDark} />
         <KpiCard label="Lead Conversion Rate" value="42%" icon={<TrendingUp size={15} />} accent="green" trend="▲ +4.2% H1" isDark={isDark} />
         <KpiCard label="Expected Revenue Pipeline" value="₹1.24Cr" icon={<Landmark size={15} />} accent="purple" trend="Next closing 15 days" isDark={isDark} />
       </div>
@@ -628,9 +629,9 @@ export default function CRMPage() {
               </button>
               {showConvertMenu && (
                 <div style={{ position: "absolute", top: 40, left: 0, right: 0, background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: 6, boxShadow: T.shadowMd, zIndex: 99, padding: 4 }}>
-                  <button onClick={() => handleConvertTarget("Quotation")} style={{ width: "100%", padding: "8px", border: "none", background: "none", textAlign: "left", fontSize: 10, fontWeight: 700, color: C.text1, cursor: "pointer" }}> Convert to Sales Quotation</button>
-                  <button onClick={() => handleConvertTarget("Sales Order")} style={{ width: "100%", padding: "8px", border: "none", background: "none", textAlign: "left", fontSize: 10, fontWeight: 700, color: C.text1, cursor: "pointer" }} style={{ width: "100%", padding: "8px 12px", background: "#f8fafc", border: `1px solid ${C.border}`, borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", color: C.text1, display: "flex", alignItems: "center", gap: 6 }}><Box size={13} /> Convert to Sales Order</button>
-                  <button onClick={() => handleConvertTarget("Proforma Invoice")} style={{ width: "100%", padding: "8px", border: "none", background: "none", textAlign: "left", fontSize: 10, fontWeight: 700, color: C.text1, cursor: "pointer" }} style={{ width: "100%", padding: "8px 12px", background: "#f8fafc", border: `1px solid ${C.border}`, borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", color: C.text1, display: "flex", alignItems: "center", gap: 6 }}><Receipt size={13} /> Convert to Proforma Invoice</button>
+                  <button onClick={() => handleConvertTarget("Quotation")} style={{ width: "100%", padding: "8px 12px", background: "#f8fafc", border: `1px solid ${C.border}`, borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", color: C.text1, display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}> Convert to Sales Quotation</button>
+                  <button onClick={() => handleConvertTarget("Sales Order")} style={{ width: "100%", padding: "8px 12px", background: "#f8fafc", border: `1px solid ${C.border}`, borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", color: C.text1, display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}><Box size={13} /> Convert to Sales Order</button>
+                  <button onClick={() => handleConvertTarget("Proforma Invoice")} style={{ width: "100%", padding: "8px 12px", background: "#f8fafc", border: `1px solid ${C.border}`, borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", color: C.text1, display: "flex", alignItems: "center", gap: 6 }}><Receipt size={13} /> Convert to Proforma Invoice</button>
                 </div>
               )}
             </div>

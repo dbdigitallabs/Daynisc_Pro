@@ -15,7 +15,7 @@ import {
   Settings, Layers, Sliders, Ruler, Landmark, FileText, CheckCircle2,
   AlertTriangle, Calendar as IconCal, Info, Printer, ShieldAlert,
   Check, X, Eye, HelpCircle, ShieldCheck, ChevronRight, Activity, Clock,
-  ArrowRightLeft, AlertCircle, RefreshCw, Send, Plus
+  ArrowRightLeft, AlertCircle, RefreshCw, Send, Plus, Folder, Upload, Search
 } from "lucide-react";
 
 type Tab =

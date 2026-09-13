@@ -74,7 +74,13 @@ export default function MastersPage() {
       lastInvoice: "—",
       lastPayment: "—",
       salesPerson: "Unassigned",
-      state: "Gujarat"
+      state: "Gujarat",
+      city: "Ahmedabad",
+      lastPaymentText: "None",
+      lastInvoiceText: "None",
+      ordersCount: 0,
+      riskScore: "Low",
+      documents: []
     };
 
     if (activeMaster === "customers") {

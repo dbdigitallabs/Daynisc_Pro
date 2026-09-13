@@ -21,7 +21,9 @@ export const T = {
   text4:    "#94a3b8",   // placeholder
 
   // Accents
-  primary:  "#4361ee",
+  primary:   "#4361ee",
+  primaryBg: "#e0e7ff",
+  accent:    "#4361ee",
   green:    "#16a34a",
   greenBg:  "#dcfce7",
   red:      "#dc2626",

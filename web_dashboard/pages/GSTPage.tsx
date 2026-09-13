@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import api from "../store/apiClient";
 import { T, inr, cardStyle, badge, thStyle, tdStyle } from "../store/theme";
-import { IconUpload, IconDownload, IconScale, IconClipboard } from "../components/Icons";
+import { IconUpload, IconDownload, IconScale, IconClipboard, IconBarChart } from "../components/Icons";
 
 function Card({ children, style = {} }: { children: React.ReactNode; style?: React.CSSProperties }) {
   return <div style={{ background: T.cardBg, borderRadius: 12, border: `1px solid ${T.border}`, boxShadow: T.shadow, ...style }}>{children}</div>;

@@ -51,6 +51,12 @@ const IconUserPlus = ({ size = 16, color = "currentColor" }) => (
   </svg>
 );
 
+const IconCheck = ({ size = 16, color = "currentColor" }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+    <polyline points="20 6 9 17 4 12" />
+  </svg>
+);
+
 // ── Interface Types ──────────────────────────────────────────────────────────
 interface Company {
   id: string;
@@ -59,6 +65,10 @@ interface Company {
   plan: string;
   parent_id: string | null;
   admins: { name: string; phone: string; role: string; email?: string }[];
+  is_active?: boolean;
+  subscription_expiry?: string;
+  subscription_start?: string;
+  db_schema?: string;
 }
 
 interface OrgNode {

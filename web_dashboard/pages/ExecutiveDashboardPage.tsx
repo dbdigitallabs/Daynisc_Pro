@@ -110,7 +110,7 @@ export default function ExecutiveDashboardPage() {
                   onClick={() => { setSelectedMonth(m); setDrillLevel("month"); }}
                   style={{
                     padding: 16, background: "#f8fafc", border: `1px solid ${T.border}`, borderRadius: 8,
-                    cursor: "pointer", hover: { background: "#f1f5f9" }
+                    cursor: "pointer"
                   }}
                 >
                   <div style={{ fontSize: 13, fontWeight: 700, color: T.text1 }}>{m}</div>

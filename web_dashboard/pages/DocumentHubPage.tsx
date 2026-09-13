@@ -12,7 +12,8 @@ import {
   IconTrash,
   IconFolder,
   IconZap,
-  IconCheckCircle
+  IconCheckCircle,
+  IconX
 } from "../components/Icons";
 
 function Card({ children, style = {}, className = "" }: { children: React.ReactNode; style?: React.CSSProperties; className?: string }) {
