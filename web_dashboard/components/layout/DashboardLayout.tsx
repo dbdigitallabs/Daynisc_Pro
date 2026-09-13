@@ -31,46 +31,25 @@ const Ic = ({ d, size = 18 }: { d: string; size?: number }) => (
 
 const NAV_ITEMS = [
   {
-    path: "/dashboard",
-    label: "Home",
-    badge: "MAIN",
-    icon: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6",
-    desc: "Executive overview & real-time KPIs",
-  },
-  {
-    path: "/bank",
-    label: "Bank",
-    badge: "BRS",
-    icon: "M3 21h18 M3 10h18 M5 10v11 M9 10v11 M15 10v11 M19 10v11 M12 2L2 7h20L12 2z",
-    desc: "Statement import, reconciliation & BRS",
-  },
-  {
-    path: "/accounting",
-    label: "Accounting",
-    badge: "BOOKS",
-    icon: "M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253",
-    desc: "Vouchers, ledgers & financial reports",
-  },
-  {
-    path: "/inventory",
-    label: "Inventory",
-    badge: "STOCK",
-    icon: "M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4",
-    desc: "Godowns, barcode scanner & stock valuation",
-  },
-  {
     path: "/ai-verification",
-    label: "AI Verification",
+    label: "AI Upload & Verification",
     badge: "AI",
     icon: "M12 2a4 4 0 014 4v1h1a3 3 0 013 3v6a3 3 0 01-3 3H7a3 3 0 01-3-3V10a3 3 0 013-3h1V6a4 4 0 014-4z M9 14h.01 M15 14h.01 M9.5 17.5s1 1 2.5 1 2.5-1 2.5-1",
-    desc: "Extract & verify bills, receipts, invoices",
+    desc: "Extract & verify invoices, bills, receipts",
   },
   {
     path: "/tally-sync",
-    label: "Tally Sync",
+    label: "Tally Prime Sync",
     badge: "SYNC",
     icon: "M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71 M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71",
     desc: "Push approved entries to TallyPrime XML HTTP",
+  },
+  {
+    path: "/bank-recon",
+    label: "Bank Automation & BRS",
+    badge: "BRS",
+    icon: "M3 21h18 M3 10h18 M5 10v11 M9 10v11 M15 10v11 M19 10v11 M12 2L2 7h20L12 2z",
+    desc: "Import statements, auto-vouchers & certified BRS",
   },
 ];
 
@@ -562,50 +541,6 @@ export default function DashboardLayout() {
         <main style={{ flex: 1, overflow: "auto" }}>
           <Outlet />
         </main>
-
-        {/* ── Mobile Responsive Bottom Navigation Bar ──────────────────────── */}
-        <nav
-          style={{
-            height: 58,
-            background: "#0d1338",
-            borderTop: "1px solid rgba(255,255,255,0.1)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-around",
-            flexShrink: 0,
-            zIndex: 90,
-            padding: "0 10px",
-          }}
-        >
-          {[
-            { path: "/dashboard", label: "Home", icon: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" },
-            { path: "/bank", label: "Bank", icon: "M3 21h18 M3 10h18 M5 10v11 M9 10v11 M15 10v11 M19 10v11 M12 2L2 7h20L12 2z" },
-            { path: "/accounting", label: "Accounting", icon: "M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" },
-            { path: "/inventory", label: "Inventory", icon: "M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" },
-          ].map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              style={({ isActive }) => ({
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: 3,
-                textDecoration: "none",
-                padding: "6px 12px",
-                borderRadius: 8,
-                color: isActive ? "#ffc107" : "rgba(255,255,255,0.6)",
-                fontSize: 11,
-                fontWeight: isActive ? 700 : 500,
-                background: isActive ? "rgba(255,193,7,0.12)" : "transparent",
-                transition: "all 0.15s",
-              })}
-            >
-              <Ic d={item.icon} size={18} />
-              <span>{item.label}</span>
-            </NavLink>
-          ))}
-        </nav>
       </div>
 
       {/* ── Mobile QR Modal ──────────────────────────────────────────────── */}
