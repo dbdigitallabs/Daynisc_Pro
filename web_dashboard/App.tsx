@@ -10,9 +10,6 @@ import BankReconciliationPage from "./pages/BankReconciliationPage";
 
 import ErrorBoundary from "./components/ErrorBoundary";
 import DownloadLandingPage from "./pages/DownloadLandingPage";
-import DashboardPage from "./pages/DashboardPage";
-import ReportsPage from "./pages/ReportsPage";
-import MastersPage from "./pages/MastersPage";
 import SettingsPage from "./pages/SettingsPage";
 
 const isElectron = (): boolean => {
@@ -50,7 +47,7 @@ export default function App() {
             <Route
               path="/"
               element={
-                isElectron() ? <Navigate to="/dashboard" replace /> : <DownloadLandingPage />
+                isElectron() ? <Navigate to="/ai-verification" replace /> : <DownloadLandingPage />
               }
             />
             <Route path="/download" element={<DownloadLandingPage />} />
@@ -62,13 +59,15 @@ export default function App() {
                 </ProtectedRoute>
               }
             >
-              <Route path="dashboard" element={<DashboardPage />} />
+              <Route index element={<Navigate to="/ai-verification" replace />} />
               <Route path="ai-verification" element={<AIVerificationPage />} />
               <Route path="tally-sync" element={<ERPSyncPage />} />
               <Route path="bank-recon" element={<BankReconciliationPage />} />
-              <Route path="reports" element={<ReportsPage />} />
-              <Route path="masters" element={<MastersPage />} />
               <Route path="settings" element={<SettingsPage />} />
+              {/* Legacy redirects */}
+              <Route path="dashboard" element={<Navigate to="/ai-verification" replace />} />
+              <Route path="reports" element={<Navigate to="/ai-verification" replace />} />
+              <Route path="masters" element={<Navigate to="/ai-verification" replace />} />
               <Route path="bank-reconciliation" element={<Navigate to="/bank-recon" replace />} />
               <Route path="tally-integration" element={<Navigate to="/tally-sync" replace />} />
             </Route>

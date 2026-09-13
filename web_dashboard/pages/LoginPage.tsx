@@ -77,7 +77,7 @@ export default function LoginPage() {
         db_schema: "public",
       };
       setAuth("demo-token-989898", "demo-token-refresh", demoUser, demoCompany);
-      navigate("/dashboard", { replace: true });
+      navigate("/ai-verification", { replace: true });
     };
 
     if (code === "989898") {
@@ -85,7 +85,7 @@ export default function LoginPage() {
         const resp = await api.post("/auth/verify-otp", { phone, otp: code });
         const { access_token, refresh_token, user, company } = resp.data;
         setAuth(access_token, refresh_token, user, company);
-        navigate("/dashboard", { replace: true });
+        navigate("/ai-verification", { replace: true });
       } catch {
         // Fallback for Vercel demo mode
         loginWithDemoUser();
@@ -99,7 +99,7 @@ export default function LoginPage() {
       const resp = await api.post("/auth/verify-otp", { phone, otp: code });
       const { access_token, refresh_token, user, company } = resp.data;
       setAuth(access_token, refresh_token, user, company);
-      navigate("/dashboard", { replace: true });
+      navigate("/ai-verification", { replace: true });
     } catch (e: any) {
       setError(e.response?.data?.detail || "Invalid OTP. Use fixed OTP: 989898");
       setOtp(["", "", "", "", "", ""]);
