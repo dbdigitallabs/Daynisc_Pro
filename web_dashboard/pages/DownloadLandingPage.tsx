@@ -6,13 +6,14 @@ export default function DownloadLandingPage() {
   const navigate = useNavigate();
   const [downloading, setDownloading] = useState(false);
   const [showDemoModal, setShowDemoModal] = useState(false);
+  const [showDownloadModal, setShowDownloadModal] = useState(false);
   const exploreRef = useRef<HTMLDivElement>(null);
 
   const handleDownload = () => {
     setDownloading(true);
-    const releaseUrl = "https://github.com/bhaveshkhimsuriya023-stack/Daynisc/archive/refs/heads/main.zip";
+    const downloadUrl = "/downloads/Daynisc-Pro-Windows.zip";
     const link = document.createElement("a");
-    link.href = releaseUrl;
+    link.href = downloadUrl;
     link.setAttribute("download", "Daynisc-Pro-Windows.zip");
     document.body.appendChild(link);
     link.click();
@@ -20,7 +21,8 @@ export default function DownloadLandingPage() {
 
     setTimeout(() => {
       setDownloading(false);
-    }, 2500);
+      setShowDownloadModal(true);
+    }, 800);
   };
 
   const scrollToExplore = () => {
@@ -756,6 +758,152 @@ export default function DownloadLandingPage() {
               >
                 Try Live in Browser →
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Download Started Modal ───────────────────────────────────────── */}
+      {showDownloadModal && (
+        <div
+          onClick={() => setShowDownloadModal(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0, 0, 0, 0.65)",
+            backdropFilter: "blur(6px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+            padding: 20,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "#ffffff",
+              borderRadius: 16,
+              maxWidth: 620,
+              width: "100%",
+              padding: 28,
+              boxShadow: "0 25px 50px rgba(0, 0, 0, 0.25)",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <img src={logoApp} alt="Daynisc" style={{ width: 30, height: 30 }} />
+                <h3 style={{ fontSize: 18, fontWeight: 700, margin: 0, color: "#0f172a" }}>
+                  Downloading Daynisc Pro for Windows
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowDownloadModal(false)}
+                style={{ background: "none", border: "none", fontSize: 18, cursor: "pointer", color: "#64748b" }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{
+              background: "#f0fdf4",
+              border: "1px solid #bbf7d0",
+              borderRadius: 12,
+              padding: 16,
+              marginBottom: 20,
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+            }}>
+              <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#22c55e", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 700, flexShrink: 0 }}>
+                ✓
+              </div>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: "#166534" }}>
+                  Your download has started!
+                </div>
+                <div style={{ fontSize: 12.5, color: "#15803d", marginTop: 2 }}>
+                  File: <b>Daynisc-Pro-Windows.zip</b> (Saved to your Downloads folder)
+                </div>
+              </div>
+            </div>
+
+            <div style={{
+              background: "#f8fafc",
+              border: "1px solid #e2e8f0",
+              borderRadius: 12,
+              padding: 20,
+              marginBottom: 20,
+            }}>
+              <div style={{ fontSize: 13.5, fontWeight: 700, color: "#0f172a", marginBottom: 10 }}>
+                Quick 2-Step Setup on Windows:
+              </div>
+              <ol style={{ fontSize: 13, color: "#475569", lineHeight: 1.9, paddingLeft: 18, margin: 0 }}>
+                <li><b>Extract:</b> Right-click <code>Daynisc-Pro-Windows.zip</code> and select <b>Extract All</b>.</li>
+                <li><b>Launch:</b> Double-click <code>Daynisc-Pro.bat</code> to launch Daynisc Pro in a dedicated desktop window.</li>
+                <li><b>Connect:</b> TallyPrime (Port 9000) or Odoo ERP (Port 8069) will be detected automatically on your PC.</li>
+              </ol>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              <button
+                onClick={() => {
+                  const link = document.createElement("a");
+                  link.href = "/downloads/Daynisc-Pro-Windows.zip";
+                  link.setAttribute("download", "Daynisc-Pro-Windows.zip");
+                  document.body.appendChild(link);
+                  link.click();
+                  document.body.removeChild(link);
+                }}
+                style={{
+                  background: "transparent",
+                  border: "none",
+                  color: "#2563eb",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  padding: "6px 0",
+                  textDecoration: "underline",
+                }}
+              >
+                Download again if not started
+              </button>
+
+              <div style={{ display: "flex", gap: 10 }}>
+                <button
+                  onClick={() => setShowDownloadModal(false)}
+                  style={{
+                    padding: "9px 18px",
+                    background: "#f1f5f9",
+                    border: "none",
+                    borderRadius: 8,
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: "#475569",
+                    cursor: "pointer",
+                  }}
+                >
+                  Done
+                </button>
+                <button
+                  onClick={() => {
+                    setShowDownloadModal(false);
+                    navigate("/ai-verification");
+                  }}
+                  style={{
+                    padding: "9px 20px",
+                    background: "#090d16",
+                    border: "none",
+                    borderRadius: 8,
+                    fontSize: 13,
+                    fontWeight: 700,
+                    color: "#ffffff",
+                    cursor: "pointer",
+                  }}
+                >
+                  Open in Browser Now →
+                </button>
+              </div>
             </div>
           </div>
         </div>
