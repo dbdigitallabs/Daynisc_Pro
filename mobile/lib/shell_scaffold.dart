@@ -10,10 +10,10 @@ class ShellScaffold extends ConsumerWidget {
   const ShellScaffold({super.key, required this.child});
 
   static const _tabs = [
-    (icon: Icons.home_outlined,            label: 'Home',        route: Routes.dashboard),
-    (icon: Icons.account_balance_outlined, label: 'Bank',        route: Routes.bank),
-    (icon: Icons.menu_book_outlined,       label: 'Accounting',  route: Routes.accounting),
-    (icon: Icons.inventory_2_outlined,     label: 'Inventory',   route: Routes.stock),
+    (icon: Icons.home_outlined, selectedIcon: Icons.home_rounded, label: 'Home', route: Routes.home),
+    (icon: Icons.account_balance_outlined, selectedIcon: Icons.account_balance_rounded, label: 'Bank', route: Routes.bank),
+    (icon: Icons.receipt_long_outlined, selectedIcon: Icons.receipt_long_rounded, label: 'Accounting', route: Routes.accounting),
+    (icon: Icons.inventory_2_outlined, selectedIcon: Icons.inventory_2_rounded, label: 'Inventory', route: Routes.inventory),
   ];
 
   @override
@@ -39,7 +39,7 @@ class ShellScaffold extends ConsumerWidget {
           height: 64,
           destinations: _tabs.map((t) => NavigationDestination(
             icon: Icon(t.icon, color: AppColors.text3, size: 22),
-            selectedIcon: Icon(t.icon, color: AppColors.primary, size: 22),
+            selectedIcon: Icon(t.selectedIcon, color: AppColors.primary, size: 22),
             label: t.label,
           )).toList(),
         ),

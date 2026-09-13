@@ -158,6 +158,58 @@ class _StockScreenState extends ConsumerState<StockScreen> {
       ),
       body: Column(
         children: [
+          // ── Quick Barcode Scan Banner ──────────────────────────────────
+          Container(
+            color: AppColors.cardBg,
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
+            child: InkWell(
+              onTap: () => context.push(Routes.barcodeScan),
+              borderRadius: AppRadius.md,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF4361EE), Color(0xFF3A0CA3)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: AppRadius.md,
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF4361EE).withAlpha(50),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withAlpha(40),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.qr_code_scanner_rounded, color: Colors.white, size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          Text('Scan Barcode to Add Item', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13)),
+                          SizedBox(height: 2),
+                          Text('Scan product packaging or barcode stickers', style: TextStyle(color: Colors.white70, fontSize: 11)),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white70, size: 14),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
           // ── Search bar ──────────────────────────────────────────────────
           Container(
             color: AppColors.cardBg,

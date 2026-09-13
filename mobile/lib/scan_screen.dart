@@ -329,11 +329,6 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
         ),
         actions: [
           IconButton(
-            tooltip: 'Barcode Scanner',
-            icon: const Icon(Icons.qr_code_scanner_rounded, color: AppColors.primary),
-            onPressed: () => context.push(Routes.barcodeScan),
-          ),
-          IconButton(
             tooltip: 'Disconnect / Switch Server',
             icon: const Icon(Icons.link_off_rounded, color: AppColors.text2),
             onPressed: _confirmDisconnect,
@@ -347,103 +342,6 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Barcode Scanner Feature Hero Card ─────────────────────
-            Container(
-              margin: const EdgeInsets.only(bottom: 20),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF4361EE), Color(0xFF3A0CA3)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: AppRadius.lg,
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF4361EE).withAlpha(60),
-                    blurRadius: 14,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-              ),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  borderRadius: AppRadius.lg,
-                  onTap: () => context.push(Routes.barcodeScan),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withAlpha(50),
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: Colors.white30),
-                          ),
-                          child: const Icon(
-                            Icons.qr_code_scanner_rounded,
-                            color: Colors.white,
-                            size: 28,
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  const Text(
-                                    'Barcode Scanner',
-                                    style: TextStyle(
-                                      fontFamily: 'Inter',
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w700,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withAlpha(60),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: const Text(
-                                      'NEW',
-                                      style: TextStyle(
-                                        fontFamily: 'Inter',
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.w800,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 3),
-                              const Text(
-                                'Scan any barcode or QR to instantly add or update inventory items',
-                                style: TextStyle(
-                                  fontFamily: 'Inter',
-                                  fontSize: 12,
-                                  color: Colors.white70,
-                                  height: 1.3,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Icon(Icons.arrow_forward_ios_rounded,
-                            color: Colors.white70, size: 16),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
             // ── Result card (shown after upload) ──────────────────────
             if (_result != null) ...[
               _ResultCard(
@@ -700,57 +598,107 @@ class _DocTypeGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 10,
-      runSpacing: 10,
-      children: _docTypes.map((t) {
-        final isSelected = t.key == selected.key;
-        return GestureDetector(
-          onTap: () => onSelect(t),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: isSelected ? t.bg : AppColors.cardBg,
-              borderRadius: AppRadius.md,
-              border: Border.all(
-                color: isSelected ? t.color : AppColors.border,
-                width: isSelected ? 1.5 : 1,
-              ),
-              boxShadow: isSelected
-                  ? [BoxShadow(
-                      color: t.color.withAlpha((0.15 * 255).round()),
-                      blurRadius: 8, offset: const Offset(0, 2))]
-                  : null,
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(t.icon,
-                    color: isSelected ? t.color : AppColors.text3,
-                    size: 18),
-                const SizedBox(width: 8),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(t.label,
-                        style: TextStyle(
-                          fontFamily: 'Inter', fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: isSelected ? t.color : AppColors.text1,
-                        )),
-                    Text(t.description,
-                        style: const TextStyle(
-                          fontFamily: 'Inter', fontSize: 10,
-                          color: AppColors.text3,
-                        )),
-                  ],
+    return SizedBox(
+      height: 88,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        clipBehavior: Clip.none,
+        physics: const BouncingScrollPhysics(),
+        itemCount: _docTypes.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 12),
+        itemBuilder: (context, index) {
+          final t = _docTypes[index];
+          final isSelected = t.key == selected.key;
+          return GestureDetector(
+            onTap: () => onSelect(t),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              width: 180,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: isSelected ? t.bg : AppColors.cardBg,
+                borderRadius: AppRadius.md,
+                border: Border.all(
+                  color: isSelected ? t.color : AppColors.border,
+                  width: isSelected ? 2 : 1,
                 ),
-              ],
+                boxShadow: isSelected
+                    ? [
+                        BoxShadow(
+                          color: t.color.withAlpha(45),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ]
+                    : [
+                        BoxShadow(
+                          color: Colors.black.withAlpha(8),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: isSelected ? t.color.withAlpha(40) : AppColors.pageBg,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      t.icon,
+                      color: isSelected ? t.color : AppColors.text2,
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          t.label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700,
+                            color: isSelected ? t.color : AppColors.text1,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          t.description,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 10,
+                            color: AppColors.text3,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (isSelected)
+                    Container(
+                      margin: const EdgeInsets.only(left: 4),
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        color: t.color,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.check, color: Colors.white, size: 12),
+                    ),
+                ],
+              ),
             ),
-          ),
-        );
-      }).toList(),
+          );
+        },
+      ),
     );
   }
 }
