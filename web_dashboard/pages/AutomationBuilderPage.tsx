@@ -55,7 +55,7 @@ export default function AutomationBuilderPage() {
       {/* Header */}
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 22, fontWeight: 800, color: T.text1, display: "flex", alignItems: "center", gap: 10, letterSpacing: "-0.4px" }}>
-          ⚡ AI-Powered Automation Builder
+          AI-Powered Automation Builder
         </h1>
         <p style={{ fontSize: 13, color: T.text3, marginTop: 3 }}>Construct visual n8n-style node workflows to link document ingestion, AI extractions, approvals, and ERP syncs.</p>
       </div>
@@ -144,7 +144,7 @@ export default function AutomationBuilderPage() {
           {flows.map((flow) => (
             <Card key={flow.id} style={{ position: "relative" }}>
               <h3 style={{ fontSize: 13, fontWeight: 800, color: T.text1, marginBottom: 14 }}>
-                🟢 Flow: {flow.name}
+                Flow: {flow.name}
               </h3>
               
               {/* Visual Node Chain */}
@@ -155,7 +155,7 @@ export default function AutomationBuilderPage() {
                   <strong style={{ color: T.primary }}>{flow.trigger}</strong>
                 </div>
 
-                <div style={{ fontSize: 14, color: T.text3 }}>➔</div>
+                <div style={{ fontSize: 14, color: T.text3 }}>→</div>
 
                 {/* Node 2: Condition */}
                 <div style={{ background: "#fffbeb", border: "1px solid #d97706", borderRadius: 8, padding: "8px 12px", fontSize: 11 }}>
@@ -163,7 +163,7 @@ export default function AutomationBuilderPage() {
                   <strong style={{ color: "#d97706" }}>{flow.conditions}</strong>
                 </div>
 
-                <div style={{ fontSize: 14, color: T.text3 }}>➔</div>
+                <div style={{ fontSize: 14, color: T.text3 }}>→</div>
 
                 {/* Node 3: Actions Chain */}
                 {flow.actions.map((act: string, aIdx: number) => (
@@ -172,7 +172,7 @@ export default function AutomationBuilderPage() {
                       <div style={{ color: T.text3, fontSize: 9 }}>ACTION</div>
                       <strong style={{ color: T.green }}>{act}</strong>
                     </div>
-                    {aIdx < flow.actions.length - 1 && <span style={{ fontSize: 14, color: T.text3 }}>➔</span>}
+                    {aIdx < flow.actions.length - 1 && <span style={{ fontSize: 14, color: T.text3 }}>→</span>}
                   </div>
                 ))}
               </div>

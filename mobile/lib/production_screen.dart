@@ -150,7 +150,7 @@ class _ProductionScreenState extends ConsumerState<ProductionScreen> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text('🏭', style: TextStyle(fontSize: 48)),
+                            Icon(Icons.factory_outlined, size: 48, color: AppColors.text3),
                             SizedBox(height: 12),
                             Text('No production orders',
                                 style: AppTextStyles.bodySmall),

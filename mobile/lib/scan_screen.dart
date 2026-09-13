@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:dio/dio.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'theme.dart';
 import 'api_client.dart';
 import 'app_router.dart';
@@ -107,6 +108,10 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
   String? _localFileName;
   String? _errorMsg;
 
+  bool _syncingToTally = false;
+  String? _tallySyncSuccessMsg;
+  String? _tallySyncErrorMsg;
+
   final _picker = ImagePicker();
 
   // ── Pick file / photo ─────────────────────────────────────────────────────
@@ -192,16 +197,148 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
       _localFileName = null;
       _result = null;
       _errorMsg = null;
+      _syncingToTally = false;
+      _tallySyncSuccessMsg = null;
+      _tallySyncErrorMsg = null;
     });
+  }
+
+  Future<void> _approveAndSyncToTally(String docId) async {
+    setState(() {
+      _syncingToTally = true;
+      _tallySyncSuccessMsg = null;
+      _tallySyncErrorMsg = null;
+    });
+
+    try {
+      final res = await ApiClient().dio.post(
+        '/documents/$docId/verify',
+        data: {'approve': true},
+      );
+      final data = res.data as Map<String, dynamic>;
+      final bool tallySynced = data['tally_synced'] == true;
+      final String msg = data['tally_message'] as String? ??
+          (tallySynced
+              ? 'Successfully synced to TallyPrime!'
+              : 'Document approved and queued for Tally sync.');
+      setState(() {
+        _tallySyncSuccessMsg = msg;
+      });
+    } on DioException catch (e) {
+      final msg = (e.error is ApiException)
+          ? (e.error as ApiException).message
+          : 'Sync to Tally failed. Check Tally server connection.';
+      setState(() => _tallySyncErrorMsg = msg);
+    } catch (e) {
+      setState(() => _tallySyncErrorMsg = e.toString());
+    } finally {
+      setState(() => _syncingToTally = false);
+    }
+  }
+
+  String _getServerHost() {
+    try {
+      final box = Hive.box('auth');
+      final url = box.get('api_base_url') as String?;
+      if (url != null && url.isNotEmpty) {
+        final uri = Uri.parse(url);
+        return uri.host.isNotEmpty ? uri.host : url;
+      }
+    } catch (_) {}
+    return 'Online';
+  }
+
+  Future<void> _confirmDisconnect() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Disconnect Server?'),
+        content: const Text(
+          'Are you sure you want to disconnect? You will need to scan or enter the server IP again to reconnect.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Disconnect'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      final box = Hive.box('auth');
+      await box.clear();
+      if (mounted) {
+        context.go(Routes.login);
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final host = _getServerHost();
+
     return Scaffold(
       backgroundColor: AppColors.pageBg,
       appBar: AppBar(
         backgroundColor: AppColors.cardBg,
-        title: const Text('Upload Document'),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Upload Document',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: AppColors.text1,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Row(
+              children: [
+                Container(
+                  width: 7,
+                  height: 7,
+                  decoration: const BoxDecoration(
+                    color: AppColors.green,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 5),
+                Text(
+                  'Connected: $host',
+                  style: const TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 11,
+                    color: AppColors.text3,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        actions: [
+          IconButton(
+            tooltip: 'Barcode Scanner',
+            icon: const Icon(Icons.qr_code_scanner_rounded, color: AppColors.primary),
+            onPressed: () => context.push(Routes.barcodeScan),
+          ),
+          IconButton(
+            tooltip: 'Disconnect / Switch Server',
+            icon: const Icon(Icons.link_off_rounded, color: AppColors.text2),
+            onPressed: _confirmDisconnect,
+          ),
+        ],
         elevation: 0,
         scrolledUnderElevation: 1,
       ),
@@ -210,9 +347,115 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // ── Barcode Scanner Feature Hero Card ─────────────────────
+            Container(
+              margin: const EdgeInsets.only(bottom: 20),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF4361EE), Color(0xFF3A0CA3)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: AppRadius.lg,
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF4361EE).withAlpha(60),
+                    blurRadius: 14,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: AppRadius.lg,
+                  onTap: () => context.push(Routes.barcodeScan),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withAlpha(50),
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: Colors.white30),
+                          ),
+                          child: const Icon(
+                            Icons.qr_code_scanner_rounded,
+                            color: Colors.white,
+                            size: 28,
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Text(
+                                    'Barcode Scanner',
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withAlpha(60),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: const Text(
+                                      'NEW',
+                                      style: TextStyle(
+                                        fontFamily: 'Inter',
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w800,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 3),
+                              const Text(
+                                'Scan any barcode or QR to instantly add or update inventory items',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 12,
+                                  color: Colors.white70,
+                                  height: 1.3,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.arrow_forward_ios_rounded,
+                            color: Colors.white70, size: 16),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
             // ── Result card (shown after upload) ──────────────────────
             if (_result != null) ...[
-              _ResultCard(result: _result!, onReset: _reset),
+              _ResultCard(
+                result: _result!,
+                onReset: _reset,
+                isSyncing: _syncingToTally,
+                syncSuccessMsg: _tallySyncSuccessMsg,
+                syncErrorMsg: _tallySyncErrorMsg,
+                onSyncToTally: _result!.id.isNotEmpty
+                    ? () => _approveAndSyncToTally(_result!.id)
+                    : null,
+              ),
               const SizedBox(height: 20),
             ],
 
@@ -251,7 +494,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
             ],
 
             // ── Step 1: Document type ─────────────────────────────────
-            _StepLabel(number: '1', label: 'Document Type'),
+            const _StepLabel(number: '1', label: 'Document Type'),
             const SizedBox(height: 10),
             _DocTypeGrid(
               selected: _selectedType,
@@ -260,7 +503,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
             const SizedBox(height: 20),
 
             // ── Step 2: Choose file ───────────────────────────────────
-            _StepLabel(number: '2', label: 'Select File'),
+            const _StepLabel(number: '2', label: 'Select File'),
             const SizedBox(height: 10),
 
             if (_localFilePath == null) ...[
@@ -305,15 +548,41 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
                 decoration: cardDecoration(),
                 child: Row(
                   children: [
-                    Container(
-                      width: 44, height: 44,
-                      decoration: BoxDecoration(
-                        color: AppColors.greenBg,
+                    if (_localFilePath != null &&
+                        (_localFileName?.toLowerCase().endsWith('.jpg') == true ||
+                         _localFileName?.toLowerCase().endsWith('.jpeg') == true ||
+                         _localFileName?.toLowerCase().endsWith('.png') == true ||
+                         _localFileName?.toLowerCase().endsWith('.webp') == true)) ...[
+                      ClipRRect(
                         borderRadius: AppRadius.sm,
+                        child: Image.file(
+                          File(_localFilePath!),
+                          width: 48,
+                          height: 48,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
+                            width: 48,
+                            height: 48,
+                            decoration: const BoxDecoration(
+                              color: AppColors.greenBg,
+                              borderRadius: AppRadius.sm,
+                            ),
+                            child: const Icon(Icons.image_outlined, color: AppColors.green, size: 24),
+                          ),
+                        ),
                       ),
-                      child: const Icon(Icons.check_circle_outline,
-                          color: AppColors.green, size: 24),
-                    ),
+                    ] else ...[
+                      Container(
+                        width: 48,
+                        height: 48,
+                        decoration: const BoxDecoration(
+                          color: AppColors.amberBg,
+                          borderRadius: AppRadius.sm,
+                        ),
+                        child: const Icon(Icons.picture_as_pdf_outlined,
+                            color: AppColors.amber, size: 26),
+                      ),
+                    ],
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
@@ -326,9 +595,13 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
                             overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 2),
-                          Text('Ready to upload',
-                              style: AppTextStyles.bodySmall.copyWith(
-                                  color: AppColors.green)),
+                          Text(
+                            'Ready to upload',
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: AppColors.green,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -348,7 +621,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
               const SizedBox(height: 20),
 
               // ── Step 3: Upload button ───────────────────────────────
-              _StepLabel(number: '3', label: 'Upload & Extract with AI'),
+              const _StepLabel(number: '3', label: 'Upload & Extract with AI'),
               const SizedBox(height: 10),
 
               SizedBox(
@@ -399,9 +672,9 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
                   ),
                   const SizedBox(height: 10),
                   ...[
-                    '📸 Take a photo or pick a PDF/image',
-                    '🤖 AI reads party name, items, amounts & GST',
-                    '✅ Review & approve to create ERP entry',
+                    '1. Take a photo or pick a PDF/image',
+                    '2. AI reads party name, items, amounts & GST',
+                    '3. Review & approve to create ERP entry',
                   ].map((t) => Padding(
                         padding: const EdgeInsets.symmetric(vertical: 3),
                         child: Text(t,
@@ -535,7 +808,7 @@ class _StepLabel extends StatelessWidget {
       children: [
         Container(
           width: 24, height: 24,
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             color: AppColors.primary, borderRadius: AppRadius.full,
           ),
           child: Center(
@@ -558,7 +831,19 @@ class _StepLabel extends StatelessWidget {
 class _ResultCard extends StatelessWidget {
   final _UploadResult result;
   final VoidCallback onReset;
-  const _ResultCard({required this.result, required this.onReset});
+  final bool isSyncing;
+  final String? syncSuccessMsg;
+  final String? syncErrorMsg;
+  final VoidCallback? onSyncToTally;
+
+  const _ResultCard({
+    required this.result,
+    required this.onReset,
+    this.isSyncing = false,
+    this.syncSuccessMsg,
+    this.syncErrorMsg,
+    this.onSyncToTally,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -641,7 +926,121 @@ class _ResultCard extends StatelessWidget {
                 ],
               ),
             ],
+
+            // ── Tally Sync Status Banner ───────────────────────────────
+            if (syncSuccessMsg != null) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: AppRadius.sm,
+                  border: Border.all(color: AppColors.green, width: 1.5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.green.withAlpha(20),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.cloud_done_rounded, color: AppColors.green, size: 24),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Synced to TallyPrime!',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.green,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            syncSuccessMsg!,
+                            style: AppTextStyles.bodySmall.copyWith(
+                              fontSize: 11,
+                              color: AppColors.text2,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ] else if (syncErrorMsg != null) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.redBg,
+                  borderRadius: AppRadius.sm,
+                  border: Border.all(color: AppColors.red.withAlpha(100)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.error_outline_rounded, color: AppColors.red, size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        syncErrorMsg!,
+                        style: const TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 12,
+                          color: AppColors.red,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
             const SizedBox(height: 14),
+
+            // ── Tally Sync Action ─────────────────────────────────────
+            if (syncSuccessMsg == null && onSyncToTally != null) ...[
+              SizedBox(
+                width: double.infinity,
+                height: 46,
+                child: ElevatedButton.icon(
+                  onPressed: isSyncing ? null : onSyncToTally,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0F766E), // Teal / Tally brand vibe
+                    foregroundColor: Colors.white,
+                    shape: const RoundedRectangleBorder(borderRadius: AppRadius.md),
+                    elevation: 1,
+                  ),
+                  icon: isSyncing
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.cloud_sync_rounded, size: 20),
+                  label: Text(
+                    isSyncing ? 'Pushing to TallyPrime…' : 'Approve & Sync to TallyPrime',
+                    style: const TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+            ],
+
             Row(
               children: [
                 Expanded(

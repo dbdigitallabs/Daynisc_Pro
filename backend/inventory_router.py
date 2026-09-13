@@ -111,6 +111,144 @@ async def list_items(
     return {"items": items, "count": len(items)}
 
 
+@router.get("/items/lookup")
+async def lookup_item(
+    code: str = Query(...),
+    db: AsyncSession = Depends(get_db),
+    user: CurrentUser = Depends(get_current_user),
+):
+    await _set_schema(db, user.db_schema)
+    q = code.strip()
+    rows = await _rows(db, """
+        SELECT im.id::text, im.item_code, im.item_name, COALESCE(im.item_group, 'General') AS category,
+               im.unit, im.hsn_code, im.gst_rate, im.reorder_level,
+               COALESCE(im.standard_rate, 0) AS purchase_rate,
+               COALESCE(im.mrp, 0) AS selling_rate,
+               COALESCE(SUM(sb.quantity), 0) AS quantity
+        FROM item_master im
+        LEFT JOIN stock_balance sb ON sb.item_id = im.id
+        WHERE im.item_code ILIKE :code OR im.id::text = :code
+        GROUP BY im.id, im.item_code, im.item_name, im.item_group, im.unit,
+                 im.hsn_code, im.gst_rate, im.reorder_level, im.standard_rate, im.mrp
+        LIMIT 1
+    """, {"code": q})
+
+    if rows:
+        return {"found": True, "item": rows[0]}
+    return {"found": False, "code": code}
+
+
+@router.post("/items")
+async def create_or_update_item(
+    payload: dict,
+    db: AsyncSession = Depends(get_db),
+    user: CurrentUser = Depends(get_current_user),
+):
+    await _set_schema(db, user.db_schema)
+    item_code = str(payload.get("item_code", "")).strip()
+    item_name = str(payload.get("item_name", "")).strip()
+    if not item_code or not item_name:
+        raise HTTPException(status_code=400, detail="item_code and item_name are required")
+
+    category = payload.get("category", "General") or "General"
+    unit = str(payload.get("unit", "PCS") or "PCS").upper()
+    hsn_code = payload.get("hsn_code")
+    gst_rate = float(payload.get("gst_rate", 18.0) or 18.0)
+    reorder_level = float(payload.get("reorder_level", 0.0) or 0.0)
+    purchase_rate = float(payload.get("purchase_rate", 0.0) or 0.0)
+    selling_rate = float(payload.get("selling_rate", 0.0) or 0.0)
+    quantity = float(payload.get("quantity", 0.0) or 0.0)
+
+    # Check if item_code exists
+    existing = await _rows(db, "SELECT id, item_code, item_name FROM item_master WHERE item_code = :code LIMIT 1", {"code": item_code})
+
+    if existing:
+        item_id = existing[0]["id"]
+        await db.execute(text("""
+            UPDATE item_master
+            SET item_name = :item_name,
+                item_group = :category,
+                unit = :unit,
+                hsn_code = :hsn_code,
+                gst_rate = :gst_rate,
+                reorder_level = :reorder_level,
+                standard_rate = :purchase_rate,
+                mrp = :selling_rate,
+                updated_at = NOW()
+            WHERE id = :id
+        """), {
+            "id": item_id,
+            "item_name": item_name,
+            "category": category,
+            "unit": unit,
+            "hsn_code": hsn_code,
+            "gst_rate": gst_rate,
+            "reorder_level": reorder_level,
+            "purchase_rate": purchase_rate,
+            "selling_rate": selling_rate,
+        })
+        action = "updated"
+    else:
+        res = await db.execute(text("""
+            INSERT INTO item_master (item_code, item_name, item_group, unit, hsn_code, gst_rate, reorder_level, standard_rate, mrp, is_purchased, is_sold, is_active)
+            VALUES (:item_code, :item_name, :category, :unit, :hsn_code, :gst_rate, :reorder_level, :purchase_rate, :selling_rate, TRUE, TRUE, TRUE)
+            RETURNING id::text
+        """), {
+            "item_code": item_code,
+            "item_name": item_name,
+            "category": category,
+            "unit": unit,
+            "hsn_code": hsn_code,
+            "gst_rate": gst_rate,
+            "reorder_level": reorder_level,
+            "purchase_rate": purchase_rate,
+            "selling_rate": selling_rate,
+        })
+        inserted = res.fetchone()
+        item_id = inserted[0] if inserted else None
+        action = "created"
+
+    # If opening quantity > 0, record in stock_balance
+    if quantity > 0 and item_id:
+        # Get default warehouse
+        wh_rows = await _rows(db, "SELECT id FROM warehouses LIMIT 1")
+        wh_id = wh_rows[0]["id"] if wh_rows else None
+        if wh_id:
+            await db.execute(text("""
+                INSERT INTO stock_balance (item_id, warehouse_id, quantity, avg_cost, total_value)
+                VALUES (:item_id, :wh_id, :qty, :cost, :total_val)
+                ON CONFLICT (item_id, warehouse_id, batch_number)
+                DO UPDATE SET quantity = stock_balance.quantity + :qty,
+                              last_updated = NOW()
+            """), {
+                "item_id": item_id,
+                "wh_id": wh_id,
+                "qty": quantity,
+                "cost": purchase_rate,
+                "total_val": quantity * purchase_rate,
+            })
+
+    await db.commit()
+
+    return {
+        "success": True,
+        "action": action,
+        "item": {
+            "id": str(item_id),
+            "item_code": item_code,
+            "item_name": item_name,
+            "category": category,
+            "unit": unit,
+            "quantity": quantity,
+            "purchase_rate": purchase_rate,
+            "selling_rate": selling_rate,
+            "gst_rate": gst_rate,
+            "hsn_code": hsn_code,
+            "reorder_level": reorder_level
+        }
+    }
+
+
 # ── Low Stock Alert ───────────────────────────────────────────────────────────
 
 @router.get("/low-stock")

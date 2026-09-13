@@ -50,9 +50,9 @@ class DashboardScreen extends ConsumerWidget {
                             child: const Icon(Icons.bolt, color: AppColors.primary, size: 18),
                           ),
                           const SizedBox(width: 8),
-                          Text(
+                          const Text(
                             'Daynisc',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontFamily: 'Inter',
                               fontSize: 16,
                               fontWeight: FontWeight.w800,
@@ -103,8 +103,8 @@ class DashboardScreen extends ConsumerWidget {
                   child: Container(
                     margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
                         colors: [Color(0xFF4361EE), Color(0xFF7C3AED)],
                         begin: Alignment.centerLeft,
                         end: Alignment.centerRight,
@@ -161,18 +161,18 @@ class DashboardScreen extends ConsumerWidget {
                 ),
 
                 // ── Quick Actions ────────────────────────────────────────
-                SliverToBoxAdapter(
+                const SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                    padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
                     child: _QuickActions(),
                   ),
                 ),
 
                 // ── KPI Cards ────────────────────────────────────────────
-                SliverToBoxAdapter(
+                const SliverToBoxAdapter(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 20, 16, 6),
-                    child: const SectionHeader(
+                    padding: EdgeInsets.fromLTRB(16, 20, 16, 6),
+                    child: SectionHeader(
                       label: "Today's Summary",
                       icon: Icons.bar_chart_rounded,
                     ),
@@ -223,10 +223,10 @@ class DashboardScreen extends ConsumerWidget {
 
                 // ── Pending Actions ──────────────────────────────────────
                 if (data.pendingActions.isNotEmpty) ...[
-                  SliverToBoxAdapter(
+                  const SliverToBoxAdapter(
                     child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
-                      child: const SectionHeader(
+                      padding: EdgeInsets.fromLTRB(16, 16, 16, 6),
+                      child: SectionHeader(
                         label: 'Pending Actions',
                         icon: Icons.pending_actions_outlined,
                         iconColor: AppColors.red,
@@ -245,10 +245,10 @@ class DashboardScreen extends ConsumerWidget {
 
                 // ── Low Stock Alerts ─────────────────────────────────────
                 if (data.lowStockItems.isNotEmpty) ...[
-                  SliverToBoxAdapter(
+                  const SliverToBoxAdapter(
                     child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
-                      child: const SectionHeader(
+                      padding: EdgeInsets.fromLTRB(16, 16, 16, 6),
+                      child: SectionHeader(
                         label: 'Low Stock Alerts',
                         icon: Icons.warning_amber_rounded,
                         iconColor: AppColors.amber,
@@ -345,7 +345,7 @@ class _PendingActionTile extends StatelessWidget {
       child: ListTile(
         leading: Container(
           width: 38, height: 38,
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             color: AppColors.amberBg,
             borderRadius: AppRadius.sm,
           ),

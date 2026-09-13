@@ -17,6 +17,21 @@ export default function InventoryPage() {
   const [importResult, setImportResult] = useState<any | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // Add Item / Barcode modal states
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [barcodeInput, setBarcodeInput] = useState("");
+  const [itemNameInput, setItemNameInput] = useState("");
+  const [categoryInput, setCategoryInput] = useState("Finished Good");
+  const [unitInput, setUnitInput] = useState("PCS");
+  const [qtyInput, setQtyInput] = useState("1");
+  const [costInput, setCostInput] = useState("0");
+  const [sellingInput, setSellingInput] = useState("0");
+  const [gstInput, setGstInput] = useState("18");
+  const [hsnInput, setHsnInput] = useState("");
+  const [addingItem, setAddingItem] = useState(false);
+  const [addSuccessMsg, setAddSuccessMsg] = useState<string | null>(null);
+  const [addErrorMsg, setAddErrorMsg] = useState<string | null>(null);
+
   const { data, isLoading } = useQuery({
     queryKey: ["inventory"],
     queryFn: () => api.get("/inventory/items", { params: { limit: 200 } }).then(r => r.data).catch(() => ({ items: [] })),
@@ -116,44 +131,104 @@ export default function InventoryPage() {
     resetImport();
   };
 
+  const handleAddItem = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!barcodeInput.trim() || !itemNameInput.trim()) {
+      setAddErrorMsg("Item Name and Barcode / SKU are required.");
+      return;
+    }
+    setAddingItem(true);
+    setAddErrorMsg(null);
+    try {
+      await api.post("/inventory/items", {
+        item_code: barcodeInput.trim(),
+        item_name: itemNameInput.trim(),
+        category: categoryInput,
+        unit: unitInput,
+        quantity: parseFloat(qtyInput) || 0,
+        purchase_rate: parseFloat(costInput) || 0,
+        selling_rate: parseFloat(sellingInput) || 0,
+        gst_rate: parseFloat(gstInput) || 18,
+        hsn_code: hsnInput.trim() || undefined,
+      });
+      queryClient.invalidateQueries({ queryKey: ["inventory"] });
+      setAddSuccessMsg(`Item "${itemNameInput}" saved successfully!`);
+      setTimeout(() => {
+        setShowAddModal(false);
+        setBarcodeInput("");
+        setItemNameInput("");
+        setAddSuccessMsg(null);
+      }, 1000);
+    } catch (err: any) {
+      const msg = err.response?.data?.detail || "Failed to save item.";
+      setAddErrorMsg(msg);
+    } finally {
+      setAddingItem(false);
+    }
+  };
+
   return (
     <div style={{ padding: "24px 28px", fontFamily: "'Inter',sans-serif", background: T.pageBg, minHeight: "100%" }}>
-      {/* Header with Import Button */}
+      {/* Header with Add & Import Buttons */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <h1 style={{ fontSize: 22, fontWeight: 800, color: T.text1, margin: 0, letterSpacing: "-0.4px" }}>Inventory</h1>
-        <button 
-          onClick={() => setShowImportModal(true)}
-          style={{
-            background: T.primary,
-            color: "#fff",
-            border: "none",
-            borderRadius: "8px",
-            padding: "10px 18px",
-            fontSize: "13px",
-            fontWeight: 600,
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            boxShadow: "0 4px 12px rgba(99, 102, 241, 0.2)",
-            transition: "all 0.2s ease"
-          }}
-          onMouseEnter={e => {
-            e.currentTarget.style.transform = "translateY(-1px)";
-            e.currentTarget.style.boxShadow = "0 6px 16px rgba(99, 102, 241, 0.3)";
-          }}
-          onMouseLeave={e => {
-            e.currentTarget.style.transform = "translateY(0)";
-            e.currentTarget.style.boxShadow = "0 4px 12px rgba(99, 102, 241, 0.2)";
-          }}
-        >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-            <polyline points="17 8 12 3 7 8" />
-            <line x1="12" y1="3" x2="12" y2="15" />
-          </svg>
-          Import Items
-        </button>
+        <div style={{ display: "flex", gap: "10px" }}>
+          {/* Add Item with Barcode Button */}
+          <button
+            onClick={() => setShowAddModal(true)}
+            style={{
+              background: T.primary,
+              color: "#fff",
+              border: "none",
+              borderRadius: "8px",
+              padding: "10px 18px",
+              fontSize: "13px",
+              fontWeight: 600,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              boxShadow: "0 4px 12px rgba(99, 102, 241, 0.2)",
+              transition: "all 0.2s ease"
+            }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 7V5a2 2 0 0 1 2-2h2" />
+              <path d="M17 3h2a2 2 0 0 1 2 2v2" />
+              <path d="M21 17v2a2 2 0 0 1-2 2h-2" />
+              <path d="M7 21H5a2 2 0 0 1-2-2v-2" />
+              <rect x="7" y="7" width="10" height="10" rx="1" />
+            </svg>
+            + Add Item (Barcode)
+          </button>
+
+          {/* Import Items */}
+          <button 
+            onClick={() => setShowImportModal(true)}
+            style={{
+              background: "#fff",
+              color: T.text1,
+              border: `1px solid ${T.border}`,
+              borderRadius: "8px",
+              padding: "10px 18px",
+              fontSize: "13px",
+              fontWeight: 600,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              boxShadow: "0 2px 4px rgba(0,0,0,0.03)",
+              transition: "all 0.2s ease"
+            }}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+            Import Sheet
+          </button>
+        </div>
       </div>
 
       {/* KPIs */}
@@ -213,7 +288,7 @@ export default function InventoryPage() {
                     <td style={{ ...tdStyle, fontWeight: 600 }}>{inr(val)}</td>
                     <td style={tdStyle}>
                       <span style={badge(isLow ? T.red : T.green, isLow ? T.redBg : T.greenBg)}>
-                        {isLow ? "⚠ Low Stock" : "✓ OK"}
+                        {isLow ? "Low Stock" : "OK"}
                       </span>
                     </td>
                   </tr>
@@ -408,7 +483,7 @@ export default function InventoryPage() {
                   fontSize: "12px",
                   color: T.text2
                 }}>
-                  <div style={{ fontWeight: 700, color: T.text1, marginBottom: "4px" }}>💡 Template Columns:</div>
+                  <div style={{ fontWeight: 700, color: T.text1, marginBottom: "4px" }}> Template Columns:</div>
                   <ul style={{ margin: 0, paddingLeft: "18px", lineHeight: "1.5", color: T.text3 }}>
                     <li>Must include <strong style={{ color: T.text2 }}>title</strong> (Item Name / description) column.</li>
                     <li>Must include <strong style={{ color: T.text2 }}>dept. name</strong> (Category / department / item group) column.</li>
@@ -563,6 +638,312 @@ export default function InventoryPage() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Add Item with Barcode Modal */}
+      {showAddModal && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: "rgba(15, 23, 42, 0.6)",
+          backdropFilter: "blur(4px)",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          zIndex: 1000,
+          padding: "20px"
+        }}>
+          <div style={{
+            background: "#fff",
+            borderRadius: "16px",
+            width: "100%",
+            maxWidth: "540px",
+            boxShadow: "0 20px 40px rgba(0,0,0,0.15)",
+            padding: "24px 28px",
+            animation: "fadeIn 0.2s ease-out"
+          }}>
+            {/* Modal Header */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                <div style={{ background: T.primaryBg, padding: "8px", borderRadius: "8px" }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={T.primary} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 7V5a2 2 0 0 1 2-2h2" />
+                    <path d="M17 3h2a2 2 0 0 1 2 2v2" />
+                    <path d="M21 17v2a2 2 0 0 1-2 2h-2" />
+                    <path d="M7 21H5a2 2 0 0 1-2-2v-2" />
+                    <rect x="7" y="7" width="10" height="10" rx="1" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "17px", fontWeight: 800, color: T.text1 }}>Add Item via Barcode</h3>
+                  <div style={{ fontSize: "12px", color: T.text3 }}>Scan with barcode scanner or enter SKU manually</div>
+                </div>
+              </div>
+              <button 
+                onClick={() => { setShowAddModal(false); setAddErrorMsg(null); setAddSuccessMsg(null); }}
+                style={{ background: "transparent", border: "none", cursor: "pointer", color: T.text3 }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {addSuccessMsg && (
+              <div style={{ background: "#ecfdf5", border: "1px solid #a7f3d0", color: "#065f46", padding: "10px 14px", borderRadius: "8px", marginBottom: "16px", fontSize: "13px", fontWeight: 600 }}>
+                ✓ {addSuccessMsg}
+              </div>
+            )}
+
+            {addErrorMsg && (
+              <div style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#991b1b", padding: "10px 14px", borderRadius: "8px", marginBottom: "16px", fontSize: "13px", fontWeight: 600 }}>
+                ✕ {addErrorMsg}
+              </div>
+            )}
+
+            <form onSubmit={handleAddItem}>
+              {/* Barcode & Item Name */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: "14px" }}>
+                <div>
+                  <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: T.text2, marginBottom: "6px" }}>
+                    Barcode / SKU *
+                  </label>
+                  <input
+                    type="text"
+                    value={barcodeInput}
+                    onChange={e => setBarcodeInput(e.target.value)}
+                    placeholder="Scan or type barcode"
+                    autoFocus
+                    required
+                    style={{
+                      width: "100%",
+                      padding: "9px 12px",
+                      borderRadius: "8px",
+                      border: `1px solid ${T.border}`,
+                      fontSize: "13px",
+                      fontFamily: "monospace",
+                      fontWeight: 600,
+                      outline: "none",
+                      background: "#fafafa"
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: T.text2, marginBottom: "6px" }}>
+                    Item Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={itemNameInput}
+                    onChange={e => setItemNameInput(e.target.value)}
+                    placeholder="e.g. Parle-G 250g"
+                    required
+                    style={{
+                      width: "100%",
+                      padding: "9px 12px",
+                      borderRadius: "8px",
+                      border: `1px solid ${T.border}`,
+                      fontSize: "13px",
+                      outline: "none"
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Category & Unit */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: "14px" }}>
+                <div>
+                  <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: T.text2, marginBottom: "6px" }}>
+                    Category
+                  </label>
+                  <select
+                    value={categoryInput}
+                    onChange={e => setCategoryInput(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "9px 12px",
+                      borderRadius: "8px",
+                      border: `1px solid ${T.border}`,
+                      fontSize: "13px",
+                      outline: "none",
+                      background: "#fff"
+                    }}
+                  >
+                    {["Finished Good", "Raw Material", "Packaging", "Consumable", "General"].map(c => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: T.text2, marginBottom: "6px" }}>
+                    Unit
+                  </label>
+                  <select
+                    value={unitInput}
+                    onChange={e => setUnitInput(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "9px 12px",
+                      borderRadius: "8px",
+                      border: `1px solid ${T.border}`,
+                      fontSize: "13px",
+                      outline: "none",
+                      background: "#fff"
+                    }}
+                  >
+                    {["PCS", "KG", "BOX", "MTR", "LTR", "PKT", "DOZ"].map(u => (
+                      <option key={u} value={u}>{u}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Quantity, Cost Rate, Selling Rate */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px", marginBottom: "14px" }}>
+                <div>
+                  <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: T.text2, marginBottom: "6px" }}>
+                    Initial Stock
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={qtyInput}
+                    onChange={e => setQtyInput(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "9px 12px",
+                      borderRadius: "8px",
+                      border: `1px solid ${T.border}`,
+                      fontSize: "13px",
+                      outline: "none"
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: T.text2, marginBottom: "6px" }}>
+                    Cost Rate (₹)
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={costInput}
+                    onChange={e => setCostInput(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "9px 12px",
+                      borderRadius: "8px",
+                      border: `1px solid ${T.border}`,
+                      fontSize: "13px",
+                      outline: "none"
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: T.text2, marginBottom: "6px" }}>
+                    Selling Rate (₹)
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={sellingInput}
+                    onChange={e => setSellingInput(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "9px 12px",
+                      borderRadius: "8px",
+                      border: `1px solid ${T.border}`,
+                      fontSize: "13px",
+                      outline: "none"
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* GST Rate & HSN */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px", marginBottom: "24px" }}>
+                <div>
+                  <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: T.text2, marginBottom: "6px" }}>
+                    GST Rate (%)
+                  </label>
+                  <select
+                    value={gstInput}
+                    onChange={e => setGstInput(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "9px 12px",
+                      borderRadius: "8px",
+                      border: `1px solid ${T.border}`,
+                      fontSize: "13px",
+                      outline: "none",
+                      background: "#fff"
+                    }}
+                  >
+                    {["0", "5", "12", "18", "28"].map(g => (
+                      <option key={g} value={g}>{g}%</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: "12px", fontWeight: 700, color: T.text2, marginBottom: "6px" }}>
+                    HSN Code (optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={hsnInput}
+                    onChange={e => setHsnInput(e.target.value)}
+                    placeholder="e.g. 1905"
+                    style={{
+                      width: "100%",
+                      padding: "9px 12px",
+                      borderRadius: "8px",
+                      border: `1px solid ${T.border}`,
+                      fontSize: "13px",
+                      outline: "none"
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Form Buttons */}
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  style={{
+                    padding: "10px 18px",
+                    borderRadius: "8px",
+                    border: `1px solid ${T.border}`,
+                    background: "#fff",
+                    color: T.text2,
+                    fontSize: "13px",
+                    fontWeight: 600,
+                    cursor: "pointer"
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={addingItem}
+                  style={{
+                    padding: "10px 22px",
+                    borderRadius: "8px",
+                    border: "none",
+                    background: T.primary,
+                    color: "#fff",
+                    fontSize: "13px",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    boxShadow: "0 4px 12px rgba(99, 102, 241, 0.25)"
+                  }}
+                >
+                  {addingItem ? "Saving Item..." : "Save & Add to Inventory"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

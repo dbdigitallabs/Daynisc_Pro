@@ -62,7 +62,7 @@ export default function VendorPortalPage() {
       <div style={{ marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 800, color: T.text1, display: "flex", alignItems: "center", gap: 10, letterSpacing: "-0.4px" }}>
-            🤝 Supplier & Vendor Self-Service Portal
+            Supplier & Vendor Self-Service Portal
           </h1>
           <p style={{ fontSize: 13, color: T.text3, marginTop: 3 }}>Vendor console to upload invoices, verify tax filings, download ledgers, and chat with finance.</p>
         </div>
@@ -117,7 +117,7 @@ export default function VendorPortalPage() {
                       <td style={{ padding: "10px", fontSize: 12, fontWeight: 700, color: T.text1 }}>{inr(v.total)}</td>
                       <td style={{ padding: "10px" }}>
                         <span style={badge(v.tally_synced ? T.green : T.amber, v.tally_synced ? T.greenBg : T.amberBg)}>
-                          {v.tally_synced ? "✓ Synced" : "Pending"}
+                          {v.tally_synced ? "Synced" : "Pending"}
                         </span>
                       </td>
                       <td style={{ padding: "10px" }}>

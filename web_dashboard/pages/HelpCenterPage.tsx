@@ -5,6 +5,7 @@ function Card({ children, style = {} }: { children: React.ReactNode; style?: Rea
   return <div style={{ background: T.cardBg, borderRadius: 12, border: `1px solid ${T.border}`, boxShadow: T.shadow, padding: 20, ...style }}>{children}</div>;
 }
 
+
 export default function HelpCenterPage() {
   const [activeSupportTab, setActiveSupportTab] = useState("kb");
 
@@ -18,7 +19,7 @@ export default function HelpCenterPage() {
       {/* Header */}
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 22, fontWeight: 800, color: T.text1, display: "flex", alignItems: "center", gap: 10, letterSpacing: "-0.4px" }}>
-          🙋 Help Center & Customer Support
+          Help Center & Customer Support
         </h1>
         <p style={{ fontSize: 13, color: T.text3, marginTop: 3 }}>Find troubleshooting guidelines, submit technical support tickets, or read latest platform release logs.</p>
       </div>

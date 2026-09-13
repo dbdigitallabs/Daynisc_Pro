@@ -143,7 +143,7 @@ export default function PurchasePage() {
                     <td style={{ ...tdStyle, fontWeight: 700, color: T.amber }}>{inr(v.total)}</td>
                     <td style={tdStyle}>
                       <span style={badge(v.tally_synced ? T.green : T.amber, v.tally_synced ? T.greenBg : T.amberBg)}>
-                        {v.tally_synced ? "✓ Synced" : "Pending"}
+                        {v.tally_synced ? "Synced" : "Pending"}
                       </span>
                     </td>
                   </tr>

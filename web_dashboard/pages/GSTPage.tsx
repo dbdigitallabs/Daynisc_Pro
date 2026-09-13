@@ -64,7 +64,7 @@ export default function GSTPage() {
                   <td style={{ ...tdStyle, fontWeight: 700, color: Number(m.net) > 0 ? T.red : T.green }}>{inr(m.net)}</td>
                   <td style={tdStyle}>
                     <span style={badge(m.filed ? T.green : T.amber, m.filed ? T.greenBg : T.amberBg)}>
-                      {m.filed ? "✓ Filed" : "Pending"}
+                      {m.filed ? "Filed" : "Pending"}
                     </span>
                   </td>
                 </tr>
@@ -153,7 +153,7 @@ export default function GSTPage() {
               {/* Matched Panel */}
               {reconData.matched.length > 0 && (
                 <div>
-                  <h4 style={{ fontSize: 12, fontWeight: 800, color: T.green, marginBottom: 8 }}>✓ Matches confirmed (Claimable ITC)</h4>
+                  <h4 style={{ fontSize: 12, fontWeight: 800, color: T.green, marginBottom: 8 }}> Matches confirmed (Claimable ITC)</h4>
                   <table style={{ width: "100%", borderCollapse: "collapse", border: `1px solid ${T.border}`, borderRadius: 8 }}>
                     <thead style={{ background: "#f8fafc" }}>
                       <tr>
@@ -167,7 +167,7 @@ export default function GSTPage() {
                           <td style={{ ...tdStyle, fontWeight: 600 }}>{m.portal_item.invoice_number}</td>
                           <td style={tdStyle}>{inr(m.books_item.total)}</td>
                           <td style={tdStyle}>{inr(m.portal_item.total)}</td>
-                          <td style={tdStyle}><span style={badge(T.green, T.greenBg)}>✓ Eligible</span></td>
+                          <td style={tdStyle}><span style={badge(T.green, T.greenBg)}>Eligible</span></td>
                         </tr>
                       ))}
                     </tbody>
@@ -178,7 +178,7 @@ export default function GSTPage() {
               {/* Missing in Books Panel */}
               {reconData.missing_in_books.length > 0 && (
                 <div style={{ marginTop: 12 }}>
-                  <h4 style={{ fontSize: 12, fontWeight: 800, color: T.purple, marginBottom: 8 }}>⚠️ Invoices in Portal but Missing in Books</h4>
+                  <h4 style={{ fontSize: 12, fontWeight: 800, color: T.purple, marginBottom: 8 }}>️ Invoices in Portal but Missing in Books</h4>
                   <table style={{ width: "100%", borderCollapse: "collapse", border: `1px solid ${T.border}`, borderRadius: 8 }}>
                     <thead style={{ background: "#f8fafc" }}>
                       <tr>
@@ -210,7 +210,7 @@ export default function GSTPage() {
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "40px 0", gap: 10 }}>
-            <span style={{ fontSize: 32 }}>📊</span>
+            <span style={{ display: "flex", justifyContent: "center" }}><IconBarChart size={32} color={T.primary} /></span>
             <span style={{ fontSize: 12, color: T.text3 }}>No reconciliation report generated yet. Click the button above to run checks.</span>
           </div>
         )}

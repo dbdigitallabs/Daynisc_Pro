@@ -172,7 +172,7 @@ async def upload_document(
         return {
             "id": doc_id,
             "status": "failed",
-            "message": "⚠ Gemini API key not configured. Go to Settings → AI Settings → enter your Gemini API key.",
+            "message": " Gemini API key not configured. Go to Settings → AI Settings → enter your Gemini API key.",
             "setup_url": "/settings",
         }
 
@@ -233,7 +233,7 @@ async def upload_document(
         "invoice_number": extracted.get("invoice_number"),
         "total_amount": extracted.get("total_amount"),
         "confidence": confidence,
-        "message": "✅ AI extraction complete — review in Needs Review tab",
+        "message": " AI extraction complete — review in Needs Review tab",
     }
 
 

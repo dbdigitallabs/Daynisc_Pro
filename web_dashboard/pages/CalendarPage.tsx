@@ -18,7 +18,7 @@ export default function CalendarPage() {
       {/* Header */}
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 22, fontWeight: 800, color: T.text1, display: "flex", alignItems: "center", gap: 10, letterSpacing: "-0.4px" }}>
-          📅 Central ERP Calendar
+          Central ERP Calendar
         </h1>
         <p style={{ fontSize: 13, color: T.text3, marginTop: 3 }}>One unified calendar combining GST due dates, vendor pay warnings, production tasks, and user approvals.</p>
       </div>

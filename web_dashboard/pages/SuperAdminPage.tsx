@@ -581,7 +581,7 @@ export default function SuperAdminPage() {
                   color: "#fff",
                 }}
               >
-                {node.type === "company" ? "🏢" : avatarInitial}
+                {node.type === "company" ? <IconBuilding size={14} /> : avatarInitial}
               </div>
               <div style={{ flex: 1, overflow: "hidden" }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: "#fff", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
@@ -631,7 +631,7 @@ export default function SuperAdminPage() {
                     return (
                       <div key={f.key} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10 }}>
                         <span style={{ color: hasAccess ? T.green : T.red, fontWeight: 900 }}>
-                          {hasAccess ? "✓" : "×"}
+                          {hasAccess ? "Yes" : "No"}
                         </span>
                         <span style={{ color: hasAccess ? "#cbd5e1" : "#64748b", textTransform: "capitalize" }}>
                           {f.key.replace("_", " ")}
@@ -1149,7 +1149,7 @@ export default function SuperAdminPage() {
                             background: paymentDone ? T.greenBg : T.redBg,
                             padding: "2px 6px", borderRadius: 12,
                           }}>
-                            {paymentDone ? "✓ Payment Done" : "⚠️ Payment Due"}
+                            {paymentDone ? "Payment Done" : "Payment Due"}
                           </span>
                           <span style={{
                             fontSize: 9, fontWeight: 700,
@@ -1267,7 +1267,7 @@ export default function SuperAdminPage() {
                             </div>
                             <div style={{ display: "flex", justifyContent: "space-between" }}>
                               <span>Tally Sync:</span>
-                              <span style={{ fontWeight: 600, color: T.green }}>✓ Connected (Active)</span>
+                              <span style={{ fontWeight: 600, color: T.green }}>Connected (Active)</span>
                             </div>
                             <div style={{ display: "flex", justifyContent: "space-between" }}>
                               <span>Network Node ID:</span>
@@ -1625,10 +1625,10 @@ export default function SuperAdminPage() {
                   </div>
                   <div style={{ fontSize: 11, color: T.text2, display: "flex", flexDirection: "column", gap: 4 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <span style={{ color: T.green }}>✓</span> TallyPrime client status: Active
+                      <IconCheck size={12} color={T.green} /> TallyPrime client status: Active
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <span style={{ color: T.green }}>✓</span> Database Schema: {co.id.replace("-", "_")}
+                      <IconCheck size={12} color={T.green} /> Database Schema: {co.id.replace("-", "_")}
                     </div>
                   </div>
                 </div>
@@ -2078,7 +2078,7 @@ export default function SuperAdminPage() {
                             <td style={{ padding: "8px 12px", fontFamily: "monospace" }}>{u.phone || "—"}</td>
                             <td style={{ padding: "8px 12px", textTransform: "capitalize" }}>{u.role?.replace("_", " ") || "—"}</td>
                             <td style={{ padding: "8px 12px", fontWeight: 700, color: u.valid ? T.green : T.red }}>
-                              {u.valid ? "✓ Valid" : u.error}
+                              {u.valid ? "Valid" : u.error}
                             </td>
                           </tr>
                         ))}

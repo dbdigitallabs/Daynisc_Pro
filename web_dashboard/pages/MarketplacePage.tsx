@@ -35,7 +35,7 @@ export default function MarketplacePage() {
       {/* Header */}
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 22, fontWeight: 800, color: T.text1, display: "flex", alignItems: "center", gap: 10, letterSpacing: "-0.4px" }}>
-          🏪 Modular Plugin Marketplace
+          Modular Plugin Marketplace
         </h1>
         <p style={{ fontSize: 13, color: T.text3, marginTop: 3 }}>Install and activate pre-built integrations for shipping carriers, payment gateways, e-invoicing portals, and CRM channels.</p>
       </div>

@@ -141,7 +141,8 @@ class _ErrorInterceptor extends Interceptor {
     } else if (err.response?.statusCode == 404) {
       message = 'Record not found';
     } else if (err.response?.statusCode == 409) {
-      message = 'Duplicate record detected';
+      message = err.response?.data['detail']?.toString() ??
+          'Duplicate bill detected: This bill already exists in the system';
     } else if (err.response?.statusCode == 429) {
       message = 'Too many requests — please wait';
     } else if (err.type == DioExceptionType.unknown &&

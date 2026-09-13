@@ -23,7 +23,7 @@ export default function NotificationCenterPage() {
       {/* Header */}
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 22, fontWeight: 800, color: T.text1, display: "flex", alignItems: "center", gap: 10, letterSpacing: "-0.4px" }}>
-          🔔 Notification Center & Outbox Logs
+          Notification Center & Outbox Logs
         </h1>
         <p style={{ fontSize: 13, color: T.text3, marginTop: 3 }}>One unified repository tracking approvals, system errors, AI anomalies, and WhatsApp logs.</p>
       </div>

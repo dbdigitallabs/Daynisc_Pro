@@ -84,7 +84,7 @@ export default function WorkflowEnginePage() {
       {/* Page Title */}
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 22, fontWeight: 800, color: T.text1, display: "flex", alignItems: "center", gap: 10, letterSpacing: "-0.4px" }}>
-          ⚙️ Workflow & Approval Engine
+          Workflow & Approval Engine
         </h1>
         <p style={{ fontSize: 13, color: T.text3, marginTop: 3 }}>Configure multi-level approval triggers, thresholds, and view pending vouchers requiring sign-offs.</p>
       </div>
@@ -267,7 +267,7 @@ export default function WorkflowEnginePage() {
                       borderRadius: T.radiusSm, padding: "10px", fontSize: 12, fontWeight: 700, cursor: "pointer"
                     }}
                   >
-                    ✓ Approve Voucher
+                    Approve Voucher
                   </button>
                   <button
                     onClick={() => handleApproval("reject")}
@@ -276,7 +276,7 @@ export default function WorkflowEnginePage() {
                       color: T.red, borderRadius: T.radiusSm, fontSize: 12, fontWeight: 700, cursor: "pointer"
                     }}
                   >
-                    ✗ Reject
+                    Reject
                   </button>
                 </div>
               </div>

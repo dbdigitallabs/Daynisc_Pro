@@ -951,13 +951,13 @@ export default function BankingPage() {
               {/* Pre-configured AI prompt chips */}
               <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                 <button onClick={() => runAIPrompt("Why is cash flow low this week?")} style={{ background: "#fff", border: `1px solid ${T.border}`, borderRadius: 4, padding: 4, fontSize: 9, textAlign: "left", cursor: "pointer", fontWeight: 600 }} onMouseEnter={e => e.currentTarget.style.borderColor = T.primary} onMouseLeave={e => e.currentTarget.style.borderColor = T.border}>
-                  ❓ Why is cash flow low this week?
+                  Why is cash flow low this week?
                 </button>
                 <button onClick={() => runAIPrompt("Find potential duplicate payments")} style={{ background: "#fff", border: `1px solid ${T.border}`, borderRadius: 4, padding: 4, fontSize: 9, textAlign: "left", cursor: "pointer", fontWeight: 600 }} onMouseEnter={e => e.currentTarget.style.borderColor = T.primary} onMouseLeave={e => e.currentTarget.style.borderColor = T.border}>
-                  🔍 Find potential duplicate payments
+                  Find potential duplicate payments
                 </button>
                 <button onClick={() => runAIPrompt("Suggest FD reserve investments")} style={{ background: "#fff", border: `1px solid ${T.border}`, borderRadius: 4, padding: 4, fontSize: 9, textAlign: "left", cursor: "pointer", fontWeight: 600 }} onMouseEnter={e => e.currentTarget.style.borderColor = T.primary} onMouseLeave={e => e.currentTarget.style.borderColor = T.border}>
-                  📈 Suggest FD reserve investments
+                  Suggest FD reserve investments
                 </button>
               </div>
             </Card>
@@ -1059,7 +1059,7 @@ export default function BankingPage() {
                 padding: "6px 12px", fontSize: 10, fontWeight: 700, cursor: "pointer"
               }}
             >
-              ➕ Add Bank Account
+              Add Bank Account
             </button>
           </div>
 
@@ -1164,7 +1164,7 @@ export default function BankingPage() {
           {/* Filters Panel */}
           <Card>
             <div style={{ fontSize: 11, fontWeight: 800, color: T.text1, textTransform: "uppercase", marginBottom: 12, display: "flex", justifyContent: "space-between" }}>
-              <span>🔍 Advanced Bank Book Filters</span>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><Search size={13} /> Advanced Bank Book Filters</span>
               <button onClick={() => {
                 setSearchQuery("");
                 setFilterBank("all");
@@ -1319,7 +1319,7 @@ export default function BankingPage() {
                     <td style={{ ...tdStyle, fontWeight: 700 }}>{inr(t.balance)}</td>
                     <td style={tdStyle}>
                       <span style={{ color: t.sync ? T.green : T.amber, fontWeight: 700 }}>
-                        {t.sync ? "✓ Synced" : "Pending"}
+                        {t.sync ? <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}><Check size={11} /> Synced</span> : "Pending"}
                       </span>
                     </td>
                   </tr>
@@ -1342,7 +1342,7 @@ export default function BankingPage() {
                 padding: "6px 12px", fontSize: 10, fontWeight: 700, cursor: "pointer"
               }}
             >
-              ➕ Add Beneficiary
+              Add Beneficiary
             </button>
           </div>
 
@@ -1491,7 +1491,7 @@ export default function BankingPage() {
                   onClick={() => { setBulkFile("Daynisc_BulkPayout_2026.xlsx"); toast.success("Payout template selected"); }}
                   style={{ border: `2px dashed ${T.border}`, padding: 24, borderRadius: 8, background: "#f8fafc", cursor: "pointer" }}
                 >
-                  <span style={{ fontSize: 28 }}>📁</span>
+                  <Folder size={28} color="#94a3b8" />
                   <div style={{ fontSize: 10, fontWeight: 700, color: T.text2, marginTop: 6 }}>Select Payout Excel Template</div>
                   {bulkFile && <div style={{ fontSize: 9, color: T.primary, fontWeight: 800, marginTop: 4 }}>{bulkFile}</div>}
                 </div>
@@ -1571,7 +1571,7 @@ export default function BankingPage() {
 
             {bulkStep === 5 && (
               <div style={{ textAlign: "center", padding: 16 }}>
-                <span style={{ fontSize: 32, color: T.green }}>✓</span>
+                <CheckCircle2 size={32} color={T.green} />
                 <div style={{ fontSize: 11, fontWeight: 800, color: T.text1, marginTop: 8 }}>Bulk payout batch processed successfully!</div>
                 <div style={{ fontSize: 9, color: T.text3, marginTop: 4 }}>UTR reference logs generated. Bank ledger entries synced.</div>
                 <div style={{ display: "flex", gap: 6, justifyContent: "center", marginTop: 12 }}>
@@ -1624,7 +1624,7 @@ export default function BankingPage() {
                           <button onClick={() => toast.success("Payment hold configured")} style={{ padding: "4px 8px", background: "#f1f5f9", border: `1px solid ${T.border}`, borderRadius: 4, fontSize: 9, fontWeight: 700, cursor: "pointer" }}>Hold</button>
                         </div>
                       ) : (
-                        <span style={{ fontSize: 9, color: T.text3, fontWeight: 600 }}>✓ Released to Bank API</span>
+                        <span style={{ fontSize: 9, color: T.text3, fontWeight: 600, display: "inline-flex", alignItems: "center", gap: 3 }}><Check size={10} color={T.green} /> Released to Bank API</span>
                       )}
                     </td>
                   </tr>
@@ -1807,7 +1807,7 @@ export default function BankingPage() {
                   onClick={() => { setWizardFile("HDFC_STATEMENT_JUNE.pdf"); toast.success("HDFC statement file uploaded."); }}
                   style={{ border: `2px dashed ${T.border}`, padding: 20, borderRadius: 8, background: "#f8fafc", cursor: "pointer", textAlign: "center" }}
                 >
-                  <span style={{ fontSize: 24 }}>📤</span>
+                  <Upload size={24} color={T.primary} />
                   <div style={{ fontSize: 10, fontWeight: 700, color: T.text2, marginTop: 4 }}>Drag & Drop Bank Statement here</div>
                   {wizardFile && <div style={{ fontSize: 9, color: T.primary, fontWeight: 800, marginTop: 4 }}>{wizardFile}</div>}
                 </div>
@@ -1894,7 +1894,7 @@ export default function BankingPage() {
 
             {wizardStep === 5 && (
               <div style={{ textAlign: "center", padding: 18 }}>
-                <span style={{ fontSize: 32, color: T.green }}>✓</span>
+                <CheckCircle2 size={32} color={T.green} />
                 <div style={{ fontSize: 11, fontWeight: 800, color: T.text1, marginTop: 8 }}>Bank statement import finished!</div>
                 <div style={{ fontSize: 9, color: T.text3, marginTop: 4 }}>Daynisc AI reconciler auto-matched 2 statement entries.</div>
                 <button onClick={() => { setWizardFile(null); setWizardStep(1); }} style={{ background: T.primary, color: "#fff", border: "none", borderRadius: 6, padding: "8px 14px", fontSize: 10, fontWeight: 700, cursor: "pointer", marginTop: 12 }}>
@@ -2111,7 +2111,7 @@ export default function BankingPage() {
               {/* Offset adjustment sliders */}
               <div style={{ background: "#f8fafc", padding: 10, borderRadius: 6, border: `1px solid ${T.border}`, display: "flex", flexDirection: "column", gap: 6 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 9, fontWeight: 700, color: T.text1, borderBottom: `1px solid ${T.border}`, paddingBottom: 4, marginBottom: 4 }}>
-                  <span>🎚 Alignment Offset Config (mm)</span>
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><Sliders size={13} /> Alignment Offset Config (mm)</span>
                   <label style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 3 }}>
                     <input type="checkbox" checked={showRulers} onChange={e => setShowRulers(e.target.checked)} />
                     Show Alignment Rulers
@@ -2440,14 +2440,14 @@ export default function BankingPage() {
             boxShadow: T.shadowMd, width: 170
           }}>
             {[
-              { type: "add-bank", label: "➕ Add Bank Account" },
-              { type: "payment", label: "💸 Bank Payment" },
-              { type: "receipt", label: "💰 Bank Receipt" },
-              { type: "transfer", label: "🔁 Fund Transfer" },
-              { type: "deposit", label: "🏦 Cash Deposit" },
-              { type: "upload", label: "📄 Upload Statement" },
-              { type: "qr", label: "📱 Generate UPI QR" },
-              { type: "cheque", label: "📝 Create Cheque" }
+              { type: "add-bank", label: "Add Bank Account" },
+              { type: "payment", label: "Bank Payment" },
+              { type: "receipt", label: "Bank Receipt" },
+              { type: "transfer", label: "Fund Transfer" },
+              { type: "deposit", label: "Cash Deposit" },
+              { type: "upload", label: "Upload Statement" },
+              { type: "qr", label: "Generate UPI QR" },
+              { type: "cheque", label: "Create Cheque" }
             ].map(opt => (
               <button
                 key={opt.type}
@@ -2487,7 +2487,7 @@ export default function BankingPage() {
           onMouseEnter={e => e.currentTarget.style.transform = "scale(1.05)"}
           onMouseLeave={e => e.currentTarget.style.transform = "scale(1)"}
         >
-          {showSpeedDial ? "✕" : "＋"}
+          {showSpeedDial ? <X size={20} /> : <Plus size={20} />}
         </button>
       </div>
 
@@ -2504,7 +2504,7 @@ export default function BankingPage() {
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
               <h3 style={{ fontSize: 14, fontWeight: 800, color: T.text1 }}>Register New Bank Account</h3>
-              <button onClick={() => setShowAddAccountModal(false)} style={{ background: "none", border: "none", fontSize: 16, color: T.text3, cursor: "pointer" }}>✕</button>
+              <button onClick={() => setShowAddAccountModal(false)} style={{ background: "none", border: "none", fontSize: 16, color: T.text3, cursor: "pointer" }}><X size={16} /></button>
             </div>
             <form onSubmit={e => { e.preventDefault(); toast.success("Bank account successfully linked and configured!"); setShowAddAccountModal(false); }} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -2546,7 +2546,7 @@ export default function BankingPage() {
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
               <h3 style={{ fontSize: 14, fontWeight: 800, color: T.text1 }}>New Bank {paymentType === "payment" ? "Payment" : "Receipt"} Entry</h3>
-              <button onClick={() => setShowPaymentModal(false)} style={{ background: "none", border: "none", fontSize: 16, color: T.text3, cursor: "pointer" }}>✕</button>
+              <button onClick={() => setShowPaymentModal(false)} style={{ background: "none", border: "none", fontSize: 16, color: T.text3, cursor: "pointer" }}><X size={16} /></button>
             </div>
             <form onSubmit={e => { e.preventDefault(); toast.success(`Bank ${paymentType} logged and posted successfully!`); setShowPaymentModal(false); }} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -2596,7 +2596,7 @@ export default function BankingPage() {
                 </h3>
                 <span style={{ fontSize: 9, color: T.text3 }}>Category: {MOCK_REPORTS_LIST.find(r => r.id === selectedReportId)?.type}</span>
               </div>
-              <button onClick={() => setReportModalOpen(false)} style={{ background: "none", border: "none", fontSize: 18, color: T.text3, cursor: "pointer" }}>✕</button>
+              <button onClick={() => setReportModalOpen(false)} style={{ background: "none", border: "none", fontSize: 18, color: T.text3, cursor: "pointer" }}><X size={16} /></button>
             </div>
 
             {/* Quick Report parameters */}
@@ -2675,7 +2675,7 @@ export default function BankingPage() {
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
               <h3 style={{ fontSize: 14, fontWeight: 800, color: T.text1 }}>AI Suggested Match Parameters</h3>
-              <button onClick={() => setReconDetailItem(null)} style={{ background: "none", border: "none", fontSize: 18, color: T.text3, cursor: "pointer" }}>✕</button>
+              <button onClick={() => setReconDetailItem(null)} style={{ background: "none", border: "none", fontSize: 18, color: T.text3, cursor: "pointer" }}><X size={16} /></button>
             </div>
 
             <div style={{ background: "#f8fafc", padding: 12, borderRadius: 8, border: `1px solid ${T.border}`, display: "flex", flexDirection: "column", gap: 8, fontSize: 11, marginBottom: 14 }}>
@@ -2708,7 +2708,7 @@ export default function BankingPage() {
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
               <h3 style={{ fontSize: 14, fontWeight: 800, color: T.text1 }}>Digital Approval Verification</h3>
-              <button onClick={() => setShowDigitalTokenModal(false)} style={{ background: "none", border: "none", fontSize: 18, color: T.text3, cursor: "pointer" }}>✕</button>
+              <button onClick={() => setShowDigitalTokenModal(false)} style={{ background: "none", border: "none", fontSize: 18, color: T.text3, cursor: "pointer" }}><X size={16} /></button>
             </div>
             
             <div style={{ background: "#f8fafc", padding: 10, borderRadius: 8, border: `1px solid ${T.border}`, marginBottom: 12, fontSize: 10 }}>
@@ -2756,7 +2756,7 @@ export default function BankingPage() {
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
               <h3 style={{ fontSize: 14, fontWeight: 800, color: T.text1 }}>Add New Beneficiary Profile</h3>
-              <button onClick={() => setShowNewBeneficiaryModal(false)} style={{ background: "none", border: "none", fontSize: 18, color: T.text3, cursor: "pointer" }}>✕</button>
+              <button onClick={() => setShowNewBeneficiaryModal(false)} style={{ background: "none", border: "none", fontSize: 18, color: T.text3, cursor: "pointer" }}><X size={16} /></button>
             </div>
             
             <form onSubmit={handleAddBeneficiary} style={{ display: "flex", flexDirection: "column", gap: 10 }}>

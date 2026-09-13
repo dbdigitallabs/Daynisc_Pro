@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:go_router/go_router.dart';
 import 'theme.dart';
 import 'api_client.dart';
+import 'app_router.dart';
 
 // ── Data model ────────────────────────────────────────────────────────────────
 
@@ -61,7 +63,6 @@ final stockProvider = FutureProvider.autoDispose
     final token = box.get('access_token');
     if (token == null) return [];
 
-    final apiBase = ApiClient().dio.options.baseUrl;
     final params = <String, dynamic>{'limit': 200};
     if (args.search.isNotEmpty) params['search'] = args.search;
     if (args.lowOnly) params['low_stock_only'] = true;
@@ -113,6 +114,12 @@ class _StockScreenState extends ConsumerState<StockScreen> {
         elevation: 0,
         scrolledUnderElevation: 1,
         actions: [
+          // Barcode scanner button
+          IconButton(
+            tooltip: 'Scan Barcode to Add Item',
+            icon: const Icon(Icons.qr_code_scanner_rounded, color: AppColors.primary),
+            onPressed: () => context.push(Routes.barcodeScan),
+          ),
           // Low stock toggle
           Padding(
             padding: const EdgeInsets.only(right: 8),
@@ -134,6 +141,20 @@ class _StockScreenState extends ConsumerState<StockScreen> {
             ),
           ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+        elevation: 3,
+        icon: const Icon(Icons.qr_code_scanner_rounded),
+        label: const Text(
+          'Scan Barcode',
+          style: TextStyle(
+            fontFamily: 'Inter',
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        onPressed: () => context.push(Routes.barcodeScan),
       ),
       body: Column(
         children: [
@@ -454,13 +475,13 @@ class _ErrorState extends StatelessWidget {
           children: [
             Container(
               width: 60, height: 60,
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                   color: AppColors.redBg, borderRadius: AppRadius.lg),
               child: const Icon(Icons.wifi_off_rounded,
                   color: AppColors.red, size: 30),
             ),
             const SizedBox(height: 16),
-            Text('Connection error', style: AppTextStyles.sectionTitle),
+            const Text('Connection error', style: AppTextStyles.sectionTitle),
             const SizedBox(height: 6),
             Text(message,
                 style: AppTextStyles.bodySmall,
@@ -491,7 +512,7 @@ class _EmptyState extends StatelessWidget {
         children: [
           Container(
             width: 64, height: 64,
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
                 color: AppColors.primaryBg, borderRadius: AppRadius.lg),
             child: const Icon(Icons.inventory_2_outlined,
                 color: AppColors.primary, size: 32),
@@ -503,18 +524,32 @@ class _EmptyState extends StatelessWidget {
           Text(
             isFiltered
                 ? 'Try clearing your filters'
-                : 'Add items to your inventory from the web dashboard',
+                : 'Scan any product barcode or QR to quickly add items to your inventory',
             style: AppTextStyles.bodySmall,
             textAlign: TextAlign.center,
           ),
-          if (isFiltered) ...[
-            const SizedBox(height: 16),
+          const SizedBox(height: 16),
+          if (isFiltered)
             TextButton.icon(
               onPressed: onClear,
               icon: const Icon(Icons.clear, size: 16),
               label: const Text('Clear filters'),
+            )
+          else
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                shape: const RoundedRectangleBorder(borderRadius: AppRadius.md),
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+              ),
+              onPressed: () => context.push(Routes.barcodeScan),
+              icon: const Icon(Icons.qr_code_scanner_rounded, size: 18),
+              label: const Text(
+                'Scan Barcode to Add Item',
+                style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w600),
+              ),
             ),
-          ],
         ],
       ),
     );

@@ -45,7 +45,7 @@ export default function CustomerPortalPage() {
       <div style={{ marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 800, color: T.text1, display: "flex", alignItems: "center", gap: 10, letterSpacing: "-0.4px" }}>
-            🤝 Customer Self-Service Portal
+            Customer Self-Service Portal
           </h1>
           <p style={{ fontSize: 13, color: T.text3, marginTop: 3 }}>Client dashboard to download sales bills, pay outstanding dues, and raise service tickets.</p>
         </div>

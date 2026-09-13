@@ -339,7 +339,7 @@ export default function DashboardPage() {
               </div>
             ) : filteredCompanies.length === 0 ? (
               <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: 200, gap: 10 }}>
-                <div style={{ fontSize: 32 }}>🏢</div>
+                <div style={{ display: "flex", justifyContent: "center" }}><IconBuilding size={36} color={T.primary} /></div>
                 <div style={{ fontSize: 13, color: T.text3, fontWeight: 600 }}>No Matching Businesses Found</div>
                 <button
                   onClick={() => { setSearchVal(""); setActiveSearch(""); setPlanFilter("all"); setStatusFilter("all"); setRenewalFilter(false); }}
@@ -416,7 +416,7 @@ export default function DashboardPage() {
                           background: paymentDone ? T.greenBg : T.redBg,
                           padding: "2px 6px", borderRadius: 12,
                         }}>
-                          {paymentDone ? "✓ Paid" : "⚠️ Due"}
+                          {paymentDone ? <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}><IconCheck size={11} /> Paid</span> : <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}><IconAlertTriangle size={11} /> Due</span>}
                         </span>
                       </div>
 
@@ -429,7 +429,7 @@ export default function DashboardPage() {
                       </div>
 
                       <div style={{ fontSize: 11, color: T.text2, fontWeight: 500, marginTop: "auto" }}>
-                        👥 {numAdmins} Active {numAdmins === 1 ? 'License' : 'Licenses'}
+                        {numAdmins} Active {numAdmins === 1 ? 'License' : 'Licenses'}
                       </div>
                     </div>
                   );
@@ -501,13 +501,13 @@ export default function DashboardPage() {
                 </div>
                 <div style={{ fontSize: 11, color: T.text2, display: "flex", flexDirection: "column", gap: 6 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <span style={{ color: T.green }}>✓</span> TallyPrime status: Port 9000 Online
+                    <IconCheck size={12} color={T.green} /> TallyPrime status: Port 9000 Online
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <span style={{ color: T.green }}>✓</span> Database server sync: Connected
+                    <IconCheck size={12} color={T.green} /> Database server sync: Connected
                   </div>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <span style={{ color: T.green }}>✓</span> API latency: 45ms (Healthy)
+                    <IconCheck size={12} color={T.green} /> API latency: 45ms (Healthy)
                   </div>
                 </div>
               </div>
@@ -623,7 +623,7 @@ export default function DashboardPage() {
             <option style={{ color: "#000" }}>FY 2025-26</option>
           </select>
           <div style={{ fontSize: 11, background: "rgba(255,255,255,0.15)", padding: "4px 10px", borderRadius: 6, color: "#fff", fontWeight: 500 }}>
-            📅 {today}
+            {today}
           </div>
         </div>
       </div>
@@ -702,16 +702,16 @@ export default function DashboardPage() {
         {/* AI Assistant Tasks */}
         <Card style={{ padding: "14px 18px", borderLeft: `4px solid ${T.primary}`, background: "#eff6ff" }}>
           <h3 style={{ fontSize: 12, fontWeight: 800, color: T.primary, marginBottom: 4, display: "flex", alignItems: "center", gap: 6 }}>
-            Good Morning Bhavesh 👋
+            Good Morning Bhavesh
           </h3>
           <div style={{ fontSize: 10, color: T.text3, fontWeight: 600, marginBottom: 8 }}>
             Here's what needs your attention today:
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             {[
-              { level: "🔴 Urgent", text: "Approve Purchase Voucher #PUR-3001", color: T.red },
-              { level: "🟡 Attention", text: "GST mismatch identified in GSTR-2B reconciler", color: T.amber },
-              { level: "🟢 Suggestion", text: "Transport cost is up 32% this week", color: T.green }
+              { level: "Urgent", text: "Approve Purchase Voucher #PUR-3001", color: T.red },
+              { level: "Attention", text: "GST mismatch identified in GSTR-2B reconciler", color: T.amber },
+              { level: "Suggestion", text: "Transport cost is up 32% this week", color: T.green }
             ].map((prio, idx) => (
               <div key={idx} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11 }}>
                 <span style={{ fontWeight: 800, fontSize: 9, color: prio.color, background: prio.color + "15", padding: "2px 4px", borderRadius: 4, minWidth: 65, textAlign: "center" }}>
@@ -771,11 +771,11 @@ export default function DashboardPage() {
           
           <div style={{ display: "flex", flexDirection: "column", gap: 5, fontSize: 10 }}>
             {[
-              { label: "Cash Flow Coverage", status: "Optimal", val: "✅", action: () => navigate("/banking") },
-              { label: "GST Compliance & Matching", status: "Discrepancy", val: "⚠️", action: () => navigate("/gst") },
-              { label: "Inventory Turn Rate", status: "Healthy", val: "✅", action: () => navigate("/inventory") },
-              { label: "Receivables Outstanding Dues", status: "Warning Dues", val: "⚠️", action: () => navigate("/accounting") },
-              { label: "Operating Net Profitability", status: "Stable Margin", val: "✅", action: () => navigate("/reports") }
+              { label: "Cash Flow Coverage", status: "Optimal", val: <IconCheckCircle size={14} color={T.green} />, action: () => navigate("/banking") },
+              { label: "GST Compliance & Matching", status: "Discrepancy", val: <IconAlertTriangle size={14} color={T.amber} />, action: () => navigate("/gst") },
+              { label: "Inventory Turn Rate", status: "Healthy", val: <IconCheckCircle size={14} color={T.green} />, action: () => navigate("/inventory") },
+              { label: "Receivables Outstanding Dues", status: "Warning Dues", val: <IconAlertTriangle size={14} color={T.amber} />, action: () => navigate("/accounting") },
+              { label: "Operating Net Profitability", status: "Stable Margin", val: <IconCheckCircle size={14} color={T.green} />, action: () => navigate("/reports") }
             ].map((check, idx) => (
               <div
                 key={idx}
@@ -803,7 +803,7 @@ export default function DashboardPage() {
             </button>
             {showHealthTips && (
               <p style={{ fontSize: 9, color: T.text3, marginTop: 4, background: "#fffbeb", padding: 6, borderRadius: 6, border: "1px solid #fef3c7", lineHeight: 1.3 }}>
-                💡 Resolve the GST input mismatch on Voucher #PUR-3001 immediately to reclaim ₹42,000 input tax credit. Set reminder to call Sharma Traders to settle receivables due.
+                Resolve the GST input mismatch on Voucher #PUR-3001 immediately to reclaim ₹42,000 input tax credit. Set reminder to call Sharma Traders to settle receivables due.
               </p>
             )}
           </div>
@@ -823,7 +823,7 @@ export default function DashboardPage() {
           
           {/* Polished Empty State with Create Action */}
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "10px 0", gap: 6, textAlign: "center", margin: "auto" }}>
-            <span style={{ fontSize: 20 }}>📄</span>
+            <IconFileText size={20} color={T.primary} />
             <div style={{ fontSize: 11, fontWeight: 700, color: T.text1 }}>No transactions today</div>
             <div style={{ fontSize: 10, color: T.text3 }}>Create your first sales invoice to begin reporting.</div>
             <button
@@ -844,10 +844,10 @@ export default function DashboardPage() {
           <h3 style={{ fontSize: 12, fontWeight: 800, color: T.text1, marginBottom: 10 }}>Operational Activity Log</h3>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {[
-              { text: "✅ Purchase Approved #PUR-3001", user: "Bhavesh", time: "10 min ago" },
-              { text: "🏦 Bank Statement Uploaded", user: "Ramesh Shah", time: "30 min ago" },
-              { text: "👤 Customer Added Sharma Traders", user: "Bhavesh", time: "1 hr ago" },
-              { text: "📄 Custom Report Generated Q1 P&L", user: "System", time: "2 hr ago" }
+              { text: "Purchase Approved #PUR-3001", user: "Bhavesh", time: "10 min ago" },
+              { text: "Bank Statement Uploaded", user: "Ramesh Shah", time: "30 min ago" },
+              { text: "Customer Added Sharma Traders", user: "Bhavesh", time: "1 hr ago" },
+              { text: "Custom Report Generated Q1 P&L", user: "System", time: "2 hr ago" }
             ].map((act, idx) => (
               <div key={idx} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", fontSize: 10 }}>
                 <div>
@@ -925,9 +925,7 @@ export default function DashboardPage() {
             <button
               onClick={() => setIsChatOpen(false)}
               style={{ background: "none", border: "none", color: "#fff", cursor: "pointer", fontSize: 16 }}
-            >
-              ✕
-            </button>
+            ><IconX size={16} /></button>
           </div>
 
           {/* Messages */}
@@ -951,7 +949,7 @@ export default function DashboardPage() {
                       borderRadius: 12, fontSize: 10, fontWeight: 600, color: T.text2, cursor: "pointer"
                     }}
                   >
-                    💡 {chip}
+                    {chip}
                   </button>
                 ))}
               </div>

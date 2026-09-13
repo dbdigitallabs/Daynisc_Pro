@@ -4,111 +4,81 @@ import 'package:go_router/go_router.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 import 'login_screen.dart';
-import 'dashboard_screen.dart';
 import 'scan_screen.dart';
-import 'production_screen.dart';
-import 'inventory_screen.dart';
+import 'barcode_scanner_screen.dart';
 import 'stub_screens.dart';
-import 'shell_scaffold.dart';
-import 'profile_screen.dart';
 
 // ── Route constants ────────────────────────────────────────────────────────────
 
 class Routes {
   static const login = '/login';
-  static const otp = '/otp';
-  static const dashboard = '/dashboard';
   static const scan = '/scan';
+  static const barcodeScan = '/barcode-scan';
   static const extractionReview = '/scan/review/:id';
-  static const stock = '/inventory';
-  static const stockMovement = '/inventory/movement';
-  static const production = '/production';
-  static const productionOrder = '/production/order/:id';
-  static const sales = '/sales';
-  static const invoice = '/sales/invoice/:id';
-  static const purchase = '/purchase';
-  static const dispatch = '/transport';
-  static const ledger = '/accounting';
-  static const profile = '/profile';
+  // Fallbacks / aliases pointing to scan or login
+  static const dashboard = '/scan';
+  static const otp = '/login';
+  static const stock = '/scan';
+  static const stockMovement = '/scan';
+  static const production = '/scan';
+  static const productionOrder = '/scan';
+  static const sales = '/scan';
+  static const invoice = '/scan';
+  static const purchase = '/scan';
+  static const dispatch = '/scan';
+  static const ledger = '/scan';
+  static const profile = '/scan';
 }
 
 // ── Router provider ────────────────────────────────────────────────────────────
 
 final appRouterProvider = Provider<GoRouter>((ref) {
   return GoRouter(
-    initialLocation: _isLoggedIn() ? Routes.dashboard : Routes.login,
+    initialLocation: _isLoggedIn() ? Routes.scan : Routes.login,
     redirect: (context, state) {
       final loggedIn = _isLoggedIn();
       final onAuthRoute = state.matchedLocation == Routes.login;
       if (!loggedIn && !onAuthRoute) return Routes.login;
-      if (loggedIn && onAuthRoute) return Routes.dashboard;
+      if (loggedIn && onAuthRoute) return Routes.scan;
       return null;
     },
     routes: [
-      // ── Auth (no shell) ──────────────────────────────────────────────────
+      // ── Auth ─────────────────────────────────────────────────────────────
       GoRoute(path: Routes.login, builder: (_, __) => const LoginScreen()),
 
-      // ── Main app with bottom nav shell ───────────────────────────────────
-
-      ShellRoute(
-        builder: (context, state, child) => ShellScaffold(child: child),
+      // ── Dedicated Mobile Document Scanner / Upload Screen ────────────────
+      GoRoute(
+        path: Routes.scan,
+        builder: (_, __) => const ScanScreen(),
         routes: [
           GoRoute(
-            path: Routes.dashboard,
-            builder: (_, __) => const DashboardScreen(),
+            path: 'review/:id',
+            builder: (_, state) =>
+                ExtractionReviewScreen(extractionId: state.pathParameters['id']!),
           ),
-          GoRoute(
-            path: Routes.scan,
-            builder: (_, __) => const ScanScreen(),
-            routes: [
-              GoRoute(
-                path: 'review/:id',
-                builder: (_, state) =>
-                    ExtractionReviewScreen(extractionId: state.pathParameters['id']!),
-              ),
-            ],
-          ),
-          GoRoute(
-            path: Routes.stock,
-            builder: (_, __) => const StockScreen(),
-            routes: [
-              GoRoute(
-                path: 'movement',
-                builder: (_, __) => const StockMovementScreen(),
-              ),
-            ],
-          ),
-          GoRoute(
-            path: Routes.production,
-            builder: (_, __) => const ProductionScreen(),
-            routes: [
-              GoRoute(
-                path: 'order/:id',
-                builder: (_, state) =>
-                    ProductionOrderScreen(orderId: state.pathParameters['id']!),
-              ),
-            ],
-          ),
-          GoRoute(
-            path: Routes.sales,
-            builder: (_, __) => const SalesScreen(),
-            routes: [
-              GoRoute(
-                path: 'invoice/:id',
-                builder: (_, state) =>
-                    InvoiceScreen(invoiceId: state.pathParameters['id']!),
-              ),
-            ],
-          ),
-          GoRoute(path: Routes.purchase, builder: (_, __) => const PurchaseScreen()),
-          GoRoute(path: Routes.dispatch, builder: (_, __) => const DispatchScreen()),
-          GoRoute(path: Routes.ledger, builder: (_, __) => const LedgerScreen()),
-          GoRoute(path: Routes.profile, builder: (_, __) => const ProfileScreen()),
         ],
+      ),
+
+      // ── Barcode Scanner to Add Items ─────────────────────────────────────
+      GoRoute(
+        path: Routes.barcodeScan,
+        builder: (_, __) => const BarcodeScannerScreen(),
       ),
     ],
     errorBuilder: (context, state) => Scaffold(
-      body: Center(child: Text('Route not found: ${state.uri}')),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text('Page not found: ${state.uri}'),
+            const SizedBox(height: 12),
+            ElevatedButton(
+              onPressed: () => context.go(Routes.scan),
+              child: const Text('Go to Scanner'),
+            ),
+          ],
+        ),
+      ),
     ),
   );
 });

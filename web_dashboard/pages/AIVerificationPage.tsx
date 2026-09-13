@@ -1,9 +1,16 @@
 // src/pages/AIVerificationPage.tsx
 import React, { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "react-hot-toast";
 import api from "../store/apiClient";
 import { T, inr, cardStyle, badge, thStyle, tdStyle } from "../store/theme";
-import { IconUpload, IconInbox, IconFile, IconAI, IconCheckCircle, IconXCircle, IconRefresh } from "../components/Icons";
+import {
+  IconUpload, IconInbox, IconFile, IconAI, IconCheckCircle, IconXCircle, IconRefresh,
+  IconAlertTriangle, IconGlobe, IconFileText, IconFactory, IconBox, IconTruck,
+  IconScale, IconClipboard, IconReceipt, IconSparkles, IconZap, IconX, IconSync,
+  IconCamera, IconFolder, IconLightbulb, IconHourglass
+} from "../components/Icons";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 interface LineItem {
@@ -172,7 +179,7 @@ function ExtractionDetail({ extraction, onApprove, onReject, approving }: {
           <StatusBadge status={extraction.status} />
           <ConfidencePill score={extraction.confidence_score || 0} />
           {extraction.is_duplicate && (
-            <span style={badge(T.red, T.redBg)}>⚠ Duplicate</span>
+            <span style={{ ...badge(T.red, T.redBg), display: "inline-flex", alignItems: "center", gap: 3 }}><IconAlertTriangle size={11} /> Duplicate</span>
           )}
           <span style={{ marginLeft: "auto", fontSize: 11, color: T.text3, fontWeight: 500 }}>
             BANK STATEMENT · {extraction.language?.toUpperCase()}
@@ -213,7 +220,7 @@ function ExtractionDetail({ extraction, onApprove, onReject, approving }: {
             {/* Search Input */}
             <input
               type="text"
-              placeholder="🔍 Search narration/party/ref..."
+              placeholder="Search narration/party/ref..."
               value={searchTerm}
               onChange={e => { setSearchTerm(e.target.value); setPage(1); }}
               style={{
@@ -456,18 +463,18 @@ function ExtractionDetail({ extraction, onApprove, onReject, approving }: {
                 boxShadow: (approving || approvedCount === 0) ? "none" : "0 4px 14px rgba(67,97,238,0.2)",
               }}
             >
-              {approving ? "⏳ Creating ERP Entries…" : `✅ Create ${approvedCount} Accounting Vouchers`}
+              {approving ? <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><IconHourglass size={14} /> Creating ERP Entries…</span> : <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><IconCheckCircle size={14} /> Create {approvedCount} Accounting Vouchers</span>}
             </button>
             <button
               onClick={onReject}
               style={{
-                padding: "14px 24px",
+                padding: "12px 24px",
                 background: "#fff", border: `1.5px solid ${T.red}`,
                 borderRadius: 8, color: T.red,
                 cursor: "pointer", fontSize: 13, fontWeight: 600,
               }}
             >
-              ✗ Reject
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><IconX size={13} /> Reject</span>
             </button>
           </div>
         )}
@@ -482,9 +489,9 @@ function ExtractionDetail({ extraction, onApprove, onReject, approving }: {
         <StatusBadge status={extraction.status} />
         <ConfidencePill score={extraction.confidence_score || 0} />
         {extraction.is_duplicate && (
-          <span style={badge(T.red, T.redBg)}>⚠ Duplicate</span>
+          <span style={{ ...badge(T.red, T.redBg), display: "inline-flex", alignItems: "center", gap: 3 }}><IconAlertTriangle size={11} /> Duplicate</span>
         )}
-        {isExport && <span style={badge("#0369a1", "#e0f2fe")}>🌐 Export Invoice</span>}
+        {isExport && <span style={{ ...badge("#0369a1", "#e0f2fe"), display: "inline-flex", alignItems: "center", gap: 3 }}><IconGlobe size={11} /> Export Invoice</span>}
         {d?.currency && d.currency !== "INR" && (
           <span style={badge("#7c3aed", "#ede9fe")}>{d.currency}</span>
         )}
@@ -497,7 +504,7 @@ function ExtractionDetail({ extraction, onApprove, onReject, approving }: {
       {isExport ? (
         <>
           {/* Section: Invoice Header */}
-          <div style={sectionHeader}>📄 Invoice Details</div>
+          <div style={{ ...sectionHeader, display: "flex", alignItems: "center", gap: 6 }}><IconFileText size={14} color={T.primary} /> Invoice Details</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
             <Field label="Invoice Number"    field="invoice_number"   value={d?.invoice_number} />
             <Field label="Invoice Date"      field="invoice_date"     value={d?.invoice_date} />
@@ -508,7 +515,7 @@ function ExtractionDetail({ extraction, onApprove, onReject, approving }: {
           </div>
 
           {/* Section: Exporter */}
-          <div style={sectionHeader}>🏭 Exporter (Seller)</div>
+          <div style={{ ...sectionHeader, display: "flex", alignItems: "center", gap: 6 }}><IconFactory size={14} color={T.primary} /> Exporter (Seller)</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
             <Field label="Exporter Name"    field="party_name"   value={d?.party_name} />
             <Field label="GSTIN"            field="party_gstin" value={d?.party_gstin} />
@@ -517,7 +524,7 @@ function ExtractionDetail({ extraction, onApprove, onReject, approving }: {
           </div>
 
           {/* Section: Consignee */}
-          <div style={sectionHeader}>📦 Consignee (Buyer)</div>
+          <div style={{ ...sectionHeader, display: "flex", alignItems: "center", gap: 6 }}><IconBox size={14} color={T.primary} /> Consignee (Buyer)</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
             <Field label="Consignee Name"     field="consignee_name" value={d?.consignee_name} />
             <Field label="Consignee City"     field="consignee_city" value={d?.consignee_address?.city} />
@@ -526,7 +533,7 @@ function ExtractionDetail({ extraction, onApprove, onReject, approving }: {
           </div>
 
           {/* Section: Shipping */}
-          <div style={sectionHeader}>🚢 Shipping & Logistics</div>
+          <div style={{ ...sectionHeader, display: "flex", alignItems: "center", gap: 6 }}><IconTruck size={14} color={T.primary} /> Shipping & Logistics</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
             <Field label="INCOTERMS"            field="incoterms"          value={d?.incoterms} />
             <Field label="Pre-carriage By"      field="pre_carriage_by"    value={d?.pre_carriage_by} />
@@ -537,7 +544,7 @@ function ExtractionDetail({ extraction, onApprove, onReject, approving }: {
           </div>
 
           {/* Section: Package Info */}
-          <div style={sectionHeader}>📏 Package & Weight</div>
+          <div style={{ ...sectionHeader, display: "flex", alignItems: "center", gap: 6 }}><IconScale size={14} color={T.primary} /> Package & Weight</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
             <Field label="Marks & Nos"     field="marks_and_nos"    value={d?.marks_and_nos} />
             <Field label="No. of Packages" field="no_of_packages"   value={d?.no_of_packages} />
@@ -546,7 +553,7 @@ function ExtractionDetail({ extraction, onApprove, onReject, approving }: {
           </div>
 
           {/* Section: Compliance */}
-          <div style={sectionHeader}>📋 Compliance & References</div>
+          <div style={{ ...sectionHeader, display: "flex", alignItems: "center", gap: 6 }}><IconClipboard size={14} color={T.primary} /> Compliance & References</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
             <Field label="Advance Licence No."  field="advance_licence_no"   value={d?.advance_licence_no} />
             <Field label="Adv. Licence Date"    field="advance_licence_date" value={d?.advance_licence_date} />
@@ -559,7 +566,7 @@ function ExtractionDetail({ extraction, onApprove, onReject, approving }: {
           {/* Line Items */}
           {(d?.line_items?.length ?? 0) > 0 && (
             <div style={{ marginTop: 16 }}>
-              <div style={sectionHeader}>🧾 Line Items</div>
+              <div style={{ ...sectionHeader, display: "flex", alignItems: "center", gap: 6 }}><IconReceipt size={14} color={T.primary} /> Line Items</div>
               <div style={{ border: `1px solid ${T.border}`, borderRadius: 8, overflow: "hidden" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
                   <thead>
@@ -717,7 +724,7 @@ function ExtractionDetail({ extraction, onApprove, onReject, approving }: {
                 display: "flex", alignItems: "center", gap: 6
               }}
             >
-              ✨ Fast Approve
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><IconSparkles size={13} /> Fast Approve</span>
             </button>
           )}
           <button
@@ -733,7 +740,7 @@ function ExtractionDetail({ extraction, onApprove, onReject, approving }: {
               display: "flex", alignItems: "center", justifyContent: "center", gap: 6
             }}
           >
-            {approving ? "⏳ Creating ERP & Tally Entry…" : "⚡ Approve & Sync directly to Tally"}
+            {approving ? <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><IconHourglass size={13} /> Creating ERP & Tally Entry…</span> : <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><IconZap size={13} color="#f59e0b" /> Approve & Sync directly to Tally</span>}
           </button>
           <button
             onClick={onReject}
@@ -744,7 +751,7 @@ function ExtractionDetail({ extraction, onApprove, onReject, approving }: {
               cursor: "pointer", fontSize: 12, fontWeight: 600,
             }}
           >
-            ✗ Reject
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 5 }}><IconX size={13} /> Reject</span>
           </button>
         </div>
       )}
@@ -769,12 +776,18 @@ export default function AIVerificationPage() {
     queryFn: () => api.get("/documents", { params: { status: filterStatus, limit: 50 } }).then(r => r.data.items || r.data),
   });
 
+  const navigate = useNavigate();
   const selectedExtraction = extractions.find(e => e.id === selected);
 
   const approveMutation = useMutation({
     mutationFn: ({ id, corrections }: { id: string; corrections?: Record<string, unknown> }) =>
       api.post(`/documents/${id}/verify`, { approve: true, corrections }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ["extractions"] }); setSelected(null); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["extractions"] });
+      qc.invalidateQueries({ queryKey: ["tally-pending"] });
+      setSelected(null);
+      toast.success("Document verified! Entry created for Tally Prime.", { duration: 4000 });
+    },
   });
 
   const rejectMutation = useMutation({
@@ -806,25 +819,25 @@ export default function AIVerificationPage() {
         setUploadStatus("error");
         // Friendly messages for common errors
         if (lastError.includes("quota") || lastError.includes("RESOURCE_EXHAUSTED") || lastError.includes("429")) {
-          setUploadMsg("⚠ AI quota exceeded. The document was saved — try again in a few minutes.");
+          setUploadMsg("AI quota exceeded. The document was saved — try again in a few minutes.");
         } else if (lastError.includes("Gemini API key")) {
-          setUploadMsg("⚠ Gemini API key not configured. Go to Settings → AI Settings.");
+          setUploadMsg("Gemini API key not configured. Go to Settings → AI Settings.");
         } else {
-          setUploadMsg(`⚠ Extraction failed: ${lastError.slice(0, 120)}`);
+          setUploadMsg(`Extraction failed: ${lastError.slice(0, 120)}`);
         }
         setTimeout(() => { setShowUpload(false); setUploadStatus("idle"); setFilterStatus("failed"); }, 3500);
       } else {
         setUploadStatus("done");
-        setUploadMsg(`✅ ${files.length} bill${files.length > 1 ? "s" : ""} uploaded — check Needs Review tab`);
+        setUploadMsg(`${files.length} bill${files.length > 1 ? "s" : ""} uploaded — check Needs Review tab`);
         setTimeout(() => { setShowUpload(false); setUploadStatus("idle"); setFilterStatus("extracted"); }, 2200);
       }
     } catch (err: any) {
       setUploadStatus("error");
       const detail = err?.response?.data?.detail || "";
       if (detail.includes("Unsupported file type")) {
-        setUploadMsg(`⚠ ${detail} — Please upload JPG, PNG or PDF.`);
+        setUploadMsg(`${detail} — Please upload JPG, PNG or PDF.`);
       } else if (detail.includes("too large")) {
-        setUploadMsg("⚠ File too large — maximum size is 15 MB.");
+        setUploadMsg("File too large — maximum size is 15 MB.");
       } else {
         setUploadMsg(detail || "Upload failed — check backend connection.");
       }
@@ -849,26 +862,61 @@ export default function AIVerificationPage() {
         borderBottom: `1px solid ${T.border}`,
         boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
       }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 14 }}>
           <div>
             <h1 style={{ fontSize: 22, fontWeight: 800, color: T.text1, letterSpacing: "-0.4px", marginBottom: 3, display: "flex", alignItems: "center", gap: 10 }}>
-              <IconAI size={22} color={T.primary} /> AI Verification Queue
+              <IconAI size={22} color={T.primary} /> AI Upload & Verification
             </h1>
-            <p style={{ fontSize: 13, color: T.text3 }}>Review AI-extracted documents before they enter accounting</p>
+            <p style={{ fontSize: 13, color: T.text3 }}>Upload invoices, bills or receipts, verify AI-extracted fields, and push to Tally Prime</p>
+          </div>
+          <div style={{ display: "flex", gap: 10 }}>
+            <button
+              onClick={() => navigate("/tally-sync")}
+              style={{
+                display: "flex", alignItems: "center", gap: 6,
+                padding: "9px 16px",
+                background: "#f1f5f9", border: `1px solid ${T.border}`,
+                borderRadius: 8, color: T.text1,
+                cursor: "pointer", fontSize: 13, fontWeight: 600,
+              }}
+            >
+              <IconSync size={13} /> View Tally Queue
+            </button>
+            <button
+              onClick={() => { setShowUpload(true); setUploadStatus("idle"); setUploadMsg(""); }}
+              style={{
+                display: "flex", alignItems: "center", gap: 8,
+                padding: "9px 18px",
+                background: "linear-gradient(135deg, #4361ee, #7c3aed)",
+                border: "none", borderRadius: 8, color: "#fff",
+                cursor: "pointer", fontSize: 13, fontWeight: 700,
+                boxShadow: "0 4px 14px rgba(67,97,238,0.3)",
+              }}
+            >
+              <IconUpload size={15} color="#fff" />
+              Upload Bill / Invoice
+            </button>
+          </div>
+        </div>
+
+        {/* Workflow Info Banner */}
+        <div style={{
+          padding: "8px 14px", marginBottom: 14,
+          background: "#eff6ff", border: "1px solid #bfdbfe",
+          borderRadius: 8, display: "flex", justifyContent: "space-between", alignItems: "center",
+          fontSize: 12, color: "#1e40af"
+        }}>
+          <div>
+            <b>Workflow:</b> 1. Upload bill → 2. AI extracts details → 3. Verify & Approve below → 4. Sync in Tally Prime!
           </div>
           <button
-            onClick={() => { setShowUpload(true); setUploadStatus("idle"); setUploadMsg(""); }}
+            onClick={() => navigate("/tally-sync")}
             style={{
-              display: "flex", alignItems: "center", gap: 8,
-              padding: "10px 20px", marginTop: 4,
-              background: "linear-gradient(135deg, #4361ee, #7c3aed)",
-              border: "none", borderRadius: 8, color: "#fff",
-              cursor: "pointer", fontSize: 13, fontWeight: 700,
-              boxShadow: "0 4px 14px rgba(67,97,238,0.3)",
+              background: "none", border: "none", color: "#2563eb",
+              fontWeight: 700, cursor: "pointer", textDecoration: "underline", fontSize: 12
             }}
           >
-            <IconUpload size={15} color="#fff" />
-            Upload Bill
+            Open Tally Sync →
           </button>
         </div>
 
@@ -932,7 +980,7 @@ export default function AIVerificationPage() {
                   </div>
                   <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                     <ConfidencePill score={ex.confidence_score || 0} />
-                    {ex.is_duplicate && <span style={badge(T.red, T.redBg)}>⚠ Dup</span>}
+                    {ex.is_duplicate && <span style={{ ...badge(T.red, T.redBg), display: "inline-flex", alignItems: "center", gap: 3 }}><IconAlertTriangle size={11} /> Dup</span>}
                     <span style={{ fontSize: 10, color: T.text4, marginLeft: "auto" }}>
                       {new Date(ex.created_at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
                     </span>
@@ -979,13 +1027,13 @@ export default function AIVerificationPage() {
             boxShadow: "0 24px 60px rgba(0,0,0,0.2)",
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-              <h2 style={{ fontSize: 18, fontWeight: 800, color: T.text1 }}>📤 Upload Bill / Invoice</h2>
+              <h2 style={{ fontSize: 18, fontWeight: 800, color: T.text1, display: "flex", alignItems: "center", gap: 8 }}><IconUpload size={20} color={T.primary} /> Upload Bill / Invoice</h2>
               <button onClick={() => setShowUpload(false)} style={{
                 background: "#f8fafc", border: `1px solid ${T.border}`,
                 borderRadius: 6, width: 32, height: 32, cursor: "pointer",
                 color: T.text3, fontSize: 16, display: "flex",
                 alignItems: "center", justifyContent: "center",
-              }}>✕</button>
+              }}><IconX size={16} /></button>
             </div>
 
             {/* Document Type Dropdown */}
@@ -1072,7 +1120,7 @@ export default function AIVerificationPage() {
                   justifyContent: "center", gap: 6
                 }}
               >
-                📸 Camera Scan Mode
+                <IconCamera size={14} /> Camera Scan Mode
               </button>
               <button
                 type="button"
@@ -1091,7 +1139,7 @@ export default function AIVerificationPage() {
                   justifyContent: "center", gap: 6
                 }}
               >
-                📁 Browse Documents
+                <IconFolder size={14} /> Browse Documents
               </button>
             </div>
 
@@ -1099,7 +1147,7 @@ export default function AIVerificationPage() {
               style={{ display: "none" }} onChange={e => handleUpload(e.target.files)} />
 
             <p style={{ fontSize: 11, color: T.text3, lineHeight: 1.7, textAlign: "center" }}>
-              💡 Omnichannel Extraction: Purchase Bills · Bank Statements · Lorry Receipts (LR) · Excel Sheets<br />
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><IconLightbulb size={13} color={T.amber} /> <strong>Omnichannel Extraction:</strong></span> Purchase Bills · Bank Statements · Lorry Receipts (LR) · Excel Sheets<br />
               All verified entries are automatically pushed XML to Tally Prime.
             </p>
           </div>

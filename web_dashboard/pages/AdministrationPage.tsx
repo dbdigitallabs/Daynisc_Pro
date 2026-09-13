@@ -14,7 +14,7 @@ export default function AdministrationPage() {
       {/* Header */}
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 22, fontWeight: 800, color: T.text1, display: "flex", alignItems: "center", gap: 10, letterSpacing: "-0.4px" }}>
-          ⚙️ Administration & Security Console
+          Administration & Security Console
         </h1>
         <p style={{ fontSize: 13, color: T.text3, marginTop: 3 }}>Manage authorization matrices, configure system-wide backups, edit API webhook links, and track subscriptions.</p>
       </div>
@@ -101,10 +101,10 @@ export default function AdministrationPage() {
           <h3 style={{ fontSize: 14, fontWeight: 700, color: T.text1, marginBottom: 8 }}>Daynisc Enterprise Tier</h3>
           <div style={{ fontSize: 22, fontWeight: 800, color: T.primary, marginBottom: 12 }}>₹14,999 / mo</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 12, color: T.text2, marginBottom: 14 }}>
-            <div>✓ Unlimited connected companies</div>
-            <div>✓ Full Visual Automation Builder</div>
-            <div>✓ High speed OCR extractions</div>
-            <div>✓ Tally integration sync</div>
+            <div>Unlimited connected companies</div>
+            <div>Full Visual Automation Builder</div>
+            <div>High speed OCR extractions</div>
+            <div>Tally integration sync</div>
           </div>
           <span style={badge(T.green, T.greenBg)}>Renewal Date: July 28, 2026</span>
         </Card>

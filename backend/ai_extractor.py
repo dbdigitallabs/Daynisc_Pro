@@ -149,11 +149,13 @@ _EXTRACTION_SCHEMA = """
 """
 
 
+import asyncio
+
 class AIExtractor:
     """Gemini Vision-based document extractor for Indian business documents."""
 
-    # Priority order — first available and non-quota-exhausted model is used
-    MODELS = ["gemini-2.5-flash", "gemini-1.5-flash"]
+    # Prioritize fast 2.5-flash and available models
+    MODELS = ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-flash-latest"]
 
     async def extract(
         self,
@@ -165,9 +167,7 @@ class AIExtractor:
         history_context: str | None = None,
     ) -> dict[str, Any]:
         """
-        Extract structured data from a document image/PDF.
-        Tries each model in MODELS list; skips on quota error and falls back.
-        Returns extraction dict with confidence scores.
+        Extract structured data from a document image/PDF with rapid timeout.
         """
         lang_hint = (
             "" if language_hint == "auto"
@@ -197,20 +197,22 @@ Detect Indian number format: 1,23,456.00 = 123456.00
 
         for model in self.MODELS:
             try:
-                response = await client.aio.models.generate_content(
-                    model=model,
-                    contents=[
-                        types.Part.from_text(text=prompt),
-                        types.Part.from_bytes(
-                            data=image_bytes,
-                            mime_type=mime_type,
+                response = await asyncio.wait_for(
+                    client.aio.models.generate_content(
+                        model=model,
+                        contents=[
+                            types.Part.from_text(text=prompt),
+                            types.Part.from_bytes(
+                                data=image_bytes,
+                                mime_type=mime_type,
+                            ),
+                        ],
+                        config=types.GenerateContentConfig(
+                            temperature=0.1,
+                            max_output_tokens=4096,
                         ),
-                    ],
-                    config=types.GenerateContentConfig(
-                        # No response_mime_type — avoids truncation in some Gemini versions
-                        temperature=0.1,
-                        max_output_tokens=8192,
                     ),
+                    timeout=25.0,
                 )
                 raw = response.text or ""
                 # Strip any accidental markdown fences
@@ -238,12 +240,9 @@ Detect Indian number format: 1,23,456.00 = 123456.00
 
             except Exception as e:
                 err_str = str(e)
-                last_error = err_str
-                # Quota exhausted or server unavailable → try next model
-                if "429" in err_str or "RESOURCE_EXHAUSTED" in err_str or "quota" in err_str.lower() or "503" in err_str or "UNAVAILABLE" in err_str:
-                    continue
-                # Any other error → fail immediately (bad key, invalid file, etc.)
-                return self._error_result(f"{model}: {err_str}")
+                last_error = f"{model}: {err_str}"
+                print(f"[ai_extractor] Model {model} failed: {err_str}, trying next model...", flush=True)
+                continue
 
         return self._error_result(f"Extraction failed. Last error: {last_error}")
 

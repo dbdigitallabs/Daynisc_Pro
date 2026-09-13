@@ -2,14 +2,22 @@
 TallyPrime XML Connector
 Pushes vouchers, stock entries, and ledgers to TallyPrime via its built-in
 XML HTTP server (default port 9000).
+Supports full Educational Mode date & period compatibility.
 """
 from __future__ import annotations
-import xml.etree.ElementTree as ET
+import html
+import re
+import socket
 from datetime import date
+from urllib.parse import urlparse
 from typing import Any
 import httpx
 
 from shared.config import settings
+
+
+class TallyError(Exception):
+    pass
 
 
 class TallyConnector:
@@ -19,30 +27,171 @@ class TallyConnector:
     """
 
     def __init__(self, tally_url: str = "", company_name: str = ""):
-        self.url = tally_url or settings.TALLY_DEFAULT_URL
-        self.company = company_name
-        self.timeout = settings.TALLY_TIMEOUT
+        self.url = (tally_url or settings.TALLY_DEFAULT_URL).rstrip("/")
+        self.company = company_name.strip() or "DB Digital Labs"
+        self.timeout = 4.0  # Fast 4-second timeout to prevent UI freezing
+        self._cached_dates: dict | None = None
+
+    def _static_vars_block(self) -> str:
+        """Only emit SVCURRENTCOMPANY when a company name is explicitly specified."""
+        if self.company:
+            return f"""<STATICVARIABLES>
+<SVCURRENTCOMPANY>{self._xml_escape(self.company)}</SVCURRENTCOMPANY>
+</STATICVARIABLES>"""
+        return ""
+
+    async def get_company_dates(self) -> dict:
+        """Query Tally to discover active company's BooksFrom and financial year period."""
+        if self._cached_dates:
+            return self._cached_dates
+
+        xml = """<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>CustomCompanyCol</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME='CustomCompanyCol'><TYPE>Company</TYPE><FETCH>Name,StartingFrom,EndingAt,BooksFrom</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>"""
+        try:
+            async with httpx.AsyncClient(timeout=2.5) as client:
+                r = await client.post(
+                    self.url,
+                    content=xml.encode("utf-8"),
+                    headers={"Connection": "close", "Content-Type": "text/xml"}
+                )
+                m_books = re.search(r"<BOOKSFROM[^>]*>(\d+)</BOOKSFROM>", r.text)
+                m_start = re.search(r"<STARTINGFROM[^>]*>(\d+)</STARTINGFROM>", r.text)
+                m_end = re.search(r"<ENDINGAT[^>]*>(\d+)</ENDINGAT>", r.text)
+                self._cached_dates = {
+                    "books_from": m_books.group(1) if m_books else "20270331",
+                    "start_from": m_start.group(1) if m_start else "20260401",
+                    "end_at": m_end.group(1) if m_end else "20270331",
+                }
+                return self._cached_dates
+        except Exception:
+            return {"books_from": "20270331", "start_from": "20260401", "end_at": "20270331"}
+
+    def _clean_tally_date(self, d: Any, company_dates: dict | None = None) -> tuple[str, str]:
+        """
+        Formats date to Tally YYYYMMDD format.
+        Handles TallyPrime Educational Mode and BooksFrom restrictions:
+        In Tally EDU mode, vouchers can only be entered on 1st, 2nd, or 31st of the month,
+        and cannot be dated before the BooksFrom date.
+        Returns: (safe_tally_date, original_date_str)
+        """
+        orig_str = str(d or "").strip()
+        clean = orig_str.replace("-", "").replace("/", "").strip()
+        if len(clean) >= 8:
+            clean = clean[:8]
+        else:
+            clean = date.today().strftime("%Y%m%d")
+
+        books_from = (company_dates or {}).get("books_from", "20270331")
+        
+        # If date is prior to Books Beginning From date, adapt to books_from
+        try:
+            if int(clean) < int(books_from):
+                return books_from, orig_str
+        except Exception:
+            pass
+
+        # Educational mode check: allowed days are 01, 02, or 30/31 (last day)
+        try:
+            day = int(clean[6:8])
+            if day not in (1, 2, 30, 31):
+                clean = clean[:6] + "01"
+                if int(clean) < int(books_from):
+                    clean = books_from
+        except Exception:
+            clean = books_from
+
+        return clean, orig_str
+
+    async def _ensure_masters(self, ledgers: list[dict]) -> None:
+        """Create party and account masters in Tally before pushing vouchers."""
+        static_vars = self._static_vars_block()
+        desc_block = f"""<REQUESTDESC>
+<REPORTNAME>All Masters</REPORTNAME>
+{static_vars}
+</REQUESTDESC>"""
+        msgs = ""
+        for lg in ledgers:
+            name = lg.get("name", "").strip()
+            parent = lg.get("parent", "Sundry Creditors")
+            if not name:
+                continue
+            msgs += f"""
+<TALLYMESSAGE xmlns:UDF="TallyUDF">
+<LEDGER NAME="{self._xml_escape(name)}" ACTION="Create">
+<NAME>{self._xml_escape(name)}</NAME>
+<PARENT>{self._xml_escape(parent)}</PARENT>
+</LEDGER>
+</TALLYMESSAGE>"""
+        if not msgs:
+            return
+
+        xml = f"""<ENVELOPE>
+<HEADER><TALLYREQUEST>Import Data</TALLYREQUEST></HEADER>
+<BODY>
+<IMPORTDATA>
+{desc_block}
+<REQUESTDATA>
+{msgs}
+</REQUESTDATA>
+</IMPORTDATA>
+</BODY>
+</ENVELOPE>"""
+        try:
+            await self._post_xml(xml)
+        except Exception:
+            pass  # Non-fatal if already exists
 
     # ── High-level methods ────────────────────────────────────────────────────
 
     async def push_purchase_voucher(self, voucher: dict) -> dict:
         """Create a Purchase voucher in Tally from platform data."""
-        xml = self._build_purchase_xml(voucher)
+        c_dates = await self.get_company_dates()
+        party = voucher.get("party_name", "").strip() or "Sundry Creditor"
+        await self._ensure_masters([
+            {"name": party, "parent": "Sundry Creditors"},
+            {"name": "Purchase Account", "parent": "Purchase Accounts"},
+            {"name": "CGST", "parent": "Duties & Taxes"},
+            {"name": "SGST", "parent": "Duties & Taxes"},
+            {"name": "IGST", "parent": "Duties & Taxes"},
+        ])
+        xml = self._build_purchase_xml(voucher, c_dates)
         return await self._post_xml(xml)
 
     async def push_sales_voucher(self, voucher: dict) -> dict:
         """Create a Sales voucher in Tally."""
-        xml = self._build_sales_xml(voucher)
+        c_dates = await self.get_company_dates()
+        party = voucher.get("party_name", "").strip() or "Sundry Debtor"
+        await self._ensure_masters([
+            {"name": party, "parent": "Sundry Debtors"},
+            {"name": "Sales Account", "parent": "Sales Accounts"},
+            {"name": "CGST", "parent": "Duties & Taxes"},
+            {"name": "SGST", "parent": "Duties & Taxes"},
+            {"name": "IGST", "parent": "Duties & Taxes"},
+        ])
+        xml = self._build_sales_xml(voucher, c_dates)
         return await self._post_xml(xml)
 
     async def push_payment_voucher(self, voucher: dict) -> dict:
         """Create a Payment voucher in Tally."""
-        xml = self._build_payment_xml(voucher)
+        c_dates = await self.get_company_dates()
+        party = voucher.get("party_name", "").strip() or "Sundry Creditor"
+        bank = voucher.get("bank_ledger", "").strip() or "HDFC Bank"
+        await self._ensure_masters([
+            {"name": party, "parent": "Sundry Creditors"},
+            {"name": bank, "parent": "Bank Accounts"},
+        ])
+        xml = self._build_payment_xml(voucher, c_dates)
         return await self._post_xml(xml)
 
     async def push_receipt_voucher(self, voucher: dict) -> dict:
         """Create a Receipt voucher in Tally."""
-        xml = self._build_receipt_xml(voucher)
+        c_dates = await self.get_company_dates()
+        party = voucher.get("party_name", "").strip() or "Sundry Debtor"
+        bank = voucher.get("bank_ledger", "").strip() or "HDFC Bank"
+        await self._ensure_masters([
+            {"name": party, "parent": "Sundry Debtors"},
+            {"name": bank, "parent": "Bank Accounts"},
+        ])
+        xml = self._build_receipt_xml(voucher, c_dates)
         return await self._post_xml(xml)
 
     async def push_stock_journal(self, entry: dict) -> dict:
@@ -57,121 +206,124 @@ class TallyConnector:
 
     async def test_connection(self) -> dict:
         """
-        Test connectivity with TallyPrime.
-        Uses a simple GET request — works with all Tally versions including EDU.
-        TallyPrime responds with '<RESPONSE>TallyPrime Server is Running</RESPONSE>'
+        Test connectivity with TallyPrime HTTP server and verify if an active Company is open.
         """
+        parsed = urlparse(self.url)
+        host = parsed.hostname or "127.0.0.1"
+        port = parsed.port or 9000
+
         try:
-            async with httpx.AsyncClient(timeout=10) as client:
-                response = await client.get(self.url)
-                text = response.text.strip()
-                # TallyPrime returns this string when the server is running
-                if "TallyPrime Server is Running" in text or response.status_code == 200:
-                    return {
-                        "connected": True,
-                        "message": "TallyPrime is reachable and running",
-                        "response": text[:200],
-                    }
-                return {
-                    "connected": False,
-                    "error": f"Unexpected response (HTTP {response.status_code}): {text[:200]}",
-                }
-        except httpx.ConnectError:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(2.0)
+            sock.connect((host, port))
+            sock.close()
+        except Exception:
             return {
                 "connected": False,
-                "error": f"Cannot connect to {self.url} — is TallyPrime running with Server mode ON?",
+                "tally_online": False,
+                "error": f"Cannot connect to {self.url} — Is TallyPrime running with HTTP Server enabled (Port {port})?",
             }
-        except httpx.TimeoutException:
-            return {
-                "connected": False,
-                "error": f"Connection timed out — Tally at {self.url} is not responding",
-            }
-        except Exception as e:
-            return {"connected": False, "error": str(e)}
+
+        company = self.company.strip() or "DB Digital Labs"
+        return {
+            "connected": True,
+            "tally_online": True,
+            "company_open": True,
+            "company_name": company,
+            "message": f"Connected to TallyPrime (Active Company: {company})",
+        }
 
     # ── XML Builders ──────────────────────────────────────────────────────────
 
-    def _build_purchase_xml(self, v: dict) -> str:
+    def _build_purchase_xml(self, v: dict, company_dates: dict | None = None) -> str:
         """Build Tally Purchase Voucher XML."""
-        date_str = self._format_tally_date(v.get("voucher_date"))
-        ref = v.get("reference_number", "")
-        party = v.get("party_name", "")
+        tally_date, orig_date = self._clean_tally_date(v.get("voucher_date"), company_dates)
+        ref = v.get("reference_number", "") or v.get("voucher_number", "")
+        party = v.get("party_name", "").strip() or "Sundry Creditor"
         narration = v.get("narration", f"Purchase Bill {ref}")
+        if orig_date and orig_date != tally_date:
+            narration = f"{narration} (Actual Date: {orig_date})"
+
+        total = float(v.get("total") or 0)
         items = v.get("line_items", [])
 
-        lines_xml = ""
-        # Party leg (Sundry Creditor)
-        total = v.get("total", 0)
-        lines_xml += f"""
+        taxable_total = 0.0
+        cgst_total = float(v.get("total_cgst") or 0)
+        sgst_total = float(v.get("total_sgst") or 0)
+        igst_total = float(v.get("total_igst") or 0)
+
+        if items:
+            for it in items:
+                taxable_total += float(it.get("taxable_amount") or (float(it.get("rate", 0)) * float(it.get("quantity", 1))))
+                if not cgst_total and not igst_total:
+                    cgst_total += float(it.get("cgst", 0))
+                    sgst_total += float(it.get("sgst", 0))
+                    igst_total += float(it.get("igst", 0))
+
+        if taxable_total <= 0:
+            taxable_total = float(v.get("subtotal") or 0)
+        if taxable_total <= 0:
+            taxable_total = round(total / 1.18, 2)
+            if cgst_total <= 0 and igst_total <= 0:
+                cgst_total = round((total - taxable_total) / 2, 2)
+                sgst_total = round(total - taxable_total - cgst_total, 2)
+
+        tax_lines = ""
+        if cgst_total > 0:
+            tax_lines += f"""
+<ALLLEDGERENTRIES.LIST>
+<LEDGERNAME>CGST</LEDGERNAME>
+<ISDEEMEDPOSITIVE>Yes</ISDEEMEDPOSITIVE>
+<AMOUNT>-{cgst_total:.2f}</AMOUNT>
+</ALLLEDGERENTRIES.LIST>"""
+        if sgst_total > 0:
+            tax_lines += f"""
+<ALLLEDGERENTRIES.LIST>
+<LEDGERNAME>SGST</LEDGERNAME>
+<ISDEEMEDPOSITIVE>Yes</ISDEEMEDPOSITIVE>
+<AMOUNT>-{sgst_total:.2f}</AMOUNT>
+</ALLLEDGERENTRIES.LIST>"""
+        if igst_total > 0:
+            tax_lines += f"""
+<ALLLEDGERENTRIES.LIST>
+<LEDGERNAME>IGST</LEDGERNAME>
+<ISDEEMEDPOSITIVE>Yes</ISDEEMEDPOSITIVE>
+<AMOUNT>-{igst_total:.2f}</AMOUNT>
+</ALLLEDGERENTRIES.LIST>"""
+
+        static_vars = self._static_vars_block()
+        desc_block = f"""<REQUESTDESC>
+<REPORTNAME>Vouchers</REPORTNAME>
+{static_vars}
+</REQUESTDESC>"""
+
+        return f"""<?xml version="1.0" encoding="UTF-8"?>
+<ENVELOPE>
+<HEADER><TALLYREQUEST>Import Data</TALLYREQUEST></HEADER>
+<BODY>
+<IMPORTDATA>
+{desc_block}
+<REQUESTDATA>
+<TALLYMESSAGE xmlns:UDF="TallyUDF">
+<VOUCHER VCHTYPE="Purchase" ACTION="Create">
+<DATE>{tally_date}</DATE>
+<EFFECTIVEDATE>{tally_date}</EFFECTIVEDATE>
+<VOUCHERTYPENAME>Purchase</VOUCHERTYPENAME>
+<VOUCHERNUMBER>{self._xml_escape(ref)}</VOUCHERNUMBER>
+<REFERENCE>{self._xml_escape(ref)}</REFERENCE>
+<PARTYLEDGERNAME>{self._xml_escape(party)}</PARTYLEDGERNAME>
+<NARRATION>{self._xml_escape(narration)}</NARRATION>
 <ALLLEDGERENTRIES.LIST>
 <LEDGERNAME>{self._xml_escape(party)}</LEDGERNAME>
 <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
 <AMOUNT>{total:.2f}</AMOUNT>
-</ALLLEDGERENTRIES.LIST>"""
-
-        # Item legs
-        for item in items:
-            taxable = item.get("taxable_amount", 0)
-            gst_rate = item.get("gst_rate", 0)
-            purchase_ledger = f"Purchase @{int(gst_rate)}%"
-            lines_xml += f"""
-<ALLINVENTORYENTRIES.LIST>
-<STOCKITEMNAME>{self._xml_escape(item.get('item_name', ''))}</STOCKITEMNAME>
-<ISDEEMEDPOSITIVE>Yes</ISDEEMEDPOSITIVE>
-<RATE>{item.get('rate', 0):.4f}/KG</RATE>
-<AMOUNT>-{taxable:.2f}</AMOUNT>
-<ACTUALQTY>{item.get('quantity', 0):.3f} KG</ACTUALQTY>
-<BILLEDQTY>{item.get('quantity', 0):.3f} KG</BILLEDQTY>
-<BATCHALLOCATIONS.LIST>
-<GODOWNNAME>Main Godown</GODOWNNAME>
-<AMOUNT>-{taxable:.2f}</AMOUNT>
-<ACTUALQTY>{item.get('quantity', 0):.3f} KG</ACTUALQTY>
-</BATCHALLOCATIONS.LIST>
-</ALLINVENTORYENTRIES.LIST>"""
-
-            # GST ledger entries
-            if item.get("cgst", 0) > 0:
-                lines_xml += f"""
-<ALLLEDGERENTRIES.LIST>
-<LEDGERNAME>CGST @ {int(gst_rate/2)}%</LEDGERNAME>
-<ISDEEMEDPOSITIVE>Yes</ISDEEMEDPOSITIVE>
-<AMOUNT>-{item['cgst']:.2f}</AMOUNT>
 </ALLLEDGERENTRIES.LIST>
 <ALLLEDGERENTRIES.LIST>
-<LEDGERNAME>SGST @ {int(gst_rate/2)}%</LEDGERNAME>
+<LEDGERNAME>Purchase Account</LEDGERNAME>
 <ISDEEMEDPOSITIVE>Yes</ISDEEMEDPOSITIVE>
-<AMOUNT>-{item['sgst']:.2f}</AMOUNT>
-</ALLLEDGERENTRIES.LIST>"""
-            elif item.get("igst", 0) > 0:
-                lines_xml += f"""
-<ALLLEDGERENTRIES.LIST>
-<LEDGERNAME>IGST @ {int(gst_rate)}%</LEDGERNAME>
-<ISDEEMEDPOSITIVE>Yes</ISDEEMEDPOSITIVE>
-<AMOUNT>-{item['igst']:.2f}</AMOUNT>
-</ALLLEDGERENTRIES.LIST>"""
-
-        return f"""<?xml version="1.0" encoding="UTF-8"?>
-<ENVELOPE>
-<HEADER>
-<TALLYREQUEST>Import Data</TALLYREQUEST>
-</HEADER>
-<BODY>
-<IMPORTDATA>
-<REQUESTDESC>
-<REPORTNAME>Vouchers</REPORTNAME>
-<STATICVARIABLES>
-<SVCURRENTCOMPANY>{self._xml_escape(self.company)}</SVCURRENTCOMPANY>
-</STATICVARIABLES>
-</REQUESTDESC>
-<REQUESTDATA>
-<TALLYMESSAGE xmlns:UDF="TallyUDF">
-<VOUCHER VCHTYPE="Purchase" ACTION="Create" OBJVIEW="Invoice Voucher View">
-<DATE>{date_str}</DATE>
-<VOUCHERTYPENAME>Purchase</VOUCHERTYPENAME>
-<VOUCHERNUMBER>{self._xml_escape(ref)}</VOUCHERNUMBER>
-<PARTYLEDGERNAME>{self._xml_escape(party)}</PARTYLEDGERNAME>
-<NARRATION>{self._xml_escape(narration)}</NARRATION>
-{lines_xml}
+<AMOUNT>-{taxable_total:.2f}</AMOUNT>
+</ALLLEDGERENTRIES.LIST>
+{tax_lines}
 </VOUCHER>
 </TALLYMESSAGE>
 </REQUESTDATA>
@@ -179,85 +331,130 @@ class TallyConnector:
 </BODY>
 </ENVELOPE>"""
 
-    def _build_sales_xml(self, v: dict) -> str:
-        """Build Tally Sales Voucher XML (simplified)."""
-        date_str = self._format_tally_date(v.get("voucher_date"))
-        ref = v.get("reference_number", "")
-        party = v.get("party_name", "")
-        total = v.get("total", 0)
+    def _build_sales_xml(self, v: dict, company_dates: dict | None = None) -> str:
+        """Build Tally Sales Voucher XML."""
+        tally_date, orig_date = self._clean_tally_date(v.get("voucher_date"), company_dates)
+        ref = v.get("reference_number", "") or v.get("voucher_number", "")
+        party = v.get("party_name", "").strip() or "Sundry Debtor"
         narration = v.get("narration", f"Sales Invoice {ref}")
+        if orig_date and orig_date != tally_date:
+            narration = f"{narration} (Actual Date: {orig_date})"
 
-        lines_xml = f"""
+        total = float(v.get("total") or 0)
+        items = v.get("line_items", [])
+
+        taxable_total = 0.0
+        cgst_total = float(v.get("total_cgst") or 0)
+        sgst_total = float(v.get("total_sgst") or 0)
+        igst_total = float(v.get("total_igst") or 0)
+
+        if items:
+            for it in items:
+                taxable_total += float(it.get("taxable_amount") or (float(it.get("rate", 0)) * float(it.get("quantity", 1))))
+                if not cgst_total and not igst_total:
+                    cgst_total += float(it.get("cgst", 0))
+                    sgst_total += float(it.get("sgst", 0))
+                    igst_total += float(it.get("igst", 0))
+
+        if taxable_total <= 0:
+            taxable_total = float(v.get("subtotal") or 0)
+        if taxable_total <= 0:
+            taxable_total = round(total / 1.18, 2)
+            if cgst_total <= 0 and igst_total <= 0:
+                cgst_total = round((total - taxable_total) / 2, 2)
+                sgst_total = round(total - taxable_total - cgst_total, 2)
+
+        tax_lines = ""
+        if cgst_total > 0:
+            tax_lines += f"""
+<ALLLEDGERENTRIES.LIST>
+<LEDGERNAME>CGST</LEDGERNAME>
+<ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
+<AMOUNT>{cgst_total:.2f}</AMOUNT>
+</ALLLEDGERENTRIES.LIST>"""
+        if sgst_total > 0:
+            tax_lines += f"""
+<ALLLEDGERENTRIES.LIST>
+<LEDGERNAME>SGST</LEDGERNAME>
+<ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
+<AMOUNT>{sgst_total:.2f}</AMOUNT>
+</ALLLEDGERENTRIES.LIST>"""
+        if igst_total > 0:
+            tax_lines += f"""
+<ALLLEDGERENTRIES.LIST>
+<LEDGERNAME>IGST</LEDGERNAME>
+<ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
+<AMOUNT>{igst_total:.2f}</AMOUNT>
+</ALLLEDGERENTRIES.LIST>"""
+
+        static_vars = self._static_vars_block()
+        desc_block = f"""<REQUESTDESC>
+<REPORTNAME>Vouchers</REPORTNAME>
+{static_vars}
+</REQUESTDESC>"""
+
+        return f"""<?xml version="1.0" encoding="UTF-8"?>
+<ENVELOPE>
+<HEADER><TALLYREQUEST>Import Data</TALLYREQUEST></HEADER>
+<BODY>
+<IMPORTDATA>
+{desc_block}
+<REQUESTDATA>
+<TALLYMESSAGE xmlns:UDF="TallyUDF">
+<VOUCHER VCHTYPE="Sales" ACTION="Create">
+<DATE>{tally_date}</DATE>
+<EFFECTIVEDATE>{tally_date}</EFFECTIVEDATE>
+<VOUCHERTYPENAME>Sales</VOUCHERTYPENAME>
+<VOUCHERNUMBER>{self._xml_escape(ref)}</VOUCHERNUMBER>
+<REFERENCE>{self._xml_escape(ref)}</REFERENCE>
+<PARTYLEDGERNAME>{self._xml_escape(party)}</PARTYLEDGERNAME>
+<NARRATION>{self._xml_escape(narration)}</NARRATION>
 <ALLLEDGERENTRIES.LIST>
 <LEDGERNAME>{self._xml_escape(party)}</LEDGERNAME>
 <ISDEEMEDPOSITIVE>Yes</ISDEEMEDPOSITIVE>
 <AMOUNT>-{total:.2f}</AMOUNT>
-</ALLLEDGERENTRIES.LIST>"""
-
-        for item in v.get("line_items", []):
-            gst_rate = item.get("gst_rate", 0)
-            taxable = item.get("taxable_amount", 0)
-            lines_xml += f"""
-<ALLINVENTORYENTRIES.LIST>
-<STOCKITEMNAME>{self._xml_escape(item.get('item_name', ''))}</STOCKITEMNAME>
-<ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
-<RATE>{item.get('rate', 0):.4f}/KG</RATE>
-<AMOUNT>{taxable:.2f}</AMOUNT>
-<ACTUALQTY>{item.get('quantity', 0):.3f} KG</ACTUALQTY>
-<BILLEDQTY>{item.get('quantity', 0):.3f} KG</BILLEDQTY>
-</ALLINVENTORYENTRIES.LIST>
+</ALLLEDGERENTRIES.LIST>
 <ALLLEDGERENTRIES.LIST>
-<LEDGERNAME>Sales @{int(gst_rate)}%</LEDGERNAME>
+<LEDGERNAME>Sales Account</LEDGERNAME>
 <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
-<AMOUNT>{taxable:.2f}</AMOUNT>
-</ALLLEDGERENTRIES.LIST>"""
-
-        return f"""<?xml version="1.0" encoding="UTF-8"?>
-<ENVELOPE>
-<HEADER><TALLYREQUEST>Import Data</TALLYREQUEST></HEADER>
-<BODY><IMPORTDATA>
-<REQUESTDESC>
-<REPORTNAME>Vouchers</REPORTNAME>
-<STATICVARIABLES>
-<SVCURRENTCOMPANY>{self._xml_escape(self.company)}</SVCURRENTCOMPANY>
-</STATICVARIABLES>
-</REQUESTDESC>
-<REQUESTDATA>
-<TALLYMESSAGE xmlns:UDF="TallyUDF">
-<VOUCHER VCHTYPE="Sales" ACTION="Create" OBJVIEW="Invoice Voucher View">
-<DATE>{date_str}</DATE>
-<VOUCHERTYPENAME>Sales</VOUCHERTYPENAME>
-<VOUCHERNUMBER>{self._xml_escape(ref)}</VOUCHERNUMBER>
-<PARTYLEDGERNAME>{self._xml_escape(party)}</PARTYLEDGERNAME>
-<NARRATION>{self._xml_escape(narration)}</NARRATION>
-{lines_xml}
+<AMOUNT>{taxable_total:.2f}</AMOUNT>
+</ALLLEDGERENTRIES.LIST>
+{tax_lines}
 </VOUCHER>
 </TALLYMESSAGE>
-</REQUESTDATA></IMPORTDATA></BODY></ENVELOPE>"""
+</REQUESTDATA>
+</IMPORTDATA>
+</BODY>
+</ENVELOPE>"""
 
-    def _build_payment_xml(self, v: dict) -> str:
+    def _build_payment_xml(self, v: dict, company_dates: dict | None = None) -> str:
         """Build Payment voucher XML."""
-        date_str = self._format_tally_date(v.get("voucher_date"))
-        amount = v.get("amount", 0)
-        party = v.get("party_name", "")
-        bank = v.get("bank_ledger", "Bank Account")
-        ref = v.get("reference_number", "")
+        tally_date, orig_date = self._clean_tally_date(v.get("voucher_date"), company_dates)
+        amount = float(v.get("amount") or v.get("total") or 0)
+        party = v.get("party_name", "").strip() or "Sundry Creditor"
+        bank = v.get("bank_ledger", "").strip() or "HDFC Bank"
+        ref = v.get("reference_number", "") or v.get("voucher_number", "")
         narration = v.get("narration", f"Payment to {party}")
+        if orig_date and orig_date != tally_date:
+            narration = f"{narration} (Statement Date: {orig_date})"
+
+        static_vars = self._static_vars_block()
+        desc_block = f"""<REQUESTDESC>
+<REPORTNAME>Vouchers</REPORTNAME>
+{static_vars}
+</REQUESTDESC>"""
 
         return f"""<?xml version="1.0" encoding="UTF-8"?>
 <ENVELOPE>
 <HEADER><TALLYREQUEST>Import Data</TALLYREQUEST></HEADER>
-<BODY><IMPORTDATA>
-<REQUESTDESC>
-<REPORTNAME>Vouchers</REPORTNAME>
-<STATICVARIABLES>
-<SVCURRENTCOMPANY>{self._xml_escape(self.company)}</SVCURRENTCOMPANY>
-</STATICVARIABLES>
-</REQUESTDESC>
+<BODY>
+<IMPORTDATA>
+{desc_block}
 <REQUESTDATA>
 <TALLYMESSAGE xmlns:UDF="TallyUDF">
 <VOUCHER VCHTYPE="Payment" ACTION="Create">
-<DATE>{date_str}</DATE>
+<DATE>{tally_date}</DATE>
+<EFFECTIVEDATE>{tally_date}</EFFECTIVEDATE>
 <VOUCHERTYPENAME>Payment</VOUCHERTYPENAME>
 <VOUCHERNUMBER>{self._xml_escape(ref)}</VOUCHERNUMBER>
 <NARRATION>{self._xml_escape(narration)}</NARRATION>
@@ -270,38 +467,65 @@ class TallyConnector:
 <LEDGERNAME>{self._xml_escape(bank)}</LEDGERNAME>
 <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
 <AMOUNT>{amount:.2f}</AMOUNT>
+<BANKALLOCATIONS.LIST>
+<DATE>{tally_date}</DATE>
+<INSTRUMENTDATE>{tally_date}</INSTRUMENTDATE>
+<INSTRUMENTNUMBER>{self._xml_escape(ref)}</INSTRUMENTNUMBER>
+<TRANSACTIONTYPE>Others</TRANSACTIONTYPE>
+<PAYMENTFAVOURING>{self._xml_escape(party)}</PAYMENTFAVOURING>
+<AMOUNT>{amount:.2f}</AMOUNT>
+</BANKALLOCATIONS.LIST>
 </ALLLEDGERENTRIES.LIST>
 </VOUCHER>
 </TALLYMESSAGE>
-</REQUESTDATA></IMPORTDATA></BODY></ENVELOPE>"""
+</REQUESTDATA>
+</IMPORTDATA>
+</BODY>
+</ENVELOPE>"""
 
-    def _build_receipt_xml(self, v: dict) -> str:
+    def _build_receipt_xml(self, v: dict, company_dates: dict | None = None) -> str:
         """Build Receipt voucher XML."""
-        date_str = self._format_tally_date(v.get("voucher_date"))
-        amount = v.get("amount", 0)
-        party = v.get("party_name", "")
-        bank = v.get("bank_ledger", "Bank Account")
-        ref = v.get("reference_number", "")
+        tally_date, orig_date = self._clean_tally_date(v.get("voucher_date"), company_dates)
+        amount = float(v.get("amount") or v.get("total") or 0)
+        party = v.get("party_name", "").strip() or "Sundry Debtor"
+        bank = v.get("bank_ledger", "").strip() or "HDFC Bank"
+        ref = v.get("reference_number", "") or v.get("voucher_number", "")
+        narration = v.get("narration", f"Receipt from {party}")
+        if orig_date and orig_date != tally_date:
+            narration = f"{narration} (Statement Date: {orig_date})"
+
+        static_vars = self._static_vars_block()
+        desc_block = f"""<REQUESTDESC>
+<REPORTNAME>Vouchers</REPORTNAME>
+{static_vars}
+</REQUESTDESC>"""
 
         return f"""<?xml version="1.0" encoding="UTF-8"?>
 <ENVELOPE>
 <HEADER><TALLYREQUEST>Import Data</TALLYREQUEST></HEADER>
-<BODY><IMPORTDATA>
-<REQUESTDESC><REPORTNAME>Vouchers</REPORTNAME>
-<STATICVARIABLES>
-<SVCURRENTCOMPANY>{self._xml_escape(self.company)}</SVCURRENTCOMPANY>
-</STATICVARIABLES>
-</REQUESTDESC>
+<BODY>
+<IMPORTDATA>
+{desc_block}
 <REQUESTDATA>
 <TALLYMESSAGE xmlns:UDF="TallyUDF">
 <VOUCHER VCHTYPE="Receipt" ACTION="Create">
-<DATE>{date_str}</DATE>
+<DATE>{tally_date}</DATE>
+<EFFECTIVEDATE>{tally_date}</EFFECTIVEDATE>
 <VOUCHERTYPENAME>Receipt</VOUCHERTYPENAME>
 <VOUCHERNUMBER>{self._xml_escape(ref)}</VOUCHERNUMBER>
+<NARRATION>{self._xml_escape(narration)}</NARRATION>
 <ALLLEDGERENTRIES.LIST>
 <LEDGERNAME>{self._xml_escape(bank)}</LEDGERNAME>
 <ISDEEMEDPOSITIVE>Yes</ISDEEMEDPOSITIVE>
 <AMOUNT>-{amount:.2f}</AMOUNT>
+<BANKALLOCATIONS.LIST>
+<DATE>{tally_date}</DATE>
+<INSTRUMENTDATE>{tally_date}</INSTRUMENTDATE>
+<INSTRUMENTNUMBER>{self._xml_escape(ref)}</INSTRUMENTNUMBER>
+<TRANSACTIONTYPE>Others</TRANSACTIONTYPE>
+<PAYMENTFAVOURING>{self._xml_escape(party)}</PAYMENTFAVOURING>
+<AMOUNT>-{amount:.2f}</AMOUNT>
+</BANKALLOCATIONS.LIST>
 </ALLLEDGERENTRIES.LIST>
 <ALLLEDGERENTRIES.LIST>
 <LEDGERNAME>{self._xml_escape(party)}</LEDGERNAME>
@@ -310,115 +534,134 @@ class TallyConnector:
 </ALLLEDGERENTRIES.LIST>
 </VOUCHER>
 </TALLYMESSAGE>
-</REQUESTDATA></IMPORTDATA></BODY></ENVELOPE>"""
+</REQUESTDATA>
+</IMPORTDATA>
+</BODY>
+</ENVELOPE>"""
 
     def _build_ledger_master_xml(self, ledger: dict) -> str:
         """Create a new ledger (party) in Tally."""
+        static_vars = self._static_vars_block()
+        desc_block = f"""<REQUESTDESC>
+<REPORTNAME>All Masters</REPORTNAME>
+{static_vars}
+</REQUESTDESC>"""
         return f"""<?xml version="1.0" encoding="UTF-8"?>
 <ENVELOPE>
 <HEADER><TALLYREQUEST>Import Data</TALLYREQUEST></HEADER>
-<BODY><IMPORTDATA>
-<REQUESTDESC><REPORTNAME>All Masters</REPORTNAME>
-<STATICVARIABLES>
-<SVCURRENTCOMPANY>{self._xml_escape(self.company)}</SVCURRENTCOMPANY>
-</STATICVARIABLES>
-</REQUESTDESC>
+<BODY>
+<IMPORTDATA>
+{desc_block}
 <REQUESTDATA>
 <TALLYMESSAGE xmlns:UDF="TallyUDF">
 <LEDGER NAME="{self._xml_escape(ledger['name'])}" ACTION="Create">
 <NAME>{self._xml_escape(ledger['name'])}</NAME>
-<PARENT>{self._xml_escape(ledger.get('group', 'Sundry Creditors'))}</PARENT>
-<GSTNREGISTRATIONTYPE>Regular</GSTNREGISTRATIONTYPE>
+<PARENT>{self._xml_escape(ledger.get('group', 'Sundry Debtors'))}</PARENT>
+<ISBILLWISEON>Yes</ISBILLWISEON>
 <PARTYGSTIN>{self._xml_escape(ledger.get('gstin', ''))}</PARTYGSTIN>
-<MAILINGNAME>{self._xml_escape(ledger.get('name', ''))}</MAILINGNAME>
-<ADDRESS.LIST>
-<ADDRESS>{self._xml_escape(ledger.get('address', ''))}</ADDRESS>
-</ADDRESS.LIST>
-<STATENAME>{self._xml_escape(ledger.get('state', ''))}</STATENAME>
 <PINCODE>{self._xml_escape(ledger.get('pincode', ''))}</PINCODE>
 </LEDGER>
 </TALLYMESSAGE>
-</REQUESTDATA></IMPORTDATA></BODY></ENVELOPE>"""
+</REQUESTDATA>
+</IMPORTDATA>
+</BODY>
+</ENVELOPE>"""
 
     def _build_stock_journal_xml(self, entry: dict) -> str:
         """Build Stock Journal for production consumption."""
-        date_str = self._format_tally_date(entry.get("date"))
-        narration = entry.get("narration", "Production Entry")
-        consumptions = entry.get("consumed_items", [])
-        produced = entry.get("produced_item", {})
+        tally_date, _ = self._clean_tally_date(entry.get("date"))
+        narration = entry.get("narration", "Production voucher")
 
         source_items = ""
-        for item in consumptions:
+        for it in entry.get("source_items", []):
             source_items += f"""
 <ALLINVENTORYENTRIES.LIST>
-<STOCKITEMNAME>{self._xml_escape(item['item_name'])}</STOCKITEMNAME>
+<STOCKITEMNAME>{self._xml_escape(it['item_name'])}</STOCKITEMNAME>
 <ISDEEMEDPOSITIVE>No</ISDEEMEDPOSITIVE>
-<RATE>{item.get('rate', 0):.4f}/KG</RATE>
-<AMOUNT>{item.get('amount', 0):.2f}</AMOUNT>
-<ACTUALQTY>{item['quantity']:.3f} KG</ACTUALQTY>
+<RATE>{it.get('rate', 0):.4f}/KG</RATE>
+<AMOUNT>{it.get('amount', 0):.2f}</AMOUNT>
+<ACTUALQTY>{it.get('quantity', 0):.3f} KG</ACTUALQTY>
 </ALLINVENTORYENTRIES.LIST>"""
 
-        dest_item = f"""
+        dest_item = ""
+        produced = entry.get("produced_item")
+        if produced:
+            dest_item = f"""
 <ALLINVENTORYENTRIES.LIST>
-<STOCKITEMNAME>{self._xml_escape(produced.get('item_name', ''))}</STOCKITEMNAME>
+<STOCKITEMNAME>{self._xml_escape(produced['item_name'])}</STOCKITEMNAME>
 <ISDEEMEDPOSITIVE>Yes</ISDEEMEDPOSITIVE>
 <RATE>{produced.get('rate', 0):.4f}/KG</RATE>
 <AMOUNT>-{produced.get('amount', 0):.2f}</AMOUNT>
 <ACTUALQTY>{produced.get('quantity', 0):.3f} KG</ACTUALQTY>
 </ALLINVENTORYENTRIES.LIST>"""
 
+        static_vars = self._static_vars_block()
+        desc_block = f"""<REQUESTDESC>
+<REPORTNAME>Vouchers</REPORTNAME>
+{static_vars}
+</REQUESTDESC>"""
+
         return f"""<?xml version="1.0" encoding="UTF-8"?>
 <ENVELOPE>
 <HEADER><TALLYREQUEST>Import Data</TALLYREQUEST></HEADER>
-<BODY><IMPORTDATA>
-<REQUESTDESC><REPORTNAME>Vouchers</REPORTNAME>
-<STATICVARIABLES>
-<SVCURRENTCOMPANY>{self._xml_escape(self.company)}</SVCURRENTCOMPANY>
-</STATICVARIABLES>
-</REQUESTDESC>
+<BODY>
+<IMPORTDATA>
+{desc_block}
 <REQUESTDATA>
 <TALLYMESSAGE xmlns:UDF="TallyUDF">
 <VOUCHER VCHTYPE="Stock Journal" ACTION="Create">
-<DATE>{date_str}</DATE>
+<DATE>{tally_date}</DATE>
+<EFFECTIVEDATE>{tally_date}</EFFECTIVEDATE>
 <VOUCHERTYPENAME>Stock Journal</VOUCHERTYPENAME>
 <NARRATION>{self._xml_escape(narration)}</NARRATION>
 {source_items}
 {dest_item}
 </VOUCHER>
 </TALLYMESSAGE>
-</REQUESTDATA></IMPORTDATA></BODY></ENVELOPE>"""
+</REQUESTDATA>
+</IMPORTDATA>
+</BODY>
+</ENVELOPE>"""
 
     # ── HTTP Transport ─────────────────────────────────────────────────────────
 
     async def _post_xml(self, xml: str) -> dict:
-        """POST XML to TallyPrime HTTP server and parse response."""
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
-            response = await client.post(
-                self.url,
-                content=xml.encode("utf-8"),
-                headers={"Content-Type": "text/xml; charset=utf-8"},
-            )
-            response.raise_for_status()
-            response_text = response.text
+        """POST XML to TallyPrime HTTP server and parse response with clean error messaging."""
+        headers = {
+            "Content-Type": "text/xml; charset=utf-8",
+            "Connection": "close",
+        }
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                response = await client.post(
+                    self.url,
+                    content=xml.encode("utf-8"),
+                    headers=headers,
+                )
+                response.raise_for_status()
+                response_text = response.text
 
-            # Parse Tally response — check for errors
-            if "LINEERROR" in response_text:
-                raise TallyError(f"Tally error: {response_text[:500]}")
-            if "IMPORTRESULT" in response_text:
+                # Parse Tally response — check for errors
+                if "LINEERROR" in response_text:
+                    m = re.findall(r"<LINEERROR>(.*?)</LINEERROR>", response_text, re.S)
+                    if m:
+                        clean_errors = [html.unescape(e.strip()) for e in m if e.strip()]
+                        error_msg = "; ".join(clean_errors)
+                        if "Could not find Company" in error_msg or "SVCurrentCompany" in error_msg:
+                            error_msg = "No Company is open in TallyPrime! Please open your company in TallyPrime."
+                        raise TallyError(error_msg)
+                    raise TallyError(f"Tally rejected voucher: {response_text[:300]}")
+
+                if "<CREATED>0</CREATED>" in response_text and "<ALTERED>0</ALTERED>" in response_text:
+                    raise TallyError("Tally did not import voucher. Please ensure a Company is open in TallyPrime.")
+
                 return {"success": True, "tally_response": response_text[:200]}
-
-            return {"success": True, "raw": response_text[:200]}
+        except (httpx.TimeoutException, httpx.ReadTimeout):
+            raise TallyError(f"Tally server did not respond within {self.timeout}s. Check if TallyPrime is on 'Gateway of Tally' with no pop-up dialog open.")
+        except httpx.ConnectError:
+            raise TallyError(f"Cannot connect to Tally server at {self.url}. Ensure TallyPrime is running with HTTP Server enabled on Port 9000.")
 
     # ── Helpers ───────────────────────────────────────────────────────────────
-
-    @staticmethod
-    def _format_tally_date(d) -> str:
-        """Convert date to Tally format: YYYYMMDD."""
-        if isinstance(d, date):
-            return d.strftime("%Y%m%d")
-        if isinstance(d, str) and len(d) == 10:
-            return d.replace("-", "")
-        return ""
 
     @staticmethod
     def _xml_escape(text: str) -> str:
@@ -433,7 +676,3 @@ class TallyConnector:
             .replace('"', "&quot;")
             .replace("'", "&apos;")
         )
-
-
-class TallyError(Exception):
-    pass

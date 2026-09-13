@@ -16,7 +16,8 @@ import {
   AlertTriangle, Calendar as IconCal, Info, Printer, ShieldAlert,
   Check, X, Eye, HelpCircle, ShieldCheck, ChevronRight, Activity, Clock,
   ArrowRightLeft, AlertCircle, RefreshCw, Send, Plus, Award, Star,
-  TrendingUp, Users, ShoppingBag, AlertOctagon, FileCheck, Clipboard, Play, Moon, Sun, MapPin, Truck
+  TrendingUp, Users, ShoppingBag, AlertOctagon, FileCheck, Clipboard, Play, Moon, Sun, MapPin, Truck,
+  Building2, Sparkles, CreditCard, Smartphone
 } from "lucide-react";
 
 type PrimaryTab = "dashboard" | "orders" | "warehouse" | "customers" | "finance" | "analytics";
@@ -647,7 +648,7 @@ export default function SalesPage() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10, flexWrap: "wrap", gap: 10 }}>
         <div>
           <div style={{ fontSize: 11, color: C.text3, display: "flex", alignItems: "center", gap: 4, marginBottom: 4 }}>
-            <span>🏢 ERP Workspace</span>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Building2 size={13} /> ERP Workspace</span>
             <span>&gt;</span>
             <span>Sales Hub</span>
             <span>&gt;</span>
@@ -663,7 +664,7 @@ export default function SalesPage() {
           <div style={{ position: "relative" }}>
             <input
               type="text"
-              placeholder="🔍 Global Search Customer, Invoice, Order..."
+              placeholder="Global Search Customer, Invoice, Order..."
               value={globalSearch}
               onChange={e => { setGlobalSearch(e.target.value); setShowSearchResults(true); }}
               style={{ ...inputFilterStyle, width: 240, padding: "7px 12px", background: C.cardBg, color: C.text1, borderColor: C.border }}
@@ -676,7 +677,7 @@ export default function SalesPage() {
               }}>
                 <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 8px", borderBottom: `1px solid ${C.border}` }}>
                   <span style={{ fontSize: 8, color: C.text3, fontWeight: 800 }}>Search Results</span>
-                  <button onClick={() => setShowSearchResults(false)} style={{ background: "none", border: "none", color: C.text3, fontSize: 10, cursor: "pointer" }}>✕</button>
+                  <button onClick={() => setShowSearchResults(false)} style={{ background: "none", border: "none", color: C.text3, cursor: "pointer", display: "flex", alignItems: "center" }}><X size={12} /></button>
                 </div>
                 {getGlobalSearchResults().map((res, i) => (
                   <div
@@ -720,7 +721,7 @@ export default function SalesPage() {
               alignItems: "center", gap: 4
             }}
           >
-            <span>🤖</span> AI Co-Pilot
+            <Sparkles size={13} color="#fff" /> AI Co-Pilot
           </button>
 
           <button
@@ -946,7 +947,7 @@ export default function SalesPage() {
                       {filteredOrders.map(o => (
                         <tr key={o.id} style={{ borderBottom: `1px solid ${C.border}` }}>
                           <td style={{ ...tdStyle, fontWeight: 700, color: C.primary, cursor: "pointer" }} onClick={() => setSelectedOrderForDrawer(o)}>
-                            {o.id} 🔍
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>{o.id} <Eye size={12} /></span>
                           </td>
                           <td style={{ ...tdStyle, fontWeight: 600 }}>{o.customer}</td>
                           <td style={tdStyle}>{o.date}</td>
@@ -997,7 +998,7 @@ export default function SalesPage() {
                           {colOrders.map(o => (
                             <div key={o.id} style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: 6, padding: 10, boxShadow: T.shadow }}>
                               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                <span style={{ fontSize: 11, fontWeight: 800, color: C.primary, cursor: "pointer" }} onClick={() => setSelectedOrderForDrawer(o)}>{o.id} 🔍</span>
+                                <span style={{ fontSize: 11, fontWeight: 800, color: C.primary, cursor: "pointer" }} onClick={() => setSelectedOrderForDrawer(o)}><span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>{o.id} <Eye size={12} /></span></span>
                                 <span style={{ fontSize: 8, color: C.text3 }}>{o.date}</span>
                               </div>
                               <div style={{ fontSize: 11, fontWeight: 700, color: C.text1, marginTop: 4 }}>{o.customer}</div>
@@ -1298,7 +1299,7 @@ export default function SalesPage() {
                         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
                           <span style={{ fontSize: 11, fontWeight: 800, color: C.text1 }}>{cust.name}</span>
                           <span style={{ color: "#eab308", fontSize: 9 }}>
-                            {"★".repeat(cust.rating)}{"☆".repeat(5 - cust.rating)}
+                            {[...Array(5)].map((_, i) => <Star key={i} size={11} fill={i < cust.rating ? "#eab308" : "none"} stroke="#eab308" style={{ display: "inline-block" }} />)}
                           </span>
                         </div>
                         <div style={{ fontSize: 9, color: C.text3, marginTop: 2 }}>
@@ -1360,7 +1361,7 @@ export default function SalesPage() {
                       <td style={{ ...tdStyle, color: T.red, fontWeight: 700 }}>{inr(cr.used)}</td>
                       <td style={{ ...tdStyle, color: cr.available < 0 ? T.red : T.green, fontWeight: 700 }}>{inr(cr.available)}</td>
                       <td style={{ ...tdStyle, color: cr.overdue > 0 ? T.red : C.text2, fontWeight: 700 }}>{inr(cr.overdue)}</td>
-                      <td style={tdStyle}><span style={badge(cr.blocked ? T.red : T.green, cr.blocked ? C.redBg : C.greenBg)}>{cr.blocked ? "⛔ Blocked" : "Active Credit"}</span></td>
+                      <td style={tdStyle}><span style={badge(cr.blocked ? T.red : T.green, cr.blocked ? C.redBg : C.greenBg)}>{cr.blocked ? "Blocked" : "Active Credit"}</span></td>
                       <td style={tdStyle}>
                         <button onClick={() => {
                           setCreditLedgers(prev => prev.map((item, i) => i === idx ? { ...item, blocked: !item.blocked } : item));
@@ -1556,7 +1557,7 @@ export default function SalesPage() {
                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   {MOCK_TARGETS.map((tg, idx) => (
                     <div key={idx} style={{ display: "flex", alignItems: "center", gap: 10, background: C.divider, padding: 10, borderRadius: 8 }}>
-                      <span style={{ fontSize: 14 }}>{idx === 0 ? "🏆" : "🥈"}</span>
+                      {idx === 0 ? <Award size={16} color="#eab308" /> : <Award size={16} color="#94a3b8" />}
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 11, fontWeight: 800, color: C.text1 }}>{tg.employee}</div>
                         <div style={{ fontSize: 9, color: C.text3 }}>{tg.branch}</div>
@@ -1684,9 +1685,9 @@ export default function SalesPage() {
         }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
             <h3 style={{ fontSize: 12, fontWeight: 800, display: "flex", alignItems: "center", gap: 6, color: C.text1 }}>
-              <span>🤖</span> AI Sales Co-Pilot
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><Sparkles size={14} color={C.primary} /> AI Sales Co-Pilot</span>
             </h3>
-            <button onClick={() => setShowAiPanel(false)} style={{ background: "none", border: "none", color: C.text3, fontSize: 16, cursor: "pointer" }}>✕</button>
+            <button onClick={() => setShowAiPanel(false)} style={{ background: "none", border: "none", color: C.text3, cursor: "pointer", display: "flex", alignItems: "center" }}><X size={16} /></button>
           </div>
 
           {/* Conversation history thread */}
@@ -1762,7 +1763,7 @@ export default function SalesPage() {
                 <h2 style={{ fontSize: 14, fontWeight: 900, color: C.primary }}>Order Details {selectedOrderForDrawer.id}</h2>
                 <span style={{ fontSize: 9, color: C.text3 }}>PO Ref: {selectedOrderForDrawer.poNum}</span>
               </div>
-              <button onClick={() => setSelectedOrderForDrawer(null)} style={{ background: "none", border: "none", color: C.text3, fontSize: 18, cursor: "pointer" }}>✕</button>
+              <button onClick={() => setSelectedOrderForDrawer(null)} style={{ background: "none", border: "none", color: C.text3, cursor: "pointer", display: "flex", alignItems: "center" }}><X size={16} /></button>
             </div>
 
             {/* Clickable Stage Pipeline */}
@@ -1888,7 +1889,7 @@ export default function SalesPage() {
                 <h3 style={{ fontSize: 12, fontWeight: 900, color: C.primary }}>GPS Vehicle Tracking Tracer</h3>
                 <span style={{ fontSize: 9, color: C.text3 }}>Challan: {activeGPSChallan.id} | Vehicle: {activeGPSChallan.vehicle}</span>
               </div>
-              <button onClick={() => setActiveGPSChallan(null)} style={{ background: "none", border: "none", color: C.text3, fontSize: 16, cursor: "pointer" }}>✕</button>
+              <button onClick={() => setActiveGPSChallan(null)} style={{ background: "none", border: "none", color: C.text3, cursor: "pointer", display: "flex", alignItems: "center" }}><X size={16} /></button>
             </div>
             
             {/* GPS Tracer Visual timeline */}
@@ -1943,11 +1944,11 @@ export default function SalesPage() {
             display: "flex", flexDirection: "column", gap: 2
           }}>
             {[
-              { type: "new-quote", label: "➕ New Quotation" },
-              { type: "new-order", label: "📦 New Sales Order" },
-              { type: "new-cust",  label: "👤 New Customer" },
-              { type: "new-dc",    label: "🚛 Create Challan" },
-              { type: "new-rma",   label: "🔁 Raise Returns (RMA)" }
+              { type: "new-quote", label: "New Quotation" },
+              { type: "new-order", label: "New Sales Order" },
+              { type: "new-cust",  label: "New Customer" },
+              { type: "new-dc",    label: "Create Challan" },
+              { type: "new-rma",   label: "Raise Returns (RMA)" }
             ].map(opt => (
               <button
                 key={opt.type}
@@ -1991,7 +1992,7 @@ export default function SalesPage() {
           <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: 12, width: "100%", maxWidth: 400, padding: 24 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
               <h3 style={{ fontSize: 13, fontWeight: 800, color: C.text1 }}>Draft New Quotation</h3>
-              <button onClick={() => setShowNewQuoteModal(false)} style={{ background: "none", border: "none", fontSize: 16, color: C.text3, cursor: "pointer" }}>✕</button>
+              <button onClick={() => setShowNewQuoteModal(false)} style={{ background: "none", border: "none", color: C.text3, cursor: "pointer", display: "flex", alignItems: "center" }}><X size={16} /></button>
             </div>
             <form onSubmit={handleCreateQuote} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               <input type="text" value={quoteCust} onChange={e => setQuoteCust(e.target.value)} placeholder="Customer Name" style={{ padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 6, fontSize: 11, background: C.cardBg, color: C.text1 }} required />
@@ -2008,7 +2009,7 @@ export default function SalesPage() {
           <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: 12, width: "100%", maxWidth: 400, padding: 24 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
               <h3 style={{ fontSize: 13, fontWeight: 800, color: C.text1 }}>Generate Sales Order</h3>
-              <button onClick={() => setShowNewOrderModal(false)} style={{ background: "none", border: "none", fontSize: 16, color: C.text3, cursor: "pointer" }}>✕</button>
+              <button onClick={() => setShowNewOrderModal(false)} style={{ background: "none", border: "none", color: C.text3, cursor: "pointer", display: "flex", alignItems: "center" }}><X size={16} /></button>
             </div>
             <form onSubmit={handleCreateOrder} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               <input type="text" value={orderCust} onChange={e => setOrderCust(e.target.value)} placeholder="Customer Name" style={{ padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 6, fontSize: 11, background: C.cardBg, color: C.text1 }} required />
@@ -2025,7 +2026,7 @@ export default function SalesPage() {
           <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: 12, width: "100%", maxWidth: 400, padding: 24 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
               <h3 style={{ fontSize: 13, fontWeight: 800, color: C.text1 }}>Add Customer Credit Limit</h3>
-              <button onClick={() => setShowNewCustModal(false)} style={{ background: "none", border: "none", fontSize: 16, color: C.text3, cursor: "pointer" }}>✕</button>
+              <button onClick={() => setShowNewCustModal(false)} style={{ background: "none", border: "none", color: C.text3, cursor: "pointer", display: "flex", alignItems: "center" }}><X size={16} /></button>
             </div>
             <form onSubmit={handleCreateCustomer} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               <input type="text" value={newCustName} onChange={e => setNewCustName(e.target.value)} placeholder="Customer Account Name" style={{ padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 6, fontSize: 11, background: C.cardBg, color: C.text1 }} required />
@@ -2041,7 +2042,7 @@ export default function SalesPage() {
           <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: 12, width: "100%", maxWidth: 400, padding: 24 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
               <h3 style={{ fontSize: 13, fontWeight: 800, color: C.text1 }}>Generate Delivery Challan</h3>
-              <button onClick={() => setShowChallanModal(false)} style={{ background: "none", border: "none", fontSize: 16, color: C.text3, cursor: "pointer" }}>✕</button>
+              <button onClick={() => setShowChallanModal(false)} style={{ background: "none", border: "none", color: C.text3, cursor: "pointer", display: "flex", alignItems: "center" }}><X size={16} /></button>
             </div>
             <form onSubmit={handleCreateChallan} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               <input type="text" value={challanVehicle} onChange={e => setChallanVehicle(e.target.value)} placeholder="Vehicle Transport Number" style={{ padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 6, fontSize: 11, background: C.cardBg, color: C.text1 }} required />
@@ -2057,7 +2058,7 @@ export default function SalesPage() {
           <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: 16, width: "100%", maxWidth: 360, padding: 24 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
               <h3 style={{ fontSize: 14, fontWeight: 800, color: C.text1 }}>Sales Verification Sign-off</h3>
-              <button onClick={() => setShowApprovalModal(false)} style={{ background: "none", border: "none", fontSize: 18, color: C.text3, cursor: "pointer" }}>✕</button>
+              <button onClick={() => setShowApprovalModal(false)} style={{ background: "none", border: "none", color: C.text3, cursor: "pointer", display: "flex", alignItems: "center" }}><X size={16} /></button>
             </div>
             <div style={{ background: C.cyanBg, padding: 10, borderRadius: 8, border: `1px solid ${C.border}`, marginBottom: 14 }}>
               <div style={{ fontSize: 10, color: C.text1, lineHeight: 1.4 }}>
@@ -2067,7 +2068,7 @@ export default function SalesPage() {
               </div>
             </div>
             <form onSubmit={handleAuthorizeApproval} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <input type="password" value={otpCode} onChange={e => setOtpCode(e.target.value)} placeholder="🔑 OTP Code (Try 989898)" style={{ padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 6, fontSize: 11, letterSpacing: 4, textAlign: "center", background: C.cardBg, color: C.text1 }} required />
+              <input type="password" value={otpCode} onChange={e => setOtpCode(e.target.value)} placeholder="OTP Code (Try 989898)" style={{ padding: "8px 10px", border: `1px solid ${C.border}`, borderRadius: 6, fontSize: 11, letterSpacing: 4, textAlign: "center", background: C.cardBg, color: C.text1 }} required />
               <button type="submit" style={{ background: T.green, color: "#fff", border: "none", borderRadius: 6, padding: "10px 14px", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>Release Transaction</button>
             </form>
           </div>
@@ -2079,7 +2080,7 @@ export default function SalesPage() {
           <div style={{ background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: 16, width: "100%", maxWidth: 360, padding: 24 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
               <h3 style={{ fontSize: 13, fontWeight: 800, color: C.text1 }}>Razorpay Gateway Payment</h3>
-              <button onClick={() => setShowPaymentSimulator(false)} style={{ background: "none", border: "none", fontSize: 18, color: C.text3, cursor: "pointer" }}>✕</button>
+              <button onClick={() => setShowPaymentSimulator(false)} style={{ background: "none", border: "none", color: C.text3, cursor: "pointer", display: "flex", alignItems: "center" }}><X size={18} /></button>
             </div>
             <div style={{ background: C.divider, padding: 12, borderRadius: 8, marginBottom: 14 }}>
               <div style={{ fontSize: 9, color: C.text3 }}>Payee Merchant: <strong>Daynisc Technologies</strong></div>
@@ -2090,12 +2091,12 @@ export default function SalesPage() {
                 setOrders(prev => prev.map(o => o.id === selectedInvoiceForPayment?.id ? { ...o, outstanding: 0 } : o));
                 toast.success("Online payment successful via Razorpay!");
                 setShowPaymentSimulator(false);
-              }} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "10px 14px", background: C.primary, color: "#fff", border: "none", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>💳 Pay Card</button>
+              }} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "10px 14px", background: C.primary, color: "#fff", border: "none", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer" }}><CreditCard size={14} /> Pay Card</button>
               <button onClick={() => {
                 setOrders(prev => prev.map(o => o.id === selectedInvoiceForPayment?.id ? { ...o, outstanding: 0 } : o));
                 toast.success("UPI cleared successfully!");
                 setShowPaymentSimulator(false);
-              }} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "10px 14px", background: T.green, color: "#fff", border: "none", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>📱 UPI QR</button>
+              }} style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "10px 14px", background: T.green, color: "#fff", border: "none", borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer" }}><Smartphone size={14} /> UPI QR</button>
             </div>
           </div>
         </div>

@@ -26,7 +26,7 @@ export default function AuditTrailPage() {
       {/* Page Title */}
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 22, fontWeight: 800, color: T.text1, display: "flex", alignItems: "center", gap: 10, letterSpacing: "-0.4px" }}>
-          🛡️ Enterprise Audit Trail Log
+          Enterprise Audit Trail Log
         </h1>
         <p style={{ fontSize: 13, color: T.text3, marginTop: 3 }}>Secure log of all edits, approvals, ledger modifications, and logins across the system.</p>
       </div>

@@ -27,7 +27,7 @@ export default function ReportsPage() {
       <div style={{ marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 800, color: T.text1, display: "flex", alignItems: "center", gap: 10, letterSpacing: "-0.4px" }}>
-            📈 Reports & Custom Dashboard Builder
+            Reports & Custom Dashboard Builder
           </h1>
           <p style={{ fontSize: 13, color: T.text3, marginTop: 3 }}>Compile core registers (financial statement, sales/purchase books) or build custom dashboard widgets.</p>
         </div>

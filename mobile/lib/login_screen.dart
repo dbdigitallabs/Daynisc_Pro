@@ -30,6 +30,35 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   String? _errorMessage;
   bool _showManualInput = false;
 
+  String _sanitizeApiBaseUrl(String raw) {
+    var input = raw.trim();
+    if (input.contains('#')) {
+      input = input.split('#').first;
+    }
+    if (input.contains('?')) {
+      input = input.split('?').first;
+    }
+    while (input.endsWith('/')) {
+      input = input.substring(0, input.length - 1);
+    }
+    if (!input.startsWith('http://') && !input.startsWith('https://')) {
+      input = 'http://$input';
+    }
+    try {
+      final uri = Uri.parse(input);
+      if (uri.host.isNotEmpty) {
+        final scheme = uri.scheme.isNotEmpty ? uri.scheme : 'http';
+        final host = uri.host;
+        int port = uri.port;
+        if (port == 0 || port == 3000) {
+          port = 8000;
+        }
+        return '$scheme://$host:$port/api/v1';
+      }
+    } catch (_) {}
+    return input;
+  }
+
   Future<void> _handleScannedData(String scannedString) async {
     if (_isLoading) return;
     setState(() {
@@ -44,21 +73,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     // 1. Try parsing scanned string as JSON
     try {
       final Map<String, dynamic> data = jsonDecode(scannedString);
-      targetUrl = data['url'];
-      token = data['token'];
-      refreshToken = data['refresh_token'];
+      if (data.containsKey('url')) {
+        targetUrl = _sanitizeApiBaseUrl(data['url'].toString());
+      }
+      token = data['token']?.toString();
+      refreshToken = data['refresh_token']?.toString();
     } catch (_) {
       // 2. Fallback: Try parsing as URL with query params
       if (scannedString.startsWith('http://') || scannedString.startsWith('https://')) {
         try {
           final uri = Uri.parse(scannedString);
           token = uri.queryParameters['token'];
-          // Remove query params to get API base path
-          targetUrl = uri.replace(queryParameters: {}).toString();
-          if (targetUrl.endsWith('?')) {
-            targetUrl = targetUrl.substring(0, targetUrl.length - 1);
-          }
         } catch (_) {}
+        targetUrl = _sanitizeApiBaseUrl(scannedString);
       }
     }
 
@@ -66,7 +93,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (targetUrl == null || targetUrl.isEmpty) {
       final cleaned = scannedString.trim();
       if (cleaned.contains('.')) {
-        targetUrl = cleaned.startsWith('http') ? cleaned : 'http://$cleaned:8000/api/v1';
+        targetUrl = _sanitizeApiBaseUrl(cleaned);
       } else if (cleaned.length == 6 && int.tryParse(cleaned) != null) {
         final octet2 = cleaned.substring(0, 2);
         final octet3Digit = cleaned.substring(2, 3);
@@ -123,7 +150,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         ApiClient().updateBaseUrl(targetUrl);
 
         if (mounted) {
-          context.go(Routes.dashboard);
+          context.go(Routes.scan);
         }
       } else {
         setState(() {
@@ -216,10 +243,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                   const SizedBox(height: 6),
                   const Text(
-                    'Scan Web Dashboard QR Code to Login',
+                    'Mobile Document Scanner',
                     style: TextStyle(
                       fontFamily: 'Inter',
-                      fontSize: 13,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primary,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Scan Web Dashboard QR Code or Enter Server IP',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 12,
                       fontWeight: FontWeight.w400,
                       color: AppColors.text3,
                     ),
@@ -330,7 +368,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                     color: AppColors.text1,
                                   ),
                                   decoration: const InputDecoration(
-                                    hintText: 'Enter PC local IP or URL',
+                                    hintText: 'e.g. 10.253.87.233 or server URL',
                                     contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                                   ),
                                   onSubmitted: (v) => _handleScannedData(v.trim()),

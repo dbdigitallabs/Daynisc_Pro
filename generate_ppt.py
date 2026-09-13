@@ -1,9 +1,14 @@
 import sys
 import os
+# pyrefly: ignore [missing-import]
 from pptx import Presentation
+# pyrefly: ignore [missing-import]
 from pptx.util import Inches, Pt
+# pyrefly: ignore [missing-import]
 from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
+# pyrefly: ignore [missing-import]
 from pptx.dml.color import RGBColor
+# pyrefly: ignore [missing-import]
 from pptx.enum.shapes import MSO_SHAPE
 
 def create_academic_presentation(output_path="Daynisc_Academic_Presentation.pptx"):

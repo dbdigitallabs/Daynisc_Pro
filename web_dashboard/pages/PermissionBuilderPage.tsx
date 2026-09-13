@@ -65,7 +65,7 @@ export default function PermissionBuilderPage() {
       <div style={{ marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 800, color: T.text1, display: "flex", alignItems: "center", gap: 10, letterSpacing: "-0.4px" }}>
-            🔒 Role & Custom Permission Builder
+            Role & Custom Permission Builder
           </h1>
           <p style={{ fontSize: 13, color: T.text3, marginTop: 3 }}>Define fine-grained access policies for your accounting, tax, warehouse, and manager user profiles.</p>
         </div>

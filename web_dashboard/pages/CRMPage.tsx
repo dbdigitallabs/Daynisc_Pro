@@ -40,9 +40,9 @@ const STAGE_COLORS: Record<CrmStage, { border: string; bg: string; text: string 
 };
 
 const MOCK_LEADS = [
-  { id: "OP-901", name: "Rajesh Patel", company: "Supreme Plastics Ltd", value: 480000, status: "Negotiation" as CrmStage, contact: "Rajesh Patel", mobile: "+91 98210 12345", email: "rajesh@supremeplastics.com", industry: "Polymers", city: "Mumbai", state: "MH", priority: "High", assigned: "Sanjay Patel", source: "Reference", date: "2026-06-30", closingDate: "2026-07-15", nextAction: "📞 Today 4:00 PM", product: "Polypropylene Resin PP-40", qty: 5000, budget: 480000, probability: 75, rating: 5, score: 92, timeline: [{ date: "Today", event: "09:30 Call - Interested, requested revised quotation" }, { date: "Yesterday", event: "WhatsApp Sent with product catalog" }, { date: "26-Jun", event: "Meeting at Mumbai Head Office" }], comments: [{ author: "Sanjay", text: "Client wants 5% wholesale discount." }] },
-  { id: "OP-902", name: "Sanjay Shah", company: "Patel Enterprises", value: 185000, status: "Quotation" as CrmStage, contact: "Sanjay Shah", mobile: "+91 99012 88710", email: "sanjay@patelent.com", industry: "Packaging", city: "Baroda", state: "GJ", priority: "High", assigned: "Ramesh Kumar", source: "Website", date: "2026-06-29", closingDate: "2026-07-10", nextAction: "💬 Tomorrow 10:30 AM", product: "HDPE Granules Grade A", qty: 2500, budget: 185000, probability: 60, rating: 4, score: 78, timeline: [{ date: "Yesterday", event: "Quotation revised to v3" }, { date: "28-Jun", event: "Visited Baroda plant" }], comments: [] },
-  { id: "OP-903", name: "Anil Verma", company: "Verma Chemicals", value: 120000, status: "Contacted" as CrmStage, contact: "Anil Verma", mobile: "+91 91220 44521", email: "anil@verma.com", industry: "Pharma", city: "Ahmedabad", state: "GJ", priority: "Medium", assigned: "Anil Sharma", source: "Cold Call", date: "2026-06-28", closingDate: "2026-07-25", nextAction: "📧 02 Jul 11:00 AM", product: "PVC Compound PVC-E2", qty: 1200, budget: 120000, probability: 45, rating: 3, score: 62, timeline: [{ date: "28-Jun", event: "Talked with Anil, interested in PVC-E2" }], comments: [] }
+  { id: "OP-901", name: "Rajesh Patel", company: "Supreme Plastics Ltd", value: 480000, status: "Negotiation" as CrmStage, contact: "Rajesh Patel", mobile: "+91 98210 12345", email: "rajesh@supremeplastics.com", industry: "Polymers", city: "Mumbai", state: "MH", priority: "High", assigned: "Sanjay Patel", source: "Reference", date: "2026-06-30", closingDate: "2026-07-15", nextAction: " Today 4:00 PM", product: "Polypropylene Resin PP-40", qty: 5000, budget: 480000, probability: 75, rating: 5, score: 92, timeline: [{ date: "Today", event: "09:30 Call - Interested, requested revised quotation" }, { date: "Yesterday", event: "WhatsApp Sent with product catalog" }, { date: "26-Jun", event: "Meeting at Mumbai Head Office" }], comments: [{ author: "Sanjay", text: "Client wants 5% wholesale discount." }] },
+  { id: "OP-902", name: "Sanjay Shah", company: "Patel Enterprises", value: 185000, status: "Quotation" as CrmStage, contact: "Sanjay Shah", mobile: "+91 99012 88710", email: "sanjay@patelent.com", industry: "Packaging", city: "Baroda", state: "GJ", priority: "High", assigned: "Ramesh Kumar", source: "Website", date: "2026-06-29", closingDate: "2026-07-10", nextAction: " Tomorrow 10:30 AM", product: "HDPE Granules Grade A", qty: 2500, budget: 185000, probability: 60, rating: 4, score: 78, timeline: [{ date: "Yesterday", event: "Quotation revised to v3" }, { date: "28-Jun", event: "Visited Baroda plant" }], comments: [] },
+  { id: "OP-903", name: "Anil Verma", company: "Verma Chemicals", value: 120000, status: "Contacted" as CrmStage, contact: "Anil Verma", mobile: "+91 91220 44521", email: "anil@verma.com", industry: "Pharma", city: "Ahmedabad", state: "GJ", priority: "Medium", assigned: "Anil Sharma", source: "Cold Call", date: "2026-06-28", closingDate: "2026-07-25", nextAction: " 02 Jul 11:00 AM", product: "PVC Compound PVC-E2", qty: 1200, budget: 120000, probability: 45, rating: 3, score: 62, timeline: [{ date: "28-Jun", event: "Talked with Anil, interested in PVC-E2" }], comments: [] }
 ];
 
 const WAREHOUSE_STOCK = {
@@ -250,7 +250,7 @@ export default function CRMPage() {
       source: formSource,
       date: new Date().toISOString().slice(0, 10),
       closingDate: formClosingDate || new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
-      nextAction: `📞 ${formNextFollowupDate || "Tomorrow"} ${formNextFollowupTime || "10:00 AM"}`,
+      nextAction: `${formNextFollowupDate || "Tomorrow"} ${formNextFollowupTime || "10:00 AM"}`,
       product: formProduct,
       qty: parseFloat(formQty) || 1000,
       budget: parseFloat(formValue) || 100000,
@@ -364,7 +364,7 @@ export default function CRMPage() {
         borderRadius: 8, padding: "10px 14px", marginBottom: 14, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10
       }}>
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          <span style={{ fontSize: 16 }}>🤖</span>
+          <Sparkles size={16} color={C.primary} />
           <div>
             <div style={{ fontSize: 11, fontWeight: 900, color: C.text1 }}>AI CRM Insights & Action Prompts</div>
             <div style={{ fontSize: 10, color: C.text2, display: "flex", gap: 12, marginTop: 2, flexWrap: "wrap" }}>
@@ -384,7 +384,7 @@ export default function CRMPage() {
       }}>
         <input
           type="text"
-          placeholder="🔍 Search Lead, Company, Product..."
+          placeholder="Search Lead, Company, Product..."
           value={search}
           onChange={e => setSearch(e.target.value)}
           style={{ ...inputFilterStyle, width: 200, background: C.pageBg, color: C.text1, borderColor: C.border }}
@@ -489,21 +489,21 @@ export default function CRMPage() {
                       </div>
 
                       <div style={{ fontSize: 9, color: T.amber, marginTop: 6, fontWeight: 700, display: "flex", alignItems: "center", gap: 4 }}>
-                        <Clock size={10} /> {lead.nextAction || "📞 Follow up scheduled"}
+                        <Clock size={10} /> {lead.nextAction || "Follow up scheduled"}
                       </div>
                       
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 6, fontSize: 9, color: C.text3 }}>
-                        <span>👤 {lead.assigned}</span>
-                        <span>📅 {lead.date}</span>
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}><User size={11} /> {lead.assigned}</span>
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}><Calendar size={11} /> {lead.date}</span>
                       </div>
 
                       {/* Compact Icon Action Buttons */}
                       <div style={{ display: "flex", gap: 4, justifyContent: "flex-end", marginTop: 8, borderTop: `1px solid ${C.divider}`, paddingTop: 6 }}>
-                        <button onClick={(e) => { e.stopPropagation(); toast.success("Phone dialer triggered!"); }} style={{ padding: "3px 6px", background: C.divider, border: "none", borderRadius: 4, fontSize: 10, cursor: "pointer" }} title="Call Customer">📞</button>
-                        <button onClick={(e) => { e.stopPropagation(); toast.success("WhatsApp opened!"); }} style={{ padding: "3px 6px", background: C.divider, border: "none", borderRadius: 4, fontSize: 10, cursor: "pointer" }} title="WhatsApp Message">💬</button>
-                        <button onClick={(e) => { e.stopPropagation(); toast.success("Email mailer opened!"); }} style={{ padding: "3px 6px", background: C.divider, border: "none", borderRadius: 4, fontSize: 10, cursor: "pointer" }} title="Send Email">✉️</button>
-                        <button onClick={(e) => { e.stopPropagation(); toast.success("Schedule Meeting"); }} style={{ padding: "3px 6px", background: C.divider, border: "none", borderRadius: 4, fontSize: 10, cursor: "pointer" }} title="Schedule Meeting">📅</button>
-                        <button onClick={(e) => { e.stopPropagation(); toast.success("Add Quick Note"); }} style={{ padding: "3px 6px", background: C.divider, border: "none", borderRadius: 4, fontSize: 10, cursor: "pointer" }} title="Quick Note">📝</button>
+                        <button onClick={(e) => { e.stopPropagation(); toast.success("Phone dialer triggered!"); }} style={{ padding: "3px 6px", background: C.divider, border: "none", borderRadius: 4, fontSize: 10, cursor: "pointer" }} title="Call Customer"><Phone size={12} /></button>
+                        <button onClick={(e) => { e.stopPropagation(); toast.success("WhatsApp opened!"); }} style={{ padding: "3px 6px", background: C.divider, border: "none", borderRadius: 4, fontSize: 10, cursor: "pointer" }} title="WhatsApp Message"><MessageSquare size={12} /></button>
+                        <button onClick={(e) => { e.stopPropagation(); toast.success("Email mailer opened!"); }} style={{ padding: "3px 6px", background: C.divider, border: "none", borderRadius: 4, fontSize: 10, cursor: "pointer" }} title="Send Email"><Mail size={12} />️</button>
+                        <button onClick={(e) => { e.stopPropagation(); toast.success("Schedule Meeting"); }} style={{ padding: "3px 6px", background: C.divider, border: "none", borderRadius: 4, fontSize: 10, cursor: "pointer" }} title="Schedule Meeting"><Calendar size={12} /></button>
+                        <button onClick={(e) => { e.stopPropagation(); toast.success("Add Quick Note"); }} style={{ padding: "3px 6px", background: C.divider, border: "none", borderRadius: 4, fontSize: 10, cursor: "pointer" }} title="Quick Note"><FileText size={12} /></button>
                       </div>
                     </div>
                   );
@@ -551,14 +551,14 @@ export default function CRMPage() {
                 <h3 style={{ fontSize: 14, fontWeight: 900, color: C.primary }}>Opportunity {selectedLeadForDrawer.id}</h3>
                 <span style={{ fontSize: 9, color: C.text3 }}>Assigned Executive: {selectedLeadForDrawer.assigned}</span>
               </div>
-              <button onClick={() => setSelectedLeadForDrawer(null)} style={{ background: "none", border: "none", color: C.text3, fontSize: 18, cursor: "pointer" }}>✕</button>
+              <button onClick={() => setSelectedLeadForDrawer(null)} style={{ background: "none", border: "none", color: C.text3, cursor: "pointer", display: "flex", alignItems: "center" }}><X size={18} /></button>
             </div>
 
             {/* 1. Customer Summary Card */}
             <div style={{ background: C.divider, border: `1px solid ${C.border}`, borderRadius: 8, padding: 12 }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div style={{ fontSize: 12, fontWeight: 900, color: C.text1 }}>{selectedLeadForDrawer.company}</div>
-                <div style={{ color: "#eab308", fontSize: 10 }}>{"★".repeat(selectedLeadForDrawer.rating)}{"☆".repeat(5 - selectedLeadForDrawer.rating)}</div>
+                <div style={{ color: "#eab308", fontSize: 10 }}>{"".repeat(selectedLeadForDrawer.rating)}{"".repeat(5 - selectedLeadForDrawer.rating)}</div>
               </div>
               <div style={{ fontSize: 9, color: C.text3, marginTop: 2 }}>
                 Customer since {FINANCE_OUTSTANDING[selectedLeadForDrawer.company as keyof typeof FINANCE_OUTSTANDING]?.since || "2023"} | Contact: {selectedLeadForDrawer.contact}
@@ -590,9 +590,9 @@ export default function CRMPage() {
 
             {/* 3. Actionable AI Recommendation Card */}
             <div style={{ background: C.cyanBg, border: `1px solid ${C.primary}`, borderRadius: 8, padding: 12 }}>
-              <div style={{ fontSize: 9, fontWeight: 900, color: C.primary, textTransform: "uppercase", marginBottom: 4 }}>✨ Actionable AI Recommendation</div>
+              <div style={{ fontSize: 9, fontWeight: 900, color: C.primary, textTransform: "uppercase", marginBottom: 4 }}> Actionable AI Recommendation</div>
               <div style={{ fontSize: 10, color: C.text1, lineHeight: 1.4 }}>
-                <strong>✔ Win Chance: {selectedLeadForDrawer.probability}%</strong> | Recommended Discount: <strong>2%</strong> | Risk: <strong style={{ color: T.green }}>Low</strong><br />
+                <strong>Win Chance: {selectedLeadForDrawer.probability}%</strong> | Recommended Discount: <strong>2%</strong> | Risk: <strong style={{ color: T.green }}>Low</strong><br />
                 <strong>Next Best Action:</strong> Call customer today regarding revised quotation.<br />
                 <strong>Expected Closing:</strong> {selectedLeadForDrawer.closingDate}
               </div>
@@ -628,9 +628,9 @@ export default function CRMPage() {
               </button>
               {showConvertMenu && (
                 <div style={{ position: "absolute", top: 40, left: 0, right: 0, background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: 6, boxShadow: T.shadowMd, zIndex: 99, padding: 4 }}>
-                  <button onClick={() => handleConvertTarget("Quotation")} style={{ width: "100%", padding: "8px", border: "none", background: "none", textAlign: "left", fontSize: 10, fontWeight: 700, color: C.text1, cursor: "pointer" }}>📄 Convert to Sales Quotation</button>
-                  <button onClick={() => handleConvertTarget("Sales Order")} style={{ width: "100%", padding: "8px", border: "none", background: "none", textAlign: "left", fontSize: 10, fontWeight: 700, color: C.text1, cursor: "pointer" }}>📦 Convert to Sales Order</button>
-                  <button onClick={() => handleConvertTarget("Proforma Invoice")} style={{ width: "100%", padding: "8px", border: "none", background: "none", textAlign: "left", fontSize: 10, fontWeight: 700, color: C.text1, cursor: "pointer" }}>🧾 Convert to Proforma Invoice</button>
+                  <button onClick={() => handleConvertTarget("Quotation")} style={{ width: "100%", padding: "8px", border: "none", background: "none", textAlign: "left", fontSize: 10, fontWeight: 700, color: C.text1, cursor: "pointer" }}> Convert to Sales Quotation</button>
+                  <button onClick={() => handleConvertTarget("Sales Order")} style={{ width: "100%", padding: "8px", border: "none", background: "none", textAlign: "left", fontSize: 10, fontWeight: 700, color: C.text1, cursor: "pointer" }} style={{ width: "100%", padding: "8px 12px", background: "#f8fafc", border: `1px solid ${C.border}`, borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", color: C.text1, display: "flex", alignItems: "center", gap: 6 }}><Box size={13} /> Convert to Sales Order</button>
+                  <button onClick={() => handleConvertTarget("Proforma Invoice")} style={{ width: "100%", padding: "8px", border: "none", background: "none", textAlign: "left", fontSize: 10, fontWeight: 700, color: C.text1, cursor: "pointer" }} style={{ width: "100%", padding: "8px 12px", background: "#f8fafc", border: `1px solid ${C.border}`, borderRadius: 6, fontSize: 11, fontWeight: 700, cursor: "pointer", color: C.text1, display: "flex", alignItems: "center", gap: 6 }}><Receipt size={13} /> Convert to Proforma Invoice</button>
                 </div>
               )}
             </div>
@@ -650,7 +650,7 @@ export default function CRMPage() {
 
             {/* 8. AI Assistant draft replies */}
             <div style={{ background: C.divider, padding: 12, borderRadius: 8 }}>
-              <div style={{ fontSize: 9, fontWeight: 800, color: C.text1, marginBottom: 8 }}>🤖 AI CRM Co-Pilot Drafts</div>
+              <div style={{ fontSize: 9, fontWeight: 800, color: C.text1, marginBottom: 8 }}> AI CRM Co-Pilot Drafts</div>
               <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
                 <button onClick={() => handleTriggerAiDraft("email")} style={{ padding: "6px 10px", background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: 6, fontSize: 9, cursor: "pointer", color: C.text1 }}>Draft Email</button>
                 <button onClick={() => handleTriggerAiDraft("whatsapp")} style={{ padding: "6px 10px", background: C.cardBg, border: `1px solid ${C.border}`, borderRadius: 6, fontSize: 9, cursor: "pointer", color: C.text1 }}>Draft WhatsApp</button>
@@ -704,7 +704,7 @@ export default function CRMPage() {
                   <h3 style={{ fontSize: 14, fontWeight: 900, color: C.text1 }}>Create New Opportunity</h3>
                   <span style={{ fontSize: 9, fontWeight: 900, background: C.cyanBg, color: C.primary, padding: "2px 6px", borderRadius: 4 }}>OP-904</span>
                 </div>
-                <button onClick={() => setShowAddLeadModal(false)} style={{ background: "none", border: "none", fontSize: 16, color: C.text3, cursor: "pointer" }}>✕</button>
+                <button onClick={() => setShowAddLeadModal(false)} style={{ background: "none", border: "none", fontSize: 16, color: C.text3, cursor: "pointer" }}><X size={16} /></button>
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 9, color: C.text3, marginBottom: 4 }}>
                 <span>●━━━━━━{modalStep === 2 ? "●" : "○"} Step {modalStep} of 2: {modalStep === 1 ? "Lead Profile" : "Sales Details"}</span>
@@ -735,7 +735,7 @@ export default function CRMPage() {
                   {/* Smart Lookup Alert */}
                   {isExistingCustomerMatch && (
                     <div style={{ background: C.greenBg, border: `1px solid ${T.green}`, padding: 8, borderRadius: 6, fontSize: 9, color: T.green }}>
-                      <strong>✓ Existing ERP Customer Found!</strong> Outstanding: ₹4.20L | Credit Limit: ₹20.00L | Sales Executive: Anil Sharma
+                      <strong style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Check size={12} color={T.green} /> Existing ERP Customer Found!</strong> Outstanding: ₹4.20L | Credit Limit: ₹20.00L | Sales Executive: Anil Sharma
                     </div>
                   )}
 
@@ -806,9 +806,9 @@ export default function CRMPage() {
                     </select>
                   </div>
 
-                  {/* ✨ AI Suggestions Box */}
+                  {/* AI Suggestions Box */}
                   <div style={{ background: C.primaryBg, border: `1px solid ${C.border}`, borderRadius: 6, padding: 8, fontSize: 9, color: C.primary }}>
-                    <strong>✨ AI Suggestions:</strong> Customer profile similar to Patel Enterprises. Expected deal value ₹3.50L. Recommended discount: 2%. Suggested polymers: HDPE Grade A, PP Resin.
+                    <strong style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Sparkles size={12} color={C.primary} /> AI Suggestions:</strong> Customer profile similar to Patel Enterprises. Expected deal value ₹3.50L. Recommended discount: 2%. Suggested polymers: HDPE Grade A, PP Resin.
                   </div>
 
                   <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr 1.5fr", gap: 8 }}>

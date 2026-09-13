@@ -4,7 +4,10 @@ import { T, cardStyle, badge, inr } from "../store/theme";
 import { toast } from "react-hot-toast";
 import {
   IconUsers, IconBox, IconSettings, IconBuilding, IconMoney,
-  IconClock, IconFile, IconCreditCard, IconUser
+  IconClock, IconFile, IconCreditCard, IconUser, IconEye, IconEdit,
+  IconBook, IconReceipt, IconPlus, IconDownload, IconUpload,
+  IconStarFilled, IconAlertTriangle, IconLightbulb, IconX,
+  IconPhone, IconFolder, IconAI, IconStatusDot
 } from "../components/Icons";
 
 function Card({ children, style = {} }: { children: React.ReactNode; style?: React.CSSProperties }) {
@@ -32,15 +35,15 @@ export default function MastersPage() {
   const [addLimit, setAddLimit] = useState("");
 
   const [customers, setCustomers] = useState([
-    { id: 1, name: "Sharma Traders", gstin: "24AAACS4321Z2Z8", email: "info@sharmatraders.com", creditLimit: 500000, status: "Active", updated: "2026-06-25", pan: "AMOPS8910H", outstanding: 125000, lastInvoice: "₹85,400 (2026-06-20)", lastPayment: "₹50,000 (2026-06-22)", salesPerson: "Bhavesh Khimsuriya", state: "Gujarat", city: "Ahmedabad", lastPaymentText: "3 days ago", lastInvoiceText: "12 Jun", ordersCount: 15, riskScore: "🟢 Low", documents: ["GST Certificate.pdf", "Partnership Deed.pdf", "Quotation-v2.pdf"] },
-    { id: 2, name: "Patel Enterprises", gstin: "24AAACS9999Z2Z1", email: "contact@patelent.in", creditLimit: 1000000, status: "Active", updated: "2026-06-22", pan: "BNIPS4321K", outstanding: 450000, lastInvoice: "₹3,20,000 (2026-06-18)", lastPayment: "₹1,50,000 (2026-06-20)", salesPerson: "Ramesh Shah", state: "Gujarat", city: "Surat", lastPaymentText: "8 days ago", lastInvoiceText: "18 Jun", ordersCount: 8, riskScore: "🟡 Medium", documents: ["GST Certificate.pdf", "Outstanding-Report.pdf"] },
-    { id: 3, name: "ABC Industries", gstin: "24AAACA1111Z2Z2", email: "finance@abcind.com", creditLimit: 750000, status: "Active", updated: "2026-06-20", pan: "ABCDS5566G", outstanding: 50000, lastInvoice: "₹50,000 (2026-06-10)", lastPayment: "—", salesPerson: "Bhavesh Khimsuriya", state: "Gujarat", city: "Vadodara", lastPaymentText: "None", lastInvoiceText: "10 Jun", ordersCount: 3, riskScore: "🟢 Low", documents: ["GST Certificate.pdf"] },
-    { id: 4, name: "Maa Enterprise", gstin: "24AAACM2222Z2Z3", email: "info@maaent.com", creditLimit: 300000, status: "Inactive", updated: "2026-06-15", pan: "MAAPS9988D", outstanding: 0, lastInvoice: "—", lastPayment: "₹25,000 (2026-06-05)", salesPerson: "System", state: "Gujarat", city: "Rajkot", lastPaymentText: "23 days ago", lastInvoiceText: "None", ordersCount: 1, riskScore: "🔴 High", documents: ["GST Certificate.pdf", "Notice.pdf"] }
+    { id: 1, name: "Sharma Traders", gstin: "24AAACS4321Z2Z8", email: "info@sharmatraders.com", creditLimit: 500000, status: "Active", updated: "2026-06-25", pan: "AMOPS8910H", outstanding: 125000, lastInvoice: "₹85,400 (2026-06-20)", lastPayment: "₹50,000 (2026-06-22)", salesPerson: "Bhavesh Khimsuriya", state: "Gujarat", city: "Ahmedabad", lastPaymentText: "3 days ago", lastInvoiceText: "12 Jun", ordersCount: 15, riskScore: "Low", documents: ["GST Certificate.pdf", "Partnership Deed.pdf", "Quotation-v2.pdf"] },
+    { id: 2, name: "Patel Enterprises", gstin: "24AAACS9999Z2Z1", email: "contact@patelent.in", creditLimit: 1000000, status: "Active", updated: "2026-06-22", pan: "BNIPS4321K", outstanding: 450000, lastInvoice: "₹3,20,000 (2026-06-18)", lastPayment: "₹1,50,000 (2026-06-20)", salesPerson: "Ramesh Shah", state: "Gujarat", city: "Surat", lastPaymentText: "8 days ago", lastInvoiceText: "18 Jun", ordersCount: 8, riskScore: "Medium", documents: ["GST Certificate.pdf", "Outstanding-Report.pdf"] },
+    { id: 3, name: "ABC Industries", gstin: "24AAACA1111Z2Z2", email: "finance@abcind.com", creditLimit: 750000, status: "Active", updated: "2026-06-20", pan: "ABCDS5566G", outstanding: 50000, lastInvoice: "₹50,000 (2026-06-10)", lastPayment: "—", salesPerson: "Bhavesh Khimsuriya", state: "Gujarat", city: "Vadodara", lastPaymentText: "None", lastInvoiceText: "10 Jun", ordersCount: 3, riskScore: "Low", documents: ["GST Certificate.pdf"] },
+    { id: 4, name: "Maa Enterprise", gstin: "24AAACM2222Z2Z3", email: "info@maaent.com", creditLimit: 300000, status: "Inactive", updated: "2026-06-15", pan: "MAAPS9988D", outstanding: 0, lastInvoice: "—", lastPayment: "₹25,000 (2026-06-05)", salesPerson: "System", state: "Gujarat", city: "Rajkot", lastPaymentText: "23 days ago", lastInvoiceText: "None", ordersCount: 1, riskScore: "High", documents: ["GST Certificate.pdf", "Notice.pdf"] }
   ]);
 
   const [vendors, setVendors] = useState([
-    { id: 1, name: "Reliance Polymers Ltd", gstin: "24AAACR1234Z1Z9", email: "sales@reliancepoly.com", creditLimit: 1500000, status: "Active", updated: "2026-06-28", pan: "CPYPS7722A", outstanding: 220000, lastInvoice: "₹1,80,000 (2026-06-24)", lastPayment: "₹1,20,000 (2026-06-26)", salesPerson: "System", state: "Maharashtra", city: "Mumbai", lastPaymentText: "2 days ago", lastInvoiceText: "24 Jun", ordersCount: 12, riskScore: "🟢 Low", documents: ["GST Certificate.pdf", "Agreement-2026.pdf"] },
-    { id: 2, name: "Supreme Plastics Ltd", gstin: "24AAACS4321Z2Z8", email: "billing@supreme.in", creditLimit: 800000, status: "Active", updated: "2026-06-27", pan: "DKLPS9011J", outstanding: 95400, lastInvoice: "₹95,400 (2026-06-25)", lastPayment: "—", salesPerson: "Ramesh Shah", state: "Maharashtra", city: "Thane", lastPaymentText: "None", lastInvoiceText: "25 Jun", ordersCount: 5, riskScore: "🟢 Low", documents: ["GST Certificate.pdf"] }
+    { id: 1, name: "Reliance Polymers Ltd", gstin: "24AAACR1234Z1Z9", email: "sales@reliancepoly.com", creditLimit: 1500000, status: "Active", updated: "2026-06-28", pan: "CPYPS7722A", outstanding: 220000, lastInvoice: "₹1,80,000 (2026-06-24)", lastPayment: "₹1,20,000 (2026-06-26)", salesPerson: "System", state: "Maharashtra", city: "Mumbai", lastPaymentText: "2 days ago", lastInvoiceText: "24 Jun", ordersCount: 12, riskScore: "Low", documents: ["GST Certificate.pdf", "Agreement-2026.pdf"] },
+    { id: 2, name: "Supreme Plastics Ltd", gstin: "24AAACS4321Z2Z8", email: "billing@supreme.in", creditLimit: 800000, status: "Active", updated: "2026-06-27", pan: "DKLPS9011J", outstanding: 95400, lastInvoice: "₹95,400 (2026-06-25)", lastPayment: "—", salesPerson: "Ramesh Shah", state: "Maharashtra", city: "Thane", lastPaymentText: "None", lastInvoiceText: "25 Jun", ordersCount: 5, riskScore: "Low", documents: ["GST Certificate.pdf"] }
   ]);
 
   const ledgers = [
@@ -481,11 +484,11 @@ export default function MastersPage() {
                       </td>
                       <td style={{ padding: "8px 12px", position: "relative" }} onClick={e => e.stopPropagation()}>
                         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                          <button title="Open Workspace" onClick={() => { setSelectedRow(c); setDetailPanelExpanded(true); }} style={{ border: "none", background: "none", fontSize: 12, cursor: "pointer", padding: "2px 4px" }}>👁</button>
-                          <button title="Edit Record" onClick={() => { setShowAddModal(true); setAddName(c.name); setAddGstin(c.gstin); setAddEmail(c.email); }} style={{ border: "none", background: "none", fontSize: 12, cursor: "pointer", padding: "2px 4px" }}>✏</button>
-                          <button title="Open Ledger" onClick={() => { toast.success(`Opening Ledger for ${c.name}`); navigate("/accounting"); }} style={{ border: "none", background: "none", fontSize: 12, cursor: "pointer", padding: "2px 4px" }}>📒</button>
-                          <button title="Create Invoice" onClick={() => { toast.success(`Generating Invoice for ${c.name}`); navigate("/sales"); }} style={{ border: "none", background: "none", fontSize: 12, cursor: "pointer", padding: "2px 4px" }}>🧾</button>
-                          <button title="Receive Payment" onClick={() => { toast.success(`Receiving Payment from ${c.name}`); navigate("/accounting"); }} style={{ border: "none", background: "none", fontSize: 12, cursor: "pointer", padding: "2px 4px" }}>💰</button>
+                          <button title="Open Workspace" onClick={() => { setSelectedRow(c); setDetailPanelExpanded(true); }} style={{ border: "none", background: "none", fontSize: 12, cursor: "pointer", padding: "2px 4px" }}><IconEye size={13} color={T.primary} /></button>
+                          <button title="Edit Record" onClick={() => { setShowAddModal(true); setAddName(c.name); setAddGstin(c.gstin); setAddEmail(c.email); }} style={{ border: "none", background: "none", fontSize: 12, cursor: "pointer", padding: "2px 4px" }}><IconEdit size={13} color={T.text2} /></button>
+                          <button title="Open Ledger" onClick={() => { toast.success(`Opening Ledger for ${c.name}`); navigate("/accounting"); }} style={{ border: "none", background: "none", fontSize: 12, cursor: "pointer", padding: "2px 4px" }}><IconBook size={13} color={T.primary} /></button>
+                          <button title="Create Invoice" onClick={() => { toast.success(`Generating Invoice for ${c.name}`); navigate("/sales"); }} style={{ border: "none", background: "none", fontSize: 12, cursor: "pointer", padding: "2px 4px" }}><IconReceipt size={13} color={T.amber} /></button>
+                          <button title="Receive Payment" onClick={() => { toast.success(`Receiving Payment from ${c.name}`); navigate("/accounting"); }} style={{ border: "none", background: "none", fontSize: 12, cursor: "pointer", padding: "2px 4px" }}><IconMoney size={13} color={T.green} /></button>
                           <button
                             title="More actions"
                             onClick={() => setActiveDropdownId(activeDropdownId === c.id ? null : c.id)}
@@ -639,11 +642,11 @@ export default function MastersPage() {
                       </td>
                       <td style={{ padding: "8px 12px", position: "relative" }} onClick={e => e.stopPropagation()}>
                         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                          <button title="Open Workspace" onClick={() => { setSelectedRow(v); setDetailPanelExpanded(true); }} style={{ border: "none", background: "none", fontSize: 12, cursor: "pointer", padding: "2px 4px" }}>👁</button>
-                          <button title="Edit Record" onClick={() => { setShowAddModal(true); setAddName(v.name); setAddGstin(v.gstin); setAddEmail(v.email); }} style={{ border: "none", background: "none", fontSize: 12, cursor: "pointer", padding: "2px 4px" }}>✏</button>
-                          <button title="Open Ledger" onClick={() => { toast.success(`Opening Ledger for ${v.name}`); navigate("/accounting"); }} style={{ border: "none", background: "none", fontSize: 12, cursor: "pointer", padding: "2px 4px" }}>📒</button>
-                          <button title="Create Invoice" onClick={() => { toast.success(`Generating Invoice for ${v.name}`); navigate("/sales"); }} style={{ border: "none", background: "none", fontSize: 12, cursor: "pointer", padding: "2px 4px" }}>🧾</button>
-                          <button title="Receive Payment" onClick={() => { toast.success(`Receiving Payment from ${v.name}`); navigate("/accounting"); }} style={{ border: "none", background: "none", fontSize: 12, cursor: "pointer", padding: "2px 4px" }}>💰</button>
+                          <button title="Open Workspace" onClick={() => { setSelectedRow(v); setDetailPanelExpanded(true); }} style={{ border: "none", background: "none", fontSize: 12, cursor: "pointer", padding: "2px 4px" }}><IconEye size={13} color={T.primary} /></button>
+                          <button title="Edit Record" onClick={() => { setShowAddModal(true); setAddName(v.name); setAddGstin(v.gstin); setAddEmail(v.email); }} style={{ border: "none", background: "none", fontSize: 12, cursor: "pointer", padding: "2px 4px" }}><IconEdit size={13} color={T.text2} /></button>
+                          <button title="Open Ledger" onClick={() => { toast.success(`Opening Ledger for ${v.name}`); navigate("/accounting"); }} style={{ border: "none", background: "none", fontSize: 12, cursor: "pointer", padding: "2px 4px" }}><IconBook size={13} color={T.primary} /></button>
+                          <button title="Create Invoice" onClick={() => { toast.success(`Generating Invoice for ${v.name}`); navigate("/sales"); }} style={{ border: "none", background: "none", fontSize: 12, cursor: "pointer", padding: "2px 4px" }}><IconReceipt size={13} color={T.amber} /></button>
+                          <button title="Receive Payment" onClick={() => { toast.success(`Receiving Payment from ${v.name}`); navigate("/accounting"); }} style={{ border: "none", background: "none", fontSize: 12, cursor: "pointer", padding: "2px 4px" }}><IconMoney size={13} color={T.green} /></button>
                           <button
                             title="More actions"
                             onClick={() => setActiveDropdownId(activeDropdownId === v.id ? null : v.id)}
@@ -706,7 +709,7 @@ export default function MastersPage() {
                       <span style={badge(T.green, T.greenBg)}>{l.status}</span>
                     </td>
                     <td style={{ padding: "8px 12px" }}>
-                      <button onClick={() => toast.success("Opening ledger detail view")} style={{ border: "none", background: "none", color: T.primary, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>✏ Edit</button>
+                      <button onClick={() => toast.success("Opening ledger detail view")} style={{ border: "none", background: "none", color: T.primary, fontSize: 11, fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 3 }}><IconEdit size={11} /> Edit</button>
                     </td>
                   </tr>
                 ))}
@@ -733,7 +736,7 @@ export default function MastersPage() {
                       <span style={badge(T.green, T.greenBg)}>{g.status}</span>
                     </td>
                     <td style={{ padding: "8px 12px" }}>
-                      <button onClick={() => toast.success("Opening warehouse detail view")} style={{ border: "none", background: "none", color: T.primary, fontSize: 11, fontWeight: 700, cursor: "pointer" }}>✏ Edit</button>
+                      <button onClick={() => toast.success("Opening warehouse detail view")} style={{ border: "none", background: "none", color: T.primary, fontSize: 11, fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 3 }}><IconEdit size={11} /> Edit</button>
                     </td>
                   </tr>
                 ))}
@@ -744,7 +747,7 @@ export default function MastersPage() {
           {/* Polished Empty States for Cost Centers / Currencies */}
           {["cost-centers", "currencies"].includes(activeMaster) && (
             <div style={{ padding: "50px 30px", textAlign: "center" }}>
-              <div style={{ fontSize: 32, marginBottom: 10 }}>📦</div>
+              <div style={{ marginBottom: 10, display: "flex", justifyContent: "center" }}><IconBox size={36} color={T.text3} /></div>
               <h3 style={{ fontSize: 13, fontWeight: 700, color: T.text1 }}>No Cost Centers Configured</h3>
               <p style={{ fontSize: 11, color: T.text3, marginTop: 4, marginBottom: 14 }}>
                 Cost Centers help classify expenses and departments. Create your first one.
@@ -805,7 +808,7 @@ export default function MastersPage() {
                   </div>
                   <input
                     type="text"
-                    placeholder={`🔍 Search ${activeMaster === "customers" ? "customer" : "vendor"}...`}
+                    placeholder={`Search ${activeMaster === "customers" ? "customer" : "vendor"}...`}
                     value={searchVal}
                     onChange={(e) => setSearchVal(e.target.value)}
                     style={{
@@ -845,7 +848,7 @@ export default function MastersPage() {
                         borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 4
                       }}
                     >
-                      ➕ Create
+                      <IconPlus size={12} /> Create
                     </button>
                     <button
                       onClick={() => toast.success("Import triggered.")}
@@ -854,7 +857,7 @@ export default function MastersPage() {
                         borderRadius: 6, fontSize: 10, color: T.text2, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 4
                       }}
                     >
-                      📥 Import
+                      <IconDownload size={12} /> Import
                     </button>
                     <button
                       onClick={() => toast.success("Export triggered.")}
@@ -863,7 +866,7 @@ export default function MastersPage() {
                         borderRadius: 6, fontSize: 10, color: T.text2, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 4
                       }}
                     >
-                      📤 Export
+                      <IconUpload size={12} /> Export
                     </button>
                   </div>
                 </div>
@@ -940,7 +943,7 @@ export default function MastersPage() {
                           e.currentTarget.style.borderColor = T.border;
                         }}
                       >
-                        <span>⭐</span>
+                        <IconStarFilled size={13} color="#f59e0b" />
                         <span>{fav}</span>
                       </button>
                     ))}
@@ -983,7 +986,7 @@ export default function MastersPage() {
                       borderRadius: 6, fontSize: 10, color: T.text2, display: "flex", flexDirection: "column", gap: 2
                     }}>
                       <div style={{ fontWeight: 700, color: T.red, display: "flex", alignItems: "center", gap: 4 }}>
-                        <span>⚠</span> <span>3 customers need follow-up</span>
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><IconAlertTriangle size={13} color={T.amber} /> 3 customers need follow-up</span>
                       </div>
                       <div style={{ fontSize: 9, color: T.text3 }}>Outstanding balance is ₹5.75L. Risk levels are rising.</div>
                       <button
@@ -996,9 +999,9 @@ export default function MastersPage() {
 
                     <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                       {[
-                        { text: "2 inactive customers this week", icon: "💡", color: T.primary },
-                        { text: "5 GST pending filing", icon: "💡", color: T.amber },
-                        { text: "3 credit limits exceeded", icon: "💡", color: T.red },
+                        { text: "2 inactive customers this week", icon: <IconLightbulb size={13} color={T.amber} />, color: T.primary },
+                        { text: "5 GST pending filing", icon: <IconLightbulb size={13} color={T.amber} />, color: T.amber },
+                        { text: "3 credit limits exceeded", icon: <IconLightbulb size={13} color={T.amber} />, color: T.red },
                       ].map((item, idx) => (
                         <div key={idx} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 9, color: T.text2 }}>
                           <span style={{ color: item.color }}>{item.icon}</span>
@@ -1048,7 +1051,7 @@ export default function MastersPage() {
                     >
                       ▶
                     </button>
-                    <button onClick={() => setSelectedRow(null)} style={{ background: "none", border: "none", color: T.text3, cursor: "pointer", fontSize: 14 }}>✕</button>
+                    <button onClick={() => setSelectedRow(null)} style={{ background: "none", border: "none", color: T.text3, cursor: "pointer", fontSize: 14 }}><IconX size={14} /></button>
                   </div>
                 </div>
 
@@ -1098,7 +1101,7 @@ export default function MastersPage() {
                         borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 4
                       }}
                     >
-                      🧾 Create Invoice
+                      <IconReceipt size={12} /> Create Invoice
                     </button>
                     <button
                       onClick={() => { toast.success(`Recording payment for ${selectedRow?.name}`); navigate("/accounting"); }}
@@ -1107,7 +1110,7 @@ export default function MastersPage() {
                         borderRadius: 6, fontSize: 10, color: T.text2, fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 4
                       }}
                     >
-                      💰 Receive Payment
+                      <IconMoney size={12} /> Receive Payment
                     </button>
                   </div>
                 </div>
@@ -1121,14 +1124,14 @@ export default function MastersPage() {
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                     {[
-                      { name: "Profile", icon: "👤", desc: "Master Details" },
-                      { name: "Ledger", icon: "📒", desc: "Transactions" },
-                      { name: "Invoices", icon: "🧾", desc: "Billing History" },
-                      { name: "Payments", icon: "💰", desc: "Payments Recd" },
-                      { name: "Orders", icon: "📦", desc: "Direct Sales" },
-                      { name: "Contacts", icon: "📞", desc: "Directories" },
-                      { name: "Documents", icon: "📂", desc: "Document Vault" },
-                      { name: "AI Assistant", icon: "🤖", desc: "Health Insights" }
+                      { name: "Profile", icon: <IconUser size={14} />, desc: "Master Details" },
+                      { name: "Ledger", icon: <IconBook size={14} />, desc: "Transactions" },
+                      { name: "Invoices", icon: <IconReceipt size={14} />, desc: "Billing History" },
+                      { name: "Payments", icon: <IconMoney size={14} />, desc: "Payments Recd" },
+                      { name: "Orders", icon: <IconBox size={14} />, desc: "Direct Sales" },
+                      { name: "Contacts", icon: <IconPhone size={14} />, desc: "Directories" },
+                      { name: "Documents", icon: <IconFolder size={14} />, desc: "Document Vault" },
+                      { name: "AI Assistant", icon: <IconAI size={14} />, desc: "Health Insights" }
                     ].map(app => (
                       <div
                         key={app.name}
@@ -1168,7 +1171,7 @@ export default function MastersPage() {
                 <div style={{ background: "#f8fafc", padding: 10, borderRadius: 8, border: `1px solid ${T.border}`, display: "flex", flexDirection: "column", gap: 4 }}>
                   <div style={{ fontSize: 8, fontWeight: 700, color: T.primary, textTransform: "uppercase", letterSpacing: 0.5 }}>AI Suggestions</div>
                   <div style={{ fontSize: 9, color: T.text2, lineHeight: 1.3, fontWeight: 500 }}>
-                    💡 AI Insights: Payments usually arrive in 8 days. Outstanding risk is <span style={{ color: T.green, fontWeight: 700 }}>LOW</span>. No action needed.
+                     Payments usually arrive in 8 days. Outstanding risk is <span style={{ color: T.green, fontWeight: 700 }}>LOW</span>. No action needed.
                   </div>
                 </div>
 
@@ -1216,7 +1219,7 @@ export default function MastersPage() {
                           fontSize: 9, color: T.text2, cursor: "pointer", fontWeight: 600
                         }}
                       >
-                        <span>📁</span>
+                        <IconFolder size={13} color={T.text3} />
                         <span>{doc}</span>
                         <span style={{ fontSize: 8, color: T.primary, marginLeft: "auto" }}>Download</span>
                       </div>
@@ -1258,7 +1261,7 @@ export default function MastersPage() {
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
               <h3 style={{ fontSize: 15, fontWeight: 800, color: T.text1 }}>Add new {activeMaster === "customers" ? "Customer" : "Vendor"}</h3>
-              <button onClick={() => setShowAddModal(false)} style={{ background: "none", border: "none", fontSize: 18, color: T.text3, cursor: "pointer" }}>✕</button>
+              <button onClick={() => setShowAddModal(false)} style={{ background: "none", border: "none", fontSize: 18, color: T.text3, cursor: "pointer" }}><IconX size={14} /></button>
             </div>
 
             <form onSubmit={handleAddSubmit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>

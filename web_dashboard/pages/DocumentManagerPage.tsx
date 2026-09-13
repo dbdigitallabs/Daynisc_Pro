@@ -62,7 +62,7 @@ export default function DocumentManagerPage() {
       <div style={{ marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 800, color: T.text1, display: "flex", alignItems: "center", gap: 10, letterSpacing: "-0.4px" }}>
-            📁 Document Management System (DMS)
+            Document Management System (DMS)
           </h1>
           <p style={{ fontSize: 13, color: T.text3, marginTop: 3 }}>Store, tag, index, and perform OCR text searches on all business files.</p>
         </div>
@@ -105,7 +105,7 @@ export default function DocumentManagerPage() {
       {/* Search results banner if search matches */}
       {searchVal && searchResults && (
         <Card style={{ marginBottom: 20, background: "#f0fdf4" }}>
-          <h3 style={{ fontSize: 12, fontWeight: 800, color: T.green, marginBottom: 8 }}>🔍 OCR Text Matches</h3>
+          <h3 style={{ fontSize: 12, fontWeight: 800, color: T.green, marginBottom: 8 }}> OCR Text Matches</h3>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {searchResults.map((f: any) => (
               <div key={f.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: "#fff", borderRadius: 6, border: `1px solid ${T.border}` }}>
@@ -140,7 +140,7 @@ export default function DocumentManagerPage() {
                     fontSize: 12, fontWeight: isSelected ? 700 : 500, cursor: "pointer", transition: "all 0.15s"
                   }}
                 >
-                  📁 {f.name}
+                  {f.name}
                 </button>
               );
             })}

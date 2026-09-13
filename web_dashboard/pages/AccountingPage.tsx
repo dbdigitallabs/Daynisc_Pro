@@ -1,9 +1,15 @@
 // src/pages/AccountingPage.tsx
 import { useState, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "../store/apiClient";
 import { T, inr, cardStyle, badge, thStyle, tdStyle } from "../store/theme";
-import { IconClipboard, IconUpload, IconDownload, IconMoney, IconUser, IconBuilding } from "../components/Icons";
+import {
+  IconClipboard, IconUpload, IconDownload, IconMoney, IconUser, IconBuilding,
+  IconTrendUp, IconTrendDown, IconHourglass, IconEdit, IconFolder, IconCheck,
+  IconEye, IconTrash, IconTarget, IconPhone, IconMail, IconMessageSquare,
+  IconBarChart, IconAlertTriangle, IconCoins, IconBank, IconArrowDown, IconArrowUp,
+  IconSearch, IconX, IconPlus, IconAI, IconFileText, IconPrinter, IconLightbulb, IconStatusDot
+} from "../components/Icons";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 
@@ -29,7 +35,7 @@ const MOCK_VOUCHERS = [
     tally_synced: true,
     gst_status: "Filed",
     approval_status: "Approved",
-    bank_synced: "✓ Bank",
+    bank_synced: "Bank Synced",
     created_by: "Bhavesh",
     narration: "Being sales of raw polymers dispatch via Ahmedabad branch",
     items: [
@@ -91,7 +97,7 @@ const MOCK_VOUCHERS = [
     tally_synced: true,
     gst_status: "N/A",
     approval_status: "Approved",
-    bank_synced: "✓ Bank",
+    bank_synced: "Bank Synced",
     created_by: "Bhavesh",
     narration: "Payment received against sales invoice SAL-2989",
     items: [
@@ -197,6 +203,22 @@ function VouchersTab({ onSelectVoucher, searchQuery, filterApproval, filterGst, 
   const [voucherType, setVoucherType] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+  const qc = useQueryClient();
+  const [syncingVchId, setSyncingVchId] = useState<string | null>(null);
+
+  const handleSyncToTally = async (vch: any) => {
+    setSyncingVchId(vch.id);
+    try {
+      const res = await api.post(`/erp/sync/voucher/${vch.id}`);
+      toast.success(res.data?.message || `Voucher ${vch.voucher_number} synced to TallyPrime!`);
+      qc.invalidateQueries({ queryKey: ["vouchers-list"] });
+    } catch (e: any) {
+      const msg = e.response?.data?.detail || e.message || "Tally sync failed";
+      toast.error(`Sync error: ${msg}`);
+    } finally {
+      setSyncingVchId(null);
+    }
+  };
 
   const { data: vData } = useQuery({
     queryKey: ["vouchers-list"],
@@ -215,7 +237,7 @@ function VouchersTab({ onSelectVoucher, searchQuery, filterApproval, filterGst, 
     tally_synced: Boolean(v.tally_synced),
     gst_status: v.gst_status || "N/A",
     approval_status: v.approval_status || "Approved",
-    bank_synced: "✓ Bank",
+    bank_synced: "Bank Synced",
     created_by: v.created_by || "System",
     narration: v.narration || "Voucher entry",
     items: v.items || [],
@@ -252,10 +274,10 @@ function VouchersTab({ onSelectVoucher, searchQuery, filterApproval, filterGst, 
     <div>
       {/* Vouchers Sub-KPIs */}
       <div style={{ display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
-        <KpiCard label="Today's Sales" value="₹1,88,118" icon={<span style={{ fontSize: 16 }}>📈</span>} color={T.green} subText="+18% vs yesterday" />
-        <KpiCard label="Today's Purchases" value="₹42,500" icon={<span style={{ fontSize: 16 }}>📉</span>} color={T.amber} subText="3 bills pending sync" />
-        <KpiCard label="Pending Approval" value="3 Vouchers" icon={<span style={{ fontSize: 16 }}>⏳</span>} color={T.red} subText="Awaiting admin sign-off" />
-        <KpiCard label="Unposted Drafts" value="5 Entries" icon={<span style={{ fontSize: 16 }}>✍</span>} color={T.text2} subText="Draft vouchers" />
+        <KpiCard label="Today's Sales" value="₹1,88,118" icon={<IconTrendUp size={16} color={T.green} />} color={T.green} subText="+18% vs yesterday" />
+        <KpiCard label="Today's Purchases" value="₹42,500" icon={<IconTrendDown size={16} color={T.amber} />} color={T.amber} subText="3 bills pending sync" />
+        <KpiCard label="Pending Approval" value="3 Vouchers" icon={<IconHourglass size={16} color={T.red} />} color={T.red} subText="Awaiting admin sign-off" />
+        <KpiCard label="Unposted Drafts" value="5 Entries" icon={<IconEdit size={16} color={T.text2} />} color={T.text2} subText="Draft vouchers" />
       </div>
 
       {/* Local Filter Bar */}
@@ -284,7 +306,7 @@ function VouchersTab({ onSelectVoucher, searchQuery, filterApproval, filterGst, 
       <div style={cardStyle({ overflow: "hidden" })}>
         {filteredVouchers.length === 0 ? (
           <div style={{ padding: 40, textAlign: "center" }}>
-            <span style={{ fontSize: 24 }}>📁</span>
+            <IconFolder size={28} color={T.text3} />
             <div style={{ fontSize: 12, fontWeight: 700, color: T.text2, marginTop: 8 }}>No vouchers today</div>
             <div style={{ fontSize: 10, color: T.text3, marginTop: 2, marginBottom: 12 }}>Create your first Sales Voucher or upload bank statements to start.</div>
             <button
@@ -335,18 +357,42 @@ function VouchersTab({ onSelectVoucher, searchQuery, filterApproval, filterGst, 
                       </span>
                     </td>
                     <td style={tdStyle}>
-                      <span style={badge(v.tally_synced ? T.green : T.amber, v.tally_synced ? T.greenBg : T.amberBg)}>
-                        {v.tally_synced ? "✓ Synced" : "Pending"}
-                      </span>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <span style={badge(v.tally_synced ? T.green : T.amber, v.tally_synced ? T.greenBg : T.amberBg)}>
+                          {v.tally_synced ? <span style={{ display: "inline-flex", alignItems: "center", gap: 3 }}><IconCheck size={11} /> Synced</span> : "Pending"}
+                        </span>
+                        {!v.tally_synced && (
+                          <button
+                            title="Push directly to TallyPrime"
+                            disabled={syncingVchId === v.id}
+                            onClick={(e) => { e.stopPropagation(); handleSyncToTally(v); }}
+                            style={{
+                              border: "1px solid #0d9488",
+                              background: "#f0fdfa",
+                              color: "#0f766e",
+                              borderRadius: 4,
+                              fontSize: 10,
+                              fontWeight: 700,
+                              cursor: "pointer",
+                              padding: "2px 6px",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 3,
+                            }}
+                          >
+                            {syncingVchId === v.id ? "Syncing…" : "Sync Tally"}
+                          </button>
+                        )}
+                      </div>
                     </td>
                     <td style={tdStyle}>
-                      <span style={{ fontSize: 10, color: T.primary, fontWeight: 700 }}>📁 {v.documents.length} files</span>
+                      <span style={{ fontSize: 10, color: T.primary, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 4 }}><IconFolder size={11} /> {v.documents.length} files</span>
                     </td>
                     <td style={tdStyle} onClick={e => e.stopPropagation()}>
                       <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                        <button title="Open Details Drawer" onClick={() => onSelectVoucher(v)} style={{ border: "none", background: "none", fontSize: 11, cursor: "pointer", padding: "2px 4px" }}>👁</button>
-                        <button title="Edit Voucher" onClick={() => toast.success(`Editing ${v.voucher_number}`)} style={{ border: "none", background: "none", fontSize: 11, cursor: "pointer", padding: "2px 4px" }}>✏</button>
-                        <button title="Delete Voucher" onClick={() => toast.error(`Delete voucher not permitted`)} style={{ border: "none", background: "none", fontSize: 11, cursor: "pointer", padding: "2px 4px" }}>🗑</button>
+                        <button title="Open Details Drawer" onClick={() => onSelectVoucher(v)} style={{ border: "none", background: "none", fontSize: 11, cursor: "pointer", padding: "2px 4px" }}><IconEye size={13} color={T.primary} /></button>
+                        <button title="Edit Voucher" onClick={() => toast.success(`Editing ${v.voucher_number}`)} style={{ border: "none", background: "none", fontSize: 11, cursor: "pointer", padding: "2px 4px" }}><IconEdit size={13} color={T.text2} /></button>
+                        <button title="Delete Voucher" onClick={() => toast.error(`Delete voucher not permitted`)} style={{ border: "none", background: "none", fontSize: 11, cursor: "pointer", padding: "2px 4px" }}><IconTrash size={13} color={T.red} /></button>
                       </div>
                     </td>
                   </tr>
@@ -425,9 +471,9 @@ function OutstandingTab() {
 
       {/* Collection success stats row */}
       <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
-        <KpiCard label="Collection Success (Today)" value="68%" icon={<span style={{ fontSize: 14 }}>🎯</span>} color={T.green} subText="Target: 75% collection rate" />
-        <KpiCard label="Collection Rate (This Month)" value="82%" icon={<span style={{ fontSize: 14 }}>📈</span>} color={T.primary} subText="Outstanding cleared in 30 days" />
-        <KpiCard label="Avg. Collection Time" value="29 Days" icon={<span style={{ fontSize: 14 }}>⏳</span>} color={T.amber} subText="Tally benchmark: 35 days" />
+        <KpiCard label="Collection Success (Today)" value="68%" icon={<IconTarget size={16} color={T.green} />} color={T.green} subText="Target: 75% collection rate" />
+        <KpiCard label="Collection Rate (This Month)" value="82%" icon={<IconTrendUp size={16} color={T.primary} />} color={T.primary} subText="Outstanding cleared in 30 days" />
+        <KpiCard label="Avg. Collection Time" value="29 Days" icon={<IconHourglass size={16} color={T.amber} />} color={T.amber} subText="Tally benchmark: 35 days" />
       </div>
 
       {/* Aging Grid */}
@@ -475,33 +521,33 @@ function OutstandingTab() {
               <div style={{ display: "flex", gap: 4 }}>
                 <button
                   onClick={() => handleSendReminder(cust.name, "Call")}
-                  style={{ padding: "4px 8px", background: "#fff", border: `1px solid ${T.border}`, borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer" }}
+                  style={{ padding: "4px 8px", background: "#fff", border: `1px solid ${T.border}`, borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4 }}
                 >
-                  📞 Call
+                  <IconPhone size={11} /> Call
                 </button>
                 <button
                   onClick={() => handleSendReminder(cust.name, "WhatsApp")}
-                  style={{ padding: "4px 8px", background: T.greenBg, color: T.green, border: `1px solid ${T.green}30`, borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer" }}
+                  style={{ padding: "4px 8px", background: T.greenBg, color: T.green, border: `1px solid ${T.green}30`, borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4 }}
                 >
-                  🟢 WhatsApp
+                  <IconStatusDot color={T.green} size={6} /><IconMessageSquare size={11} /> WhatsApp
                 </button>
                 <button
                   onClick={() => handleSendReminder(cust.name, "SMS")}
-                  style={{ padding: "4px 8px", background: "#fff", border: `1px solid ${T.border}`, borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer" }}
+                  style={{ padding: "4px 8px", background: "#fff", border: `1px solid ${T.border}`, borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4 }}
                 >
-                  💬 SMS
+                  <IconMessageSquare size={11} /> SMS
                 </button>
                 <button
                   onClick={() => handleSendReminder(cust.name, "Email")}
-                  style={{ padding: "4px 8px", background: "#fff", border: `1px solid ${T.border}`, borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer" }}
+                  style={{ padding: "4px 8px", background: "#fff", border: `1px solid ${T.border}`, borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4 }}
                 >
-                  📧 Email
+                  <IconMail size={11} /> Email
                 </button>
                 <button
                   onClick={() => toast.success(`Payment collection of ${inr(cust.overdue)} recorded successfully.`)}
-                  style={{ padding: "4px 8px", background: T.primary, color: "#fff", border: "none", borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer" }}
+                  style={{ padding: "4px 8px", background: T.primary, color: "#fff", border: "none", borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer", display: "inline-flex", alignItems: "center", gap: 4 }}
                 >
-                  💰 Collect Payment
+                  <IconMoney size={11} /> Collect Payment
                 </button>
               </div>
             </div>
@@ -618,7 +664,7 @@ function LedgerTab({ searchQuery }: LedgerTabProps) {
                 <td style={{ ...tdStyle, color: le.credit > 0 ? T.green : T.text3, fontWeight: le.credit > 0 ? 600 : 400 }}>{le.credit > 0 ? inr(le.credit) : "—"}</td>
                 <td style={{ ...tdStyle, fontWeight: 700 }}>{inr(le.running_balance)}</td>
                 <td style={tdStyle}>
-                  <span style={{ fontSize: 10, color: T.primary, fontWeight: 700 }}>📁 {le.attachments} files</span>
+                  <span style={{ fontSize: 10, color: T.primary, fontWeight: 700, display: "inline-flex", alignItems: "center", gap: 4 }}><IconFolder size={11} /> {le.attachments} files</span>
                 </td>
                 <td style={tdStyle}>
                   <span style={badge(le.status === "Approved" ? T.green : T.amber, le.status === "Approved" ? T.greenBg : T.amberBg)}>
@@ -636,6 +682,7 @@ function LedgerTab({ searchQuery }: LedgerTabProps) {
 
 // ── Bank Reconciliation Tab ──────────────────────────────────────────────────
 function BankReconTab() {
+  const navigate = useNavigate();
   const [statementList, setStatementList] = useState([
     {
       id: "tx_1", date: "09-Jun", description: "NEFT INWARD - MUMBAI PLASTICS LTD", ref: "UTRN880912", amount: 15000, type: "deposit",
@@ -662,27 +709,37 @@ function BankReconTab() {
     <div>
       {/* Recon Stats Bar */}
       <div style={{ display: "flex", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
-        <KpiCard label="Imported Statement" value="120 Entries" icon={<span style={{ fontSize: 16 }}>📊</span>} color={T.primary} />
-        <KpiCard label="Auto Matched" value="105 Matched" icon={<span style={{ fontSize: 16 }}>✓</span>} color={T.green} subText="98% confidence score average" />
-        <KpiCard label="Manual match needed" value="10 Entries" icon={<span style={{ fontSize: 16 }}>✏</span>} color={T.amber} />
-        <KpiCard label="Unmatched warnings" value="5 Entries" icon={<span style={{ fontSize: 16 }}>⚠</span>} color={T.red} />
+        <KpiCard label="Imported Statement" value="120 Entries" icon={<IconBarChart size={16} color={T.primary} />} color={T.primary} />
+        <KpiCard label="Auto Matched" value="105 Matched" icon={<IconCheck size={16} color={T.green} />} color={T.green} subText="98% confidence score average" />
+        <KpiCard label="Manual match needed" value="10 Entries" icon={<IconEdit size={16} color={T.amber} />} color={T.amber} />
+        <KpiCard label="Unmatched warnings" value="5 Entries" icon={<IconAlertTriangle size={16} color={T.red} />} color={T.red} />
       </div>
 
-      <div style={{ ...cardStyle({ padding: 18, marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "center" }) }}>
+      <div style={{ ...cardStyle({ padding: 18, marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "center", background: "linear-gradient(135deg, #f0fdfa, #ffffff)", border: "1.5px solid #0d9488" }) }}>
         <div>
-          <h3 style={{ fontSize: 14, fontWeight: 700, color: T.text1 }}>Bank Statement AI Reconciliation Console</h3>
-          <p style={{ fontSize: 12, color: T.text3, marginTop: 4 }}>Match imported bank ledger lines with ERP vouchers instantly.</p>
+          <h3 style={{ fontSize: 15, fontWeight: 800, color: "#0f766e" }}>AI-Powered Bank Statement Import & Reconciliation Engine</h3>
+          <p style={{ fontSize: 12, color: T.text3, marginTop: 4 }}>
+            Upload PDF/Excel statements, auto-identify parties with NLP, generate vouchers & certify official BRS reports.
+          </p>
         </div>
         <button
-          onClick={() => {
-            toast.success("Statement upload complete. matched 115 entries, found 5 warnings.");
-          }}
+          onClick={() => navigate("/bank-recon")}
           style={{
-            background: T.primary, color: "#fff", border: "none", borderRadius: T.radiusSm,
-            padding: "8px 14px", fontSize: 12, fontWeight: 600, cursor: "pointer"
+            background: "linear-gradient(135deg, #0f766e 0%, #0d9488 100%)",
+            color: "#fff",
+            border: "none",
+            borderRadius: T.radiusSm,
+            padding: "10px 16px",
+            fontSize: 12,
+            fontWeight: 700,
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            boxShadow: "0 2px 8px rgba(15, 118, 110, 0.3)"
           }}
         >
-          Upload Bank Statement PDF
+          Launch Bank Automation Console →
         </button>
       </div>
 
@@ -840,7 +897,7 @@ function DashboardTab({ onCollect }: DashboardTabProps) {
         {alerts.filter(a => a.active).map(a => (
           <div key={a.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", background: "#fff1f2", border: `1.5px solid ${T.red}18`, borderRadius: 8 }}>
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <span style={{ fontSize: 14 }}>💡</span>
+              <IconLightbulb size={16} color={T.amber} />
               <span style={{ fontSize: 11, fontWeight: 700, color: T.text1 }}>{a.text}</span>
             </div>
             <div style={{ display: "flex", gap: 6 }}>
@@ -1097,10 +1154,10 @@ export default function AccountingPage() {
 
       {/* Main Stats Cards Row */}
       <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
-        <KpiCard label="Cash Reserves" value="₹12.45L" icon={<span style={{ fontSize: 14 }}>💵</span>} color={T.green} />
-        <KpiCard label="Bank Balance" value="₹58.12L" icon={<span style={{ fontSize: 14 }}>🏦</span>} color={T.primary} subText="HDFC & SBI Accounts" />
-        <KpiCard label="Total Receivables" value="₹5.32L" icon={<span style={{ fontSize: 14 }}>📥</span>} color={T.primary} subText="3 overdue invoices" />
-        <KpiCard label="Total Payables" value="₹3.14L" icon={<span style={{ fontSize: 14 }}>📤</span>} color={T.amber} subText="Due next week" />
+        <KpiCard label="Cash Reserves" value="₹12.45L" icon={<IconCoins size={16} color={T.green} />} color={T.green} />
+        <KpiCard label="Bank Balance" value="₹58.12L" icon={<IconBank size={16} color={T.primary} />} color={T.primary} subText="HDFC & SBI Accounts" />
+        <KpiCard label="Total Receivables" value="₹5.32L" icon={<IconArrowDown size={16} color={T.primary} />} color={T.primary} subText="3 overdue invoices" />
+        <KpiCard label="Total Payables" value="₹3.14L" icon={<IconArrowUp size={16} color={T.amber} />} color={T.amber} subText="Due next week" />
       </div>
 
       {/* Search, Report Export actions bar, and global filter header */}
@@ -1112,7 +1169,7 @@ export default function AccountingPage() {
               <input
                 id="omni-search-input"
                 type="text"
-                placeholder="🔍 Search anything: Vouchers, Parties, Amounts, reference, narrations (Ctrl+K)..."
+                placeholder="Search anything: Vouchers, Parties, Amounts, reference, narrations (Ctrl+K)..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 style={{
@@ -1123,9 +1180,9 @@ export default function AccountingPage() {
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery("")}
-                  style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: T.text3, cursor: "pointer", fontSize: 10 }}
+                  style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: T.text3, cursor: "pointer", display: "flex", alignItems: "center" }}
                 >
-                  ✕
+                  <IconX size={12} />
                 </button>
               )}
             </div>
@@ -1138,16 +1195,16 @@ export default function AccountingPage() {
                 display: "flex", alignItems: "center", gap: 4, whiteSpace: "nowrap"
               }}
             >
-              <span>🤖</span> <span>Ask AI</span>
+              <IconAI size={13} color="#fff" /> <span>Ask AI</span>
             </button>
           </div>
 
           {/* Export Report Actions Toolbar */}
           <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-            <button onClick={() => toast.success("Exported registry ledger to PDF")} style={{ padding: "4px 8px", background: "#fff", border: `1px solid ${T.border}`, borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer" }}>📄 Export PDF</button>
-            <button onClick={() => toast.success("Exported registry data to Excel sheet")} style={{ padding: "4px 8px", background: "#fff", border: `1px solid ${T.border}`, borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer" }}>📊 Excel</button>
-            <button onClick={() => window.print()} style={{ padding: "4px 8px", background: "#fff", border: `1px solid ${T.border}`, borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer" }}>🖨 Print</button>
-            <button onClick={() => toast.success("Audit statement dispatched to email.")} style={{ padding: "4px 8px", background: "#fff", border: `1px solid ${T.border}`, borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer" }}>📧 Email</button>
+            <button onClick={() => toast.success("Exported registry ledger to PDF")} style={{ padding: "4px 8px", background: "#fff", border: `1px solid ${T.border}`, borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer" }} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><IconFileText size={11} /> PDF</button>
+            <button onClick={() => toast.success("Exported registry data to Excel sheet")} style={{ padding: "4px 8px", background: "#fff", border: `1px solid ${T.border}`, borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer" }} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><IconBarChart size={11} /> Excel</button>
+            <button onClick={() => window.print()} style={{ padding: "4px 8px", background: "#fff", border: `1px solid ${T.border}`, borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer" }} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><IconPrinter size={11} /> Print</button>
+            <button onClick={() => toast.success("Audit statement dispatched to email.")} style={{ padding: "4px 8px", background: "#fff", border: `1px solid ${T.border}`, borderRadius: 6, fontSize: 10, fontWeight: 700, cursor: "pointer" }} style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><IconMail size={11} /> Email</button>
           </div>
 
           {/* Smart filters */}
@@ -1214,9 +1271,9 @@ export default function AccountingPage() {
             </div>
             <button
               onClick={() => setSelectedVoucher(null)}
-              style={{ background: "none", border: "none", fontSize: 16, color: T.text3, cursor: "pointer" }}
+              style={{ background: "none", border: "none", color: T.text3, cursor: "pointer", display: "flex", alignItems: "center" }}
             >
-              ✕
+              <IconX size={16} />
             </button>
           </div>
 
@@ -1338,7 +1395,7 @@ export default function AccountingPage() {
                   onMouseEnter={e => e.currentTarget.style.borderColor = T.primary}
                   onMouseLeave={e => e.currentTarget.style.borderColor = T.border}
                 >
-                  <span style={{ fontSize: 20 }}>📤</span>
+                  <IconUpload size={24} color={T.primary} />
                   <div style={{ fontSize: 10, fontWeight: 700, color: T.text2, marginTop: 6 }}>Drag & Drop bill photo, GST slips or invoice scans</div>
                   <div style={{ fontSize: 8, color: T.text3, marginTop: 2 }}>Supports PDF, PNG, JPG up to 10MB</div>
                 </div>
@@ -1354,7 +1411,7 @@ export default function AccountingPage() {
                       fontSize: 9, color: T.text2, cursor: "pointer", fontWeight: 600
                     }}
                   >
-                    <span>📁</span>
+                    <IconFolder size={12} color={T.text3} />
                     <span>{doc}</span>
                     <span style={{ fontSize: 8, color: T.primary, marginLeft: "auto" }}>Download</span>
                   </div>
@@ -1374,8 +1431,8 @@ export default function AccountingPage() {
             boxShadow: "0 15px 40px rgba(0,0,0,0.15)", marginBottom: 8, overflow: "hidden"
           }}>
             <div style={{ background: T.primary, color: "#fff", padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontSize: 12, fontWeight: 800 }}>🤖 Accounting AI Assistant</span>
-              <button onClick={() => setShowAiCopilot(false)} style={{ background: "none", border: "none", color: "#fff", cursor: "pointer", fontSize: 12 }}>✕</button>
+              <span style={{ fontSize: 12, fontWeight: 800, display: "inline-flex", alignItems: "center", gap: 6 }}><IconAI size={14} color="#fff" /> Accounting AI Assistant</span>
+              <button onClick={() => setShowAiCopilot(false)} style={{ background: "none", border: "none", color: "#fff", cursor: "pointer", fontSize: 12 }}><IconX size={14} /></button>
             </div>
             <div style={{ flex: 1, overflowY: "auto", padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
               {aiChat.map((msg, idx) => (
@@ -1467,7 +1524,7 @@ export default function AccountingPage() {
             boxShadow: "0 10px 25px rgba(67, 97, 238, 0.3)"
           }}
         >
-          {showFabMenu ? "✕" : "＋"}
+          {showFabMenu ? <IconX size={20} /> : <IconPlus size={20} />}
         </button>
       </div>
 
@@ -1484,7 +1541,7 @@ export default function AccountingPage() {
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
               <h3 style={{ fontSize: 14, fontWeight: 800, color: T.text1 }}>New {createVoucherType.toUpperCase()} Voucher Entry</h3>
-              <button onClick={() => setShowCreateModal(false)} style={{ background: "none", border: "none", fontSize: 16, color: T.text3, cursor: "pointer" }}>✕</button>
+              <button onClick={() => setShowCreateModal(false)} style={{ background: "none", border: "none", fontSize: 16, color: T.text3, cursor: "pointer" }}><IconX size={14} /></button>
             </div>
 
             <form onSubmit={handleCreateVoucher} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -1544,7 +1601,7 @@ export default function AccountingPage() {
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span style={{ fontSize: 11, fontWeight: 800, color: T.text3, textTransform: "uppercase" }}>ERP Command Palette</span>
-              <button onClick={() => setShowCommandPalette(false)} style={{ background: "none", border: "none", color: T.text3, cursor: "pointer", fontSize: 12 }}>✕</button>
+              <button onClick={() => setShowCommandPalette(false)} style={{ background: "none", border: "none", color: T.text3, cursor: "pointer", fontSize: 12 }}><IconX size={14} /></button>
             </div>
             <input
               type="text"

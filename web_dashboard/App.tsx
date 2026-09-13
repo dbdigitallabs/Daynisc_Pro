@@ -4,32 +4,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useAuthStore } from "./store/authStore";
 import DashboardLayout from "./components/layout/DashboardLayout";
 import LoginPage from "./pages/LoginPage";
-import DashboardPage from "./pages/DashboardPage";
-import MastersPage from "./pages/MastersPage";
-import AccountingPage from "./pages/AccountingPage";
-import BankingPage from "./pages/BankingPage";
-import SalesPage from "./pages/SalesPage";
-import CRMPage from "./pages/CRMPage";
-import PurchasePage from "./pages/PurchasePage";
-import InventoryPage from "./pages/InventoryPage";
-import AssetsPage from "./pages/AssetsPage";
-import ProductionPage from "./pages/ProductionPage";
-import TransportPage from "./pages/TransportPage";
-import GSTPage from "./pages/GSTPage";
-import ReportsPage from "./pages/ReportsPage";
-import AICenterPage from "./pages/AICenterPage";
 import AIVerificationPage from "./pages/AIVerificationPage";
-import DocumentHubPage from "./pages/DocumentHubPage";
-import WorkflowEnginePage from "./pages/WorkflowEnginePage";
-import AutomationBuilderPage from "./pages/AutomationBuilderPage";
-import VendorPortalPage from "./pages/VendorPortalPage";
-import CustomerPortalPage from "./pages/CustomerPortalPage";
-import CalendarPage from "./pages/CalendarPage";
-import MarketplacePage from "./pages/MarketplacePage";
-import NotificationCenterPage from "./pages/NotificationCenterPage";
 import ERPSyncPage from "./pages/ERPSyncPage";
-import AdministrationPage from "./pages/AdministrationPage";
-import PresentationPage from "./pages/PresentationPage";
+import BankReconciliationPage from "./pages/BankReconciliationPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -60,35 +37,15 @@ export default function App() {
               </ProtectedRoute>
             }
           >
-            <Route index element={<Navigate to="/dashboard" replace />} />
-            <Route path="dashboard" element={<DashboardPage />} />
-            <Route path="masters" element={<MastersPage />} />
-            <Route path="accounting/*" element={<AccountingPage />} />
-            <Route path="banking" element={<BankingPage />} />
-            <Route path="sales/*" element={<SalesPage />} />
-            <Route path="crm" element={<CRMPage />} />
-            <Route path="purchase/*" element={<PurchasePage />} />
-            <Route path="inventory/*" element={<InventoryPage />} />
-            <Route path="assets" element={<AssetsPage />} />
-            <Route path="production/*" element={<ProductionPage />} />
-            <Route path="transport/*" element={<TransportPage />} />
-            <Route path="gst/*" element={<GSTPage />} />
-            <Route path="reports" element={<ReportsPage />} />
-            <Route path="ai-center" element={<AICenterPage />} />
+            <Route index element={<Navigate to="/ai-verification" replace />} />
             <Route path="ai-verification" element={<AIVerificationPage />} />
-            <Route path="presentation" element={<PresentationPage />} />
-            <Route path="document-hub" element={<DocumentHubPage />} />
-            <Route path="workflow" element={<WorkflowEnginePage />} />
-            <Route path="automation-builder" element={<AutomationBuilderPage />} />
-            <Route path="vendor-portal" element={<VendorPortalPage />} />
-            <Route path="customer-portal" element={<CustomerPortalPage />} />
-            <Route path="calendar" element={<CalendarPage />} />
-            <Route path="marketplace" element={<MarketplacePage />} />
-            <Route path="tally-integration" element={<ERPSyncPage />} />
-            <Route path="notifications" element={<NotificationCenterPage />} />
-            <Route path="administration" element={<AdministrationPage />} />
+            <Route path="tally-sync" element={<ERPSyncPage />} />
+            <Route path="bank-recon" element={<BankReconciliationPage />} />
+            <Route path="bank-reconciliation" element={<Navigate to="/bank-recon" replace />} />
+            <Route path="tally-integration" element={<Navigate to="/tally-sync" replace />} />
+            <Route path="dashboard" element={<Navigate to="/ai-verification" replace />} />
           </Route>
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<Navigate to="/ai-verification" replace />} />
         </Routes>
       </HashRouter>
     </QueryClientProvider>

@@ -88,7 +88,7 @@ export default function ProductionPage() {
       <div style={{ display: "flex", gap: 4, marginBottom: 16, background: "#f1f5f9", borderRadius: 10, padding: 4, width: "fit-content" }}>
         {(["orders", "bom", "qc"] as const).map(t => (
           <button key={t} onClick={() => setTab(t)} style={TAB_STYLE(tab === t)}>
-            {t === "orders" ? "📋 Orders" : t === "bom" ? "🧩 BOM" : "✅ QC"}
+            {t === "orders" ? "Orders" : t === "bom" ? "BOM" : "QC"}
           </button>
         ))}
       </div>
@@ -175,8 +175,8 @@ export default function ProductionPage() {
                       <td style={tdStyle}>
                         {c.result === "pending" && (
                           <div style={{ display: "flex", gap: 4 }}>
-                            <button onClick={() => updateQC.mutate({ id: c.id, result: "pass" })} style={{ background: T.green, color: "#fff", border: "none", borderRadius: 5, padding: "3px 8px", cursor: "pointer", fontSize: 11 }}>✓ Pass</button>
-                            <button onClick={() => updateQC.mutate({ id: c.id, result: "fail" })} style={{ background: T.red, color: "#fff", border: "none", borderRadius: 5, padding: "3px 8px", cursor: "pointer", fontSize: 11 }}>✗ Fail</button>
+                            <button onClick={() => updateQC.mutate({ id: c.id, result: "pass" })} style={{ background: T.green, color: "#fff", border: "none", borderRadius: 5, padding: "3px 8px", cursor: "pointer", fontSize: 11 }}>Pass</button>
+                            <button onClick={() => updateQC.mutate({ id: c.id, result: "fail" })} style={{ background: T.red, color: "#fff", border: "none", borderRadius: 5, padding: "3px 8px", cursor: "pointer", fontSize: 11 }}>Fail</button>
                           </div>
                         )}
                       </td>

@@ -53,10 +53,10 @@ export default function SettingsPage() {
     mutationFn: (payload: Record<string, any>) => api.patch("/settings/company", payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["companySettings"] });
-      alert("✅ Settings saved successfully!");
+      alert("Settings saved successfully!");
     },
     onError: (err: any) => {
-      alert(`❌ Error saving settings: ${err?.response?.data?.detail || err.message}`);
+      alert(`Error saving settings: ${err?.response?.data?.detail || err.message}`);
     }
   });
 
@@ -64,13 +64,13 @@ export default function SettingsPage() {
     setTestingTally(true);
     try {
       const res = await api.get("/erp/connection/test/tally");
-      if (res.data?.success) {
-        alert(`✅ Connection successful!\nTally Version: ${res.data?.version || "Unknown"}\nCompany: ${res.data?.company || "None"}`);
+      if (res.data?.connected || res.data?.success) {
+        alert(`Connection successful!\n${res.data?.message || "TallyPrime is reachable and responding."}`);
       } else {
-        alert(`❌ Connection failed: ${res.data?.error || "Could not connect to Tally"}`);
+        alert(`Connection failed: ${res.data?.error || "Could not connect to Tally"}`);
       }
     } catch (err: any) {
-      alert(`❌ Connection failed: ${err?.response?.data?.detail || err.message}`);
+      alert(`Connection failed: ${err?.response?.data?.detail || err.message}`);
     } finally {
       setTestingTally(false);
     }
@@ -202,7 +202,7 @@ export default function SettingsPage() {
                   display: "flex", alignItems: "center", gap: 6
                 }}
               >
-                {testingTally ? "⏳ Testing..." : "Test Connection"}
+                {testingTally ? "Testing..." : "Test Connection"}
               </button>
               <button 
                 onClick={() => saveMutation.mutate({ tally_url: tallyUrl, tally_company: tallyCompany })}
@@ -218,7 +218,7 @@ export default function SettingsPage() {
               </button>
             </div>
             <div style={{ marginTop: 24, padding: "16px 18px", background: "#f0fdf4", borderRadius: 10, border: "1px solid #bbf7d0" }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "#166534", marginBottom: 6 }}>📋 Setup Instructions</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "#166534", marginBottom: 6 }}> Setup Instructions</div>
               <ol style={{ fontSize: 12, color: "#15803d", lineHeight: 2, paddingLeft: 18 }}>
                 <li>Open TallyPrime → Press F12 (Configure)</li>
                 <li>Go to Advanced Configuration</li>
@@ -314,7 +314,7 @@ export default function SettingsPage() {
       {tab === "device" && (
         <div style={{ maxWidth: 640 }}>
           <div style={cardStyle({ padding: 32 })}>
-            <h2 style={{ fontSize: 16, fontWeight: 800, color: T.text1, marginBottom: 6 }}>📱 Mobile Device Sync</h2>
+            <h2 style={{ fontSize: 16, fontWeight: 800, color: T.text1, marginBottom: 6 }}>Mobile Device Sync</h2>
             <p style={{ fontSize: 13, color: T.text3, marginBottom: 28 }}>
               Connect your Daynisc mobile application to your local software dashboard to share real-time sales, inventory, and accounting updates.
             </p>

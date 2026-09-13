@@ -51,7 +51,7 @@ export default function AICopilotPage() {
             color: "#fff", border: "none", display: "flex", alignItems: "center", gap: 20, padding: 24
           }}>
             <div style={{ width: 56, height: 56, borderRadius: "50%", background: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 24 }}>
-              🤖
+              
             </div>
             <div>
               <h2 style={{ fontSize: 18, fontWeight: 800, color: "#fff", marginBottom: 6 }}>{greeting}, Bhavesh!</h2>
@@ -69,7 +69,7 @@ export default function AICopilotPage() {
                   padding: "12px 16px", background: "#f8fafc", border: `1px solid ${T.border}`, borderRadius: 10
                 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <span style={{ fontSize: 18 }}>💡</span>
+                    <IconLightbulb size={18} color={T.amber} />
                     <div>
                       <div style={{ fontSize: 12, fontWeight: 700, color: T.text1 }}>{act.action}</div>
                       <div style={{ fontSize: 10, color: T.text3, marginTop: 2 }}>Triggering this creates automated entries instantly</div>
@@ -96,7 +96,7 @@ export default function AICopilotPage() {
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {insights.map((ins: string, idx: number) => (
                 <div key={idx} style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "10px 12px", background: "#eff6ff", borderRadius: 8 }}>
-                  <span style={{ color: T.primary }}>⚡</span>
+                  <IconZap size={14} color={T.primary} />
                   <p style={{ fontSize: 12, color: T.primary, fontWeight: 600, lineHeight: 1.4 }}>{ins}</p>
                 </div>
               ))}
