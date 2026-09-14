@@ -1,13 +1,51 @@
 import { useState, useRef } from "react";
 import logoApp from "/logo_app.png";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-hot-toast";
+
+const TERMINAL_COMMANDS = {
+  powershell: "git clone https://github.com/bhaveshkhimsuriya023-stack/Daynisc.git ; cd Daynisc ; .\\start_all.bat",
+  cmd: "git clone https://github.com/bhaveshkhimsuriya023-stack/Daynisc.git && cd Daynisc && start_all.bat",
+};
 
 export default function DownloadLandingPage() {
   const navigate = useNavigate();
   const [downloading, setDownloading] = useState(false);
   const [showDemoModal, setShowDemoModal] = useState(false);
   const [showDownloadModal, setShowDownloadModal] = useState(false);
+  const [terminalTab, setTerminalTab] = useState<"powershell" | "cmd">("powershell");
+  const [copied, setCopied] = useState(false);
   const exploreRef = useRef<HTMLDivElement>(null);
+
+  const copyTerminalCommand = (type?: "powershell" | "cmd") => {
+    const targetType = type || terminalTab;
+    const cmd = TERMINAL_COMMANDS[targetType];
+    const notify = () => {
+      setCopied(true);
+      toast.success("Terminal command copied to clipboard!");
+      setTimeout(() => setCopied(false), 2500);
+    };
+
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(cmd).then(notify).catch(() => {
+        const textarea = document.createElement("textarea");
+        textarea.value = cmd;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+        notify();
+      });
+    } else {
+      const textarea = document.createElement("textarea");
+      textarea.value = cmd;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+      notify();
+    }
+  };
 
   const handleDownload = () => {
     setDownloading(true);
@@ -117,16 +155,15 @@ export default function DownloadLandingPage() {
           ))}
         </nav>
 
-        {/* Top Right: Windows Download Pill Button */}
-        <div style={{ display: "flex", alignItems: "center" }}>
+        {/* Top Right: Copy Terminal Command Pill Button */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <button
-            onClick={handleDownload}
-            disabled={downloading}
+            onClick={() => copyTerminalCommand()}
             style={{
               display: "flex",
               alignItems: "center",
-              gap: 9,
-              background: "#090d16",
+              gap: 8,
+              background: copied ? "#15803d" : "#090d16",
               color: "#ffffff",
               border: "none",
               borderRadius: 9999,
@@ -146,11 +183,19 @@ export default function DownloadLandingPage() {
               e.currentTarget.style.boxShadow = "0 2px 8px rgba(9, 13, 22, 0.15)";
             }}
           >
-            {/* Windows 11/10 4-box Icon */}
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4h-13.051M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-13.051-1.8" />
-            </svg>
-            <span>{downloading ? "Downloading..." : "Download for Windows"}</span>
+            {copied ? (
+              <>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                <span>Command Copied!</span>
+              </>
+            ) : (
+              <>
+                <span style={{ fontFamily: "monospace", color: "#38bdf8", fontWeight: 700, fontSize: 14 }}>&gt;_</span>
+                <span>Copy Terminal Command</span>
+              </>
+            )}
           </button>
         </div>
       </header>
@@ -213,81 +258,243 @@ export default function DownloadLandingPage() {
           Automate entries, extract data, and focus on what really matters.
         </p>
 
-        {/* CTA Buttons */}
+        {/* Terminal Command Box to Run Locally */}
+        <div style={{
+          maxWidth: 720,
+          margin: "0 auto 24px",
+          textAlign: "left",
+        }}>
+          {/* Header Bar with Tabs */}
+          <div style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            padding: "0 6px 8px",
+            flexWrap: "wrap",
+            gap: 8,
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#22c55e", display: "inline-block" }} />
+              <span style={{ fontSize: 12, fontWeight: 700, color: "#334155", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                Run Locally via Terminal
+              </span>
+            </div>
+            <div style={{ display: "flex", gap: 4, background: "#f1f5f9", padding: 3, borderRadius: 8, border: "1px solid #e2e8f0" }}>
+              <button
+                type="button"
+                onClick={() => setTerminalTab("powershell")}
+                style={{
+                  padding: "4px 10px",
+                  borderRadius: 6,
+                  border: "none",
+                  fontSize: 11.5,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  background: terminalTab === "powershell" ? "#0f172a" : "transparent",
+                  color: terminalTab === "powershell" ? "#ffffff" : "#64748b",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                PowerShell
+              </button>
+              <button
+                type="button"
+                onClick={() => setTerminalTab("cmd")}
+                style={{
+                  padding: "4px 10px",
+                  borderRadius: 6,
+                  border: "none",
+                  fontSize: 11.5,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  background: terminalTab === "cmd" ? "#0f172a" : "transparent",
+                  color: terminalTab === "cmd" ? "#ffffff" : "#64748b",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                Command Prompt (CMD)
+              </button>
+            </div>
+          </div>
+
+          {/* Terminal Container */}
+          <div style={{
+            background: "#0a0f1d",
+            borderRadius: 14,
+            border: "1px solid #1e293b",
+            boxShadow: "0 16px 40px -10px rgba(15, 23, 42, 0.22)",
+            overflow: "hidden",
+          }}>
+            {/* Window title bar */}
+            <div style={{
+              background: "#0f172a",
+              padding: "10px 16px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              borderBottom: "1px solid #1e293b",
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#ef4444", display: "inline-block" }} />
+                <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#f59e0b", display: "inline-block" }} />
+                <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#10b981", display: "inline-block" }} />
+                <span style={{ fontSize: 11.5, color: "#94a3b8", fontFamily: "monospace", marginLeft: 8 }}>
+                  {terminalTab === "powershell" ? "Windows PowerShell" : "Command Prompt"}
+                </span>
+              </div>
+              <span style={{ fontSize: 11, color: "#64748b", fontWeight: 500 }}>One-Click Local Launch</span>
+            </div>
+
+            {/* Terminal Command Row */}
+            <div style={{
+              padding: "14px 16px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+              flexWrap: "wrap",
+            }}>
+              <div style={{
+                fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+                fontSize: 13,
+                color: "#f8fafc",
+                lineHeight: 1.5,
+                overflowX: "auto",
+                whiteSpace: "nowrap",
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                flex: 1,
+              }}>
+                <span style={{ color: "#38bdf8", fontWeight: 700 }}>&gt;</span>
+                <span style={{ color: "#e2e8f0" }}>{TERMINAL_COMMANDS[terminalTab]}</span>
+              </div>
+
+              {/* Copy Button */}
+              <button
+                type="button"
+                onClick={() => copyTerminalCommand()}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 7,
+                  background: copied ? "#15803d" : "#2563eb",
+                  color: "#ffffff",
+                  border: "none",
+                  borderRadius: 8,
+                  padding: "9px 18px",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                  flexShrink: 0,
+                  boxShadow: copied ? "0 0 16px rgba(34, 197, 94, 0.4)" : "0 4px 12px rgba(37, 99, 235, 0.3)",
+                }}
+              >
+                {copied ? (
+                  <>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    <span>Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                    </svg>
+                    <span>Copy Command</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Subtext and Direct Download link */}
+          <div style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginTop: 9,
+            fontSize: 12,
+            color: "#64748b",
+            flexWrap: "wrap",
+            gap: 8,
+          }}>
+            <span>⚡ Paste and run in terminal to start Daynisc locally with live TallyPort 9000 sync</span>
+            <button
+              type="button"
+              onClick={handleDownload}
+              style={{
+                background: "none",
+                border: "none",
+                color: "#2563eb",
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: "pointer",
+                textDecoration: "underline",
+                padding: 0,
+              }}
+            >
+              Or download ZIP package
+            </button>
+          </div>
+        </div>
+
+        {/* Secondary Actions */}
         <div style={{
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
-          gap: 16,
+          gap: 14,
           flexWrap: "wrap",
         }}>
-          {/* Main Download Button */}
           <button
-            onClick={handleDownload}
-            disabled={downloading}
+            onClick={() => navigate("/ai-verification")}
             style={{
               display: "inline-flex",
               alignItems: "center",
-              gap: 10,
+              gap: 8,
               background: "#090d16",
               color: "#ffffff",
               border: "none",
               borderRadius: 9999,
-              padding: "13px 28px",
-              fontSize: 14.5,
+              padding: "11px 24px",
+              fontSize: 14,
               fontWeight: 600,
               cursor: "pointer",
-              boxShadow: "0 8px 24px rgba(9, 13, 22, 0.16)",
-              transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = "translateY(-1.5px)";
-              e.currentTarget.style.boxShadow = "0 12px 28px rgba(9, 13, 22, 0.24)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = "translateY(0)";
-              e.currentTarget.style.boxShadow = "0 8px 24px rgba(9, 13, 22, 0.16)";
+              boxShadow: "0 4px 14px rgba(9, 13, 22, 0.15)",
+              transition: "all 0.15s ease",
             }}
           >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4h-13.051M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-13.051-1.8" />
-            </svg>
-            <span>{downloading ? "Preparing..." : "Download for Windows"}</span>
-            <span style={{ fontSize: 16, marginLeft: 2 }}>→</span>
+            <span>Try Live in Browser</span>
+            <span style={{ fontSize: 15 }}>→</span>
           </button>
 
-          {/* Watch Demo Button */}
           <button
             onClick={() => setShowDemoModal(true)}
             style={{
               display: "inline-flex",
               alignItems: "center",
-              gap: 9,
+              gap: 8,
               background: "#ffffff",
               color: "#0f172a",
               border: "1.5px solid #e2e8f0",
               borderRadius: 9999,
-              padding: "12px 24px",
-              fontSize: 14.5,
+              padding: "11px 22px",
+              fontSize: 14,
               fontWeight: 600,
               cursor: "pointer",
               boxShadow: "0 2px 6px rgba(0, 0, 0, 0.03)",
-              transition: "all 0.2s ease",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = "#cbd5e1";
-              e.currentTarget.style.background = "#f8fafc";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = "#e2e8f0";
-              e.currentTarget.style.background = "#ffffff";
+              transition: "all 0.15s ease",
             }}
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
               <circle cx="12" cy="12" r="10" stroke="#0f172a" strokeWidth="2" />
               <polygon points="10 8 16 12 10 16 10 8" fill="#0f172a" />
             </svg>
-            <span>Watch Demo</span>
+            <span>Watch Workflow Tour</span>
           </button>
         </div>
       </section>
@@ -623,25 +830,24 @@ export default function DownloadLandingPage() {
           </div>
           <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
             <button
-              onClick={handleDownload}
+              onClick={() => copyTerminalCommand()}
               style={{
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 8,
-                background: "#ffffff",
-                color: "#090d16",
+                background: copied ? "#22c55e" : "#ffffff",
+                color: copied ? "#ffffff" : "#090d16",
                 border: "none",
                 borderRadius: 9999,
                 padding: "12px 24px",
                 fontSize: 14,
                 fontWeight: 700,
                 cursor: "pointer",
+                transition: "all 0.2s ease",
               }}
             >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M0 3.449L9.75 2.1v9.451H0m10.949-9.602L24 0v11.4h-13.051M0 12.6h9.75v9.451L0 20.699M10.949 12.6H24V24l-13.051-1.8" />
-              </svg>
-              Download Windows App
+              <span style={{ fontFamily: "monospace", fontWeight: 700 }}>&gt;_</span>
+              <span>{copied ? "Command Copied!" : "Copy Terminal Command"}</span>
             </button>
             <button
               onClick={() => navigate("/ai-verification")}
