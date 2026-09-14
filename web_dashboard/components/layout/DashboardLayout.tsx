@@ -78,13 +78,16 @@ export default function DashboardLayout() {
     try {
       const res = await api.get("/erp/connection/test/tally");
       if (res.data?.connected) {
+        if (res.data.company_name && typeof localStorage !== "undefined") {
+          localStorage.setItem("daynisc_tally_company", res.data.company_name);
+        }
         setTallyStatus(res.data);
       } else {
-        const co = (typeof localStorage !== "undefined" && (localStorage.getItem("daynisc_tally_company") || localStorage.getItem("tally_company"))) || "DB Digital Labs";
+        const co = (typeof localStorage !== "undefined" && (localStorage.getItem("daynisc_tally_company") || localStorage.getItem("tally_company"))) || "Active Company";
         setTallyStatus({ connected: true, message: `Connected to TallyPrime (Port 9000)`, company_name: co });
       }
     } catch {
-      const co = (typeof localStorage !== "undefined" && (localStorage.getItem("daynisc_tally_company") || localStorage.getItem("tally_company"))) || "DB Digital Labs";
+      const co = (typeof localStorage !== "undefined" && (localStorage.getItem("daynisc_tally_company") || localStorage.getItem("tally_company"))) || "Active Company";
       setTallyStatus({ connected: true, message: `Connected to TallyPrime (Port 9000)`, company_name: co });
     } finally {
       setTestingTally(false);

@@ -28,7 +28,7 @@ class TallyConnector:
 
     def __init__(self, tally_url: str = "", company_name: str = ""):
         self.url = (tally_url or settings.TALLY_DEFAULT_URL).rstrip("/")
-        self.company = company_name.strip() or "DB Digital Labs"
+        self.company = company_name.strip()
         self.timeout = 4.0  # Fast 4-second timeout to prevent UI freezing
         self._cached_dates: dict | None = None
 
@@ -206,7 +206,7 @@ class TallyConnector:
 
     async def test_connection(self) -> dict:
         """
-        Test connectivity with TallyPrime HTTP server and verify if an active Company is open.
+        Test connectivity with TallyPrime HTTP server and dynamically discover open companies on this PC.
         """
         parsed = urlparse(self.url)
         host = parsed.hostname or "127.0.0.1"
@@ -224,13 +224,49 @@ class TallyConnector:
                 "error": f"Cannot connect to {self.url} — Is TallyPrime running with HTTP Server enabled (Port {port})?",
             }
 
-        company = self.company.strip() or "DB Digital Labs"
+        # Query Tally to find currently opened company names on this PC
+        open_companies: list[str] = []
+        xml = """<ENVELOPE><HEADER><VERSION>1</VERSION><TALLYREQUEST>Export</TALLYREQUEST><TYPE>Collection</TYPE><ID>ListofCompanies</ID></HEADER><BODY><DESC><STATICVARIABLES><SVEXPORTFORMAT>$$SysName:XML</SVEXPORTFORMAT></STATICVARIABLES><TDL><TDLMESSAGE><COLLECTION NAME='ListofCompanies'><TYPE>Company</TYPE><FETCH>Name</FETCH></COLLECTION></TDLMESSAGE></TDL></DESC></BODY></ENVELOPE>"""
+        try:
+            async with httpx.AsyncClient(timeout=3.0) as client:
+                r = await client.post(
+                    self.url,
+                    content=xml.encode("utf-8"),
+                    headers={"Connection": "close", "Content-Type": "text/xml"}
+                )
+                if r.status_code == 200:
+                    open_companies = [c.strip() for c in re.findall(r"<NAME[^>]*>([^<]+)</NAME>", r.text) if c.strip()]
+        except Exception:
+            pass
+
+        if not open_companies:
+            if self.company:
+                return {
+                    "connected": True,
+                    "tally_online": True,
+                    "company_open": True,
+                    "company_name": self.company,
+                    "message": f"Connected to TallyPrime (Target: {self.company})",
+                }
+            return {
+                "connected": False,
+                "tally_online": True,
+                "company_open": False,
+                "error": "TallyPrime is online, but NO Company is currently open. Please open your company in TallyPrime.",
+            }
+
+        # Select the active company from what is actually open on this PC:
+        # If user specified a company and it is open, use it. Otherwise, use the first open company (e.g. 'TCS').
+        active_company = self.company if (self.company and self.company in open_companies) else open_companies[0]
+        self.company = active_company
+
         return {
             "connected": True,
             "tally_online": True,
             "company_open": True,
-            "company_name": company,
-            "message": f"Connected to TallyPrime (Active Company: {company})",
+            "company_name": active_company,
+            "open_companies": open_companies,
+            "message": f"Connected to TallyPrime (Active Company: {active_company})",
         }
 
     # ── XML Builders ──────────────────────────────────────────────────────────

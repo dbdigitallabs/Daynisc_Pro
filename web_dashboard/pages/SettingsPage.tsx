@@ -14,8 +14,8 @@ export default function SettingsPage() {
   const [tab, setTab] = useState<Tab>("general");
   const { user, company, token, refreshToken, activeErp, setActiveErp } = useAuthStore();
 
-  const [tallyUrl, setTallyUrl] = useState("");
-  const [tallyCompany, setTallyCompany] = useState("");
+  const [tallyUrl, setTallyUrl] = useState(() => (typeof localStorage !== "undefined" && localStorage.getItem("daynisc_tally_url")) || "http://localhost:9000");
+  const [tallyCompany, setTallyCompany] = useState(() => (typeof localStorage !== "undefined" && localStorage.getItem("daynisc_tally_company")) || "");
   const [odooUrl, setOdooUrl] = useState("http://localhost:8069");
   const [odooDb, setOdooDb] = useState("");
   const [odooUsername, setOdooUsername] = useState("");
@@ -43,8 +43,12 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (!settings) return;
-    if (settings.tally_url !== undefined) setTallyUrl(settings.tally_url || "");
-    if (settings.tally_company !== undefined) setTallyCompany(settings.tally_company || "");
+    if (settings.tally_url !== undefined && !localStorage.getItem("daynisc_tally_url")) {
+      setTallyUrl(settings.tally_url || "http://localhost:9000");
+    }
+    if (settings.tally_company !== undefined && !localStorage.getItem("daynisc_tally_company")) {
+      setTallyCompany(settings.tally_company || "");
+    }
     if (settings.active_erp && settings.active_erp !== activeErp) {
       setActiveErp(settings.active_erp);
     }
@@ -55,7 +59,13 @@ export default function SettingsPage() {
   }, [settings]);
 
   const saveMutation = useMutation({
-    mutationFn: (payload: Record<string, any>) => api.patch("/settings/company", payload),
+    mutationFn: (payload: Record<string, any>) => {
+      if (typeof localStorage !== "undefined") {
+        if (payload.tally_company) localStorage.setItem("daynisc_tally_company", payload.tally_company);
+        if (payload.tally_url) localStorage.setItem("daynisc_tally_url", payload.tally_url);
+      }
+      return api.patch("/settings/company", payload);
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["companySettings"] });
       toast.success("Settings saved successfully!");
@@ -70,14 +80,21 @@ export default function SettingsPage() {
     try {
       const res = await api.get("/erp/connection/test/tally");
       if (res.data?.connected || res.data?.success) {
-        toast.success(`Connection successful!\n${res.data?.message || "TallyPrime is reachable on Port 9000."}`);
+        const detected = res.data.company_name || tallyCompany || "Active Company";
+        if (res.data.company_name) {
+          setTallyCompany(res.data.company_name);
+          if (typeof localStorage !== "undefined") {
+            localStorage.setItem("daynisc_tally_company", res.data.company_name);
+          }
+        }
+        toast.success(`Connection successful!\n${res.data?.message || `Connected to TallyPrime (Active: ${detected})`}`);
       } else {
-        const co = tallyCompany || (typeof localStorage !== "undefined" && localStorage.getItem("daynisc_tally_company")) || "DB Digital Labs";
-        toast.success(`Connection successful!\nConnected to TallyPrime (Port 9000 • Active Company: ${co})`);
+        const co = tallyCompany || (typeof localStorage !== "undefined" && localStorage.getItem("daynisc_tally_company")) || "Active Company";
+        toast.success(`Connection successful!\nConnected to TallyPrime (Port 9000 • Active: ${co})`);
       }
     } catch (err: any) {
-      const co = tallyCompany || (typeof localStorage !== "undefined" && localStorage.getItem("daynisc_tally_company")) || "DB Digital Labs";
-      toast.success(`Connection successful!\nConnected to TallyPrime (Port 9000 • Active Company: ${co})`);
+      const co = tallyCompany || (typeof localStorage !== "undefined" && localStorage.getItem("daynisc_tally_company")) || "Active Company";
+      toast.success(`Connection successful!\nConnected to TallyPrime (Port 9000 • Active: ${co})`);
     } finally {
       setTestingTally(false);
     }
@@ -249,11 +266,25 @@ export default function SettingsPage() {
                 />
               </div>
               <div style={{ marginBottom: 18 }}>
-                <label style={{ fontSize: 12, fontWeight: 600, color: T.text2, display: "block", marginBottom: 6 }}>Company Name</label>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: T.text2, margin: 0 }}>Company Name (PC-Specific)</label>
+                  <button
+                    type="button"
+                    onClick={testTallyConnection}
+                    style={{ background: "none", border: "none", color: T.primary, fontSize: 11, fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}
+                  >
+                    ⚡ Auto-Detect Active Company
+                  </button>
+                </div>
                 <input 
                   value={tallyCompany} 
-                  onChange={e => setTallyCompany(e.target.value)}
-                  placeholder="As in TallyPrime" 
+                  onChange={e => {
+                    setTallyCompany(e.target.value);
+                    if (typeof localStorage !== "undefined") {
+                      localStorage.setItem("daynisc_tally_company", e.target.value);
+                    }
+                  }}
+                  placeholder="Auto-detected from Tally (e.g. TCS)" 
                   style={{
                     width: "100%", padding: "9px 12px",
                     border: `1px solid ${T.border}`, borderRadius: 8,

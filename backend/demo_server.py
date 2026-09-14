@@ -1894,6 +1894,8 @@ async def test_tally_connection():
         t_comp = SAVED_COMPANY_SETTINGS.get("tally_company") or ""
         tc = TallyConnector(tally_url=t_url, company_name=t_comp)
         result = await tc.test_connection()
+        if result.get("company_name"):
+            SAVED_COMPANY_SETTINGS["tally_company"] = result["company_name"]
         return result
     except Exception as e:
         return {"connected": False, "error": str(e)}

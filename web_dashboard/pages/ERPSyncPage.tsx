@@ -75,9 +75,9 @@ export default function ERPSyncPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
 
-  // Config State
-  const [tallyUrl, setTallyUrl] = useState("http://localhost:9000");
-  const [tallyCompany, setTallyCompany] = useState("DB Digital Labs");
+  // Config State (stored PC-wise via localStorage)
+  const [tallyUrl, setTallyUrl] = useState(() => (typeof localStorage !== "undefined" && localStorage.getItem("daynisc_tally_url")) || "http://localhost:9000");
+  const [tallyCompany, setTallyCompany] = useState<string>(() => (typeof localStorage !== "undefined" && localStorage.getItem("daynisc_tally_company")) || "");
   const [odooUrl, setOdooUrl] = useState("http://localhost:8069");
   const [odooDb, setOdooDb] = useState("");
   const [odooUsername, setOdooUsername] = useState("");
@@ -129,12 +129,18 @@ export default function ERPSyncPage() {
       const res = await api.get("/erp/connection/test/tally");
       setConnStatus(res.data);
       if (res.data?.connected) {
-        toast.success(`Connected to TallyPrime (Company: ${res.data.company_name || tallyCompany || "Active"})`);
+        const detected = res.data.company_name || tallyCompany || "Active Company";
+        if (res.data.company_name) {
+          setTallyCompany(res.data.company_name);
+          if (typeof localStorage !== "undefined") {
+            localStorage.setItem("daynisc_tally_company", res.data.company_name);
+          }
+        }
+        toast.success(`Connected to TallyPrime (Company: ${detected})`);
       } else if (res.data?.tally_online && !res.data?.company_open) {
         toast.error("TallyPrime is online, but NO Company is open. Please open your company in TallyPrime.", { duration: 6000 });
       } else {
-        // In case API returned offline on cloud while user's Tally is running locally
-        const co = tallyCompany || (typeof localStorage !== "undefined" && localStorage.getItem("daynisc_tally_company")) || "DB Digital Labs";
+        const co = tallyCompany || (typeof localStorage !== "undefined" && localStorage.getItem("daynisc_tally_company")) || "Active Company";
         setConnStatus({
           connected: true,
           tally_online: true,
@@ -145,7 +151,7 @@ export default function ERPSyncPage() {
         toast.success(`Connected to TallyPrime (Port 9000 • ${co})`);
       }
     } catch (e: any) {
-      const co = tallyCompany || (typeof localStorage !== "undefined" && localStorage.getItem("daynisc_tally_company")) || "DB Digital Labs";
+      const co = tallyCompany || (typeof localStorage !== "undefined" && localStorage.getItem("daynisc_tally_company")) || "Active Company";
       setConnStatus({
         connected: true,
         tally_online: true,
@@ -619,14 +625,38 @@ export default function ERPSyncPage() {
                   />
                 </div>
                 <div>
-                  <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: T.text2, marginBottom: 4 }}>
-                    Target Company Name in Tally
-                  </label>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                    <label style={{ fontSize: 11, fontWeight: 700, color: T.text2 }}>
+                      Active Company Name in Tally (PC-Specific)
+                    </label>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        await testConnection();
+                      }}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        color: T.primary,
+                        fontSize: 11,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        textDecoration: "underline",
+                      }}
+                    >
+                      ⚡ Auto-Detect from Tally
+                    </button>
+                  </div>
                   <input
                     type="text"
                     value={tallyCompany}
-                    onChange={(e) => setTallyCompany(e.target.value)}
-                    placeholder="e.g. DB Digital Labs"
+                    onChange={(e) => {
+                      setTallyCompany(e.target.value);
+                      if (typeof localStorage !== "undefined") {
+                        localStorage.setItem("daynisc_tally_company", e.target.value);
+                      }
+                    }}
+                    placeholder="Auto-detected from Tally (e.g. TCS)"
                     style={{
                       width: "100%",
                       padding: "8px 12px",

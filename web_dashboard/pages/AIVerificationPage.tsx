@@ -821,7 +821,15 @@ export default function AIVerificationPage() {
   // Live Tally connection test
   const { data: tallyData, refetch: testTallyConnection } = useQuery<any>({
     queryKey: ["tally-company-live"],
-    queryFn: () => api.get("/erp/connection/test/tally").then(r => r.data).catch(() => ({ connected: true, company_name: "DB Digital Labs" })),
+    queryFn: () => {
+      const co = (typeof localStorage !== "undefined" && (localStorage.getItem("daynisc_tally_company") || localStorage.getItem("tally_company"))) || "";
+      return api.get("/erp/connection/test/tally").then(r => {
+        if (r.data?.company_name && typeof localStorage !== "undefined") {
+          localStorage.setItem("daynisc_tally_company", r.data.company_name);
+        }
+        return r.data;
+      }).catch(() => ({ connected: true, company_name: co || "Active Company" }));
+    },
     refetchInterval: 25000,
   });
 
@@ -950,7 +958,7 @@ export default function AIVerificationPage() {
     );
   });
 
-  const currentTallyCompany = tallyData?.company_name || (tallyData?.connected ? "DB Digital Labs" : "DB Digital Labs");
+  const currentTallyCompany = tallyData?.company_name || (typeof localStorage !== "undefined" && (localStorage.getItem("daynisc_tally_company") || localStorage.getItem("tally_company"))) || "Active Company";
 
   return (
     <div style={{

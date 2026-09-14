@@ -242,14 +242,16 @@ export function getMockDataForUrl(url: string, params?: any): any {
 
   if (cleanUrl.includes("/connection/test/tally")) {
     const savedCompany =
-      (typeof localStorage !== "undefined" && (localStorage.getItem("daynisc_tally_company") || localStorage.getItem("tally_company"))) ||
-      "DB Digital Labs";
+      (typeof localStorage !== "undefined" &&
+        (localStorage.getItem("daynisc_tally_company") || localStorage.getItem("tally_company"))) ||
+      "";
+    const companyDisplay = savedCompany || "Active Company";
     return {
       connected: true,
       tally_online: true,
       company_open: true,
-      company_name: savedCompany,
-      message: `Connected to TallyPrime (Active Company: ${savedCompany})`,
+      company_name: companyDisplay,
+      message: `Connected to TallyPrime (Active Company: ${companyDisplay})`,
     };
   }
 
