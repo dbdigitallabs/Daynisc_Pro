@@ -901,6 +901,7 @@ export default function AIVerificationPage() {
         fd.append("document_type", uploadDocType);
         const res = await api.post("/documents/upload", fd, {
           headers: { "Content-Type": "multipart/form-data" },
+          timeout: 60000,
         });
         if (res.data?.status === "failed") {
           anyFailed = true;
@@ -921,16 +922,31 @@ export default function AIVerificationPage() {
         setTimeout(() => { setShowUpload(false); setUploadStatus("idle"); setFilterStatus("failed"); }, 3500);
       } else {
         setUploadStatus("done");
-        setUploadMsg(`${files.length} bill${files.length > 1 ? "s" : ""} uploaded — check Needs Review tab`);
+        setUploadMsg(`${files.length} document${files.length > 1 ? "s" : ""} uploaded — check Needs Review tab`);
         setTimeout(() => { setShowUpload(false); setUploadStatus("idle"); setFilterStatus("extracted"); }, 2200);
       }
     } catch (err: any) {
       setUploadStatus("error");
-      const detail = err?.response?.data?.detail || "";
+      const rawDetail = err?.response?.data?.detail;
+      let detail = "";
+      if (typeof rawDetail === "string") {
+        detail = rawDetail;
+      } else if (Array.isArray(rawDetail)) {
+        detail = rawDetail.map((d: any) => d?.msg || (typeof d === "string" ? d : JSON.stringify(d))).join(", ");
+      } else if (rawDetail && typeof rawDetail === "object") {
+        detail = rawDetail.message || rawDetail.error || JSON.stringify(rawDetail);
+      } else if (err?.code === "ECONNABORTED" || err?.message?.includes("timeout")) {
+        detail = "Upload processing timed out. Please try again or use a smaller file.";
+      } else {
+        detail = err?.message || "";
+      }
+
       if (detail.includes("Unsupported file type")) {
-        setUploadMsg(`${detail} — Please upload JPG, PNG or PDF.`);
+        setUploadMsg(`${detail} — Please upload PDF, Excel (.xlsx/.csv), JPG, or PNG.`);
       } else if (detail.includes("too large")) {
         setUploadMsg("File too large — maximum size is 15 MB.");
+      } else if (detail.includes("Duplicate")) {
+        setUploadMsg(detail);
       } else {
         setUploadMsg(detail || "Upload failed — check backend connection.");
       }
@@ -1574,13 +1590,13 @@ export default function AIVerificationPage() {
                   >
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
                       <span style={{ fontSize: 13, fontWeight: 700, color: T.text1 }}>
-                        {d?.party_name || "Unknown Party"}
+                        {d?.party_name || d?.bank_name || (ex.document_type === "bank_statement" ? "Bank Statement" : "Unknown Party")}
                       </span>
                       <StatusBadge status={ex.status} />
                     </div>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
                       <span style={{ fontSize: 11, color: T.text3 }}>
-                        {d?.invoice_number || ex.document_type} · {d?.invoice_date || "—"}
+                        {(ex.document_type === "bank_statement" ? (d?.account_number || "Bank Statement") : (d?.invoice_number || ex.document_type))} · {d?.statement_period || d?.invoice_date || "—"}
                       </span>
                       {d?.total_amount ? (
                         <span style={{ fontSize: 13, fontWeight: 700, color: T.amber }}>

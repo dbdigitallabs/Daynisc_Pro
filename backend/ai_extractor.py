@@ -192,6 +192,10 @@ Important: For amounts, always use numbers (not strings).
 Detect Indian number format: 1,23,456.00 = 123456.00
 """
 
+        key = api_key or getattr(settings, "GEMINI_API_KEY", "") or ""
+        if not key or str(key).strip() in ("", "None", "your-gemini-key", "change-me"):
+            return self._error_result("Gemini API key not configured. Go to Settings → AI Settings.")
+
         last_error = "No models available"
         client = _get_client(api_key)
 
@@ -212,7 +216,7 @@ Detect Indian number format: 1,23,456.00 = 123456.00
                             max_output_tokens=4096,
                         ),
                     ),
-                    timeout=25.0,
+                    timeout=7.0,
                 )
                 raw = response.text or ""
                 # Strip any accidental markdown fences

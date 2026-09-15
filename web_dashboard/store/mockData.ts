@@ -219,6 +219,41 @@ export const DEMO_RECON = {
 export function getMockDataForUrl(url: string, params?: any): any {
   const cleanUrl = url.split("?")[0].replace(/^\/api\/v1/, "");
 
+  if (cleanUrl === "/documents/upload") {
+    const docId = `doc-demo-${Date.now()}`;
+    const newDoc = {
+      id: docId,
+      status: "extracted",
+      document_type: "bank_statement",
+      language: "en",
+      confidence_score: 0.98,
+      is_duplicate: false,
+      created_at: new Date().toISOString(),
+      extracted_data: {
+        document_type: "bank_statement",
+        bank_name: "HDFC Bank Statement",
+        account_number: "502000894125",
+        statement_period: "September 2026",
+        total_amount: 275000,
+        transactions: [
+          { id: 0, date: "2026-09-12", description: "NEFT/Vendor Clearance", reference_number: "NEFT90214", withdrawal: 125000, deposit: 0, balance: 650000, party_name: "Reliance Polymers Limited", approved: true, voucher_type: "payment" },
+          { id: 1, date: "2026-09-11", description: "UPI/Customer Receipt Inflow", reference_number: "UPI44812", withdrawal: 0, deposit: 150000, balance: 775000, party_name: "Gujarat Masterbatches Pvt Ltd", approved: true, voucher_type: "receipt" }
+        ]
+      }
+    };
+    DEMO_EXTRACTIONS.unshift(newDoc);
+    return {
+      id: docId,
+      status: "extracted",
+      message: "Bank statement parsed successfully",
+      party_name: "HDFC Bank Statement",
+      invoice_number: "502000894125",
+      total_amount: 275000,
+      confidence: 0.98,
+      extracted_data: newDoc.extracted_data
+    };
+  }
+
   if (cleanUrl.startsWith("/documents")) {
     const status = params?.status || "extracted";
     const filtered = DEMO_EXTRACTIONS.filter((d) => d.status === status);

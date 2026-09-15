@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import logoApp from "/logo_app.png";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
+import { useAuthStore } from "../store/authStore";
 
 const TERMINAL_COMMANDS = {
   powershell: "git clone https://github.com/bhaveshkhimsuriya023-stack/Daynisc.git ; cd Daynisc ; .\\start_all.bat",
@@ -451,7 +452,10 @@ export default function DownloadLandingPage() {
           flexWrap: "wrap",
         }}>
           <button
-            onClick={() => navigate("/ai-verification")}
+            onClick={() => {
+              useAuthStore.getState().logout();
+              navigate("/login");
+            }}
             style={{
               display: "inline-flex",
               alignItems: "center",
@@ -850,7 +854,10 @@ export default function DownloadLandingPage() {
               <span>{copied ? "Command Copied!" : "Copy Terminal Command"}</span>
             </button>
             <button
-              onClick={() => navigate("/ai-verification")}
+              onClick={() => {
+                useAuthStore.getState().logout();
+                navigate("/login");
+              }}
               style={{
                 display: "inline-flex",
                 alignItems: "center",
@@ -949,7 +956,8 @@ export default function DownloadLandingPage() {
               <button
                 onClick={() => {
                   setShowDemoModal(false);
-                  navigate("/ai-verification");
+                  useAuthStore.getState().logout();
+                  navigate("/login");
                 }}
                 style={{
                   padding: "9px 20px",
@@ -1094,7 +1102,8 @@ export default function DownloadLandingPage() {
                 <button
                   onClick={() => {
                     setShowDownloadModal(false);
-                    navigate("/ai-verification");
+                    useAuthStore.getState().logout();
+                    navigate("/login");
                   }}
                   style={{
                     padding: "9px 20px",

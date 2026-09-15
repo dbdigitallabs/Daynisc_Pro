@@ -11,6 +11,7 @@ import socket
 from datetime import date
 from urllib.parse import urlparse
 from typing import Any
+# pyrefly: ignore [missing-import]
 import httpx
 
 from shared.config import settings
@@ -131,7 +132,7 @@ class TallyConnector:
 {desc_block}
 <REQUESTDATA>
 {msgs}
-</REQUESTDATA>
+</REQUESTDATA> 
 </IMPORTDATA>
 </BODY>
 </ENVELOPE>"""

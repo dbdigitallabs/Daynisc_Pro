@@ -66,25 +66,41 @@ def _parse_date(val: str | None):
 
 
 def _pdf_to_image_bytes(pdf_bytes: bytes) -> bytes:
-    """Convert first page of PDF to PNG bytes."""
+    """Convert first page of PDF to PNG bytes using PyMuPDF (fitz) or pdf2image."""
     try:
-        from pdf2image import convert_from_bytes
-        images = convert_from_bytes(pdf_bytes, dpi=200, first_page=1, last_page=1)
-        if not images:
+        import fitz
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+        if len(doc) == 0:
             raise ValueError("No pages found in PDF")
-        buf = io.BytesIO()
-        images[0].save(buf, format="PNG")
-        return buf.getvalue()
-    except Exception as e:
-        raise HTTPException(status_code=422, detail=f"PDF conversion failed: {e}")
+        page = doc[0]
+        pix = page.get_pixmap(dpi=150)
+        png_bytes = pix.tobytes("png")
+        doc.close()
+        return png_bytes
+    except Exception:
+        try:
+            from pdf2image import convert_from_bytes
+            images = convert_from_bytes(pdf_bytes, dpi=200, first_page=1, last_page=1)
+            if not images:
+                raise ValueError("No pages found in PDF")
+            buf = io.BytesIO()
+            images[0].save(buf, format="PNG")
+            return buf.getvalue()
+        except Exception as e:
+            raise HTTPException(status_code=422, detail=f"PDF conversion failed: {e}")
 
 
 def _validate_file(content_type: str, size: int):
-    allowed = {"application/pdf", "image/jpeg", "image/jpg", "image/png", "image/webp"}
+    allowed = {
+        "application/pdf", "image/jpeg", "image/jpg", "image/png", "image/webp",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/vnd.ms-excel", "text/csv", "application/csv", "text/plain",
+        "application/octet-stream"
+    }
     if content_type not in allowed:
         raise HTTPException(
             status_code=415,
-            detail=f"Unsupported file type: {content_type}. Use PDF, JPG, or PNG."
+            detail=f"Unsupported file type: {content_type}. Use PDF, Excel (.xlsx/.csv), JPG, or PNG."
         )
     if size > 15 * 1024 * 1024:
         raise HTTPException(status_code=413, detail="File too large (max 15 MB)")

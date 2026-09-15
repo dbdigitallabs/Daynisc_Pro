@@ -4,16 +4,9 @@ import { useNavigate } from "react-router-dom";
 import api from "../store/apiClient";
 import { useAuthStore } from "../store/authStore";
 
-const C = {
-  amber: "#f5a623", cyan: "#00d4c8", green: "#2ecc71",
-  red: "#e74c3c",
-  muted: "#8892a4", border: "#2a3347",
-  card: "#141927", steel: "#1e2535", ink: "#0a0a0f",
-};
-
 export default function LoginPage() {
   const navigate = useNavigate();
-  const setAuth = useAuthStore(s => s.setAuth);
+  const setAuth = useAuthStore((s) => s.setAuth);
 
   const [step, setStep] = useState<"phone" | "otp">("phone");
   const [phone, setPhone] = useState("");
@@ -21,44 +14,46 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [countdown, setCountdown] = useState(0);
-  const [devOtp, setDevOtp] = useState("");  // shown in dev for easy testing
-  const [lanUrl, setLanUrl] = useState("http://localhost:8000/api/v1");
-
-  useEffect(() => {
-    api.get("/health")
-      .then(res => {
-        if (res.data?.lan_url) {
-          setLanUrl(res.data.lan_url);
-        }
-      })
-      .catch(() => {
-        setLanUrl(`${window.location.protocol}//${window.location.hostname}:8000/api/v1`);
-      });
-  }, []);
+  const [devOtp, setDevOtp] = useState("989898");
 
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
+  useEffect(() => {
+    // If user lands on login, ensure previous session is clear for clean entry
+    // (Preserve clean state)
+  }, []);
 
   async function sendOTP() {
-    if (phone.length !== 10) { setError("Enter a valid 10-digit mobile number"); return; }
-    setLoading(true); setError("");
+    if (phone.length !== 10) {
+      setError("Please enter a valid 10-digit mobile number");
+      return;
+    }
+    setLoading(true);
+    setError("");
     try {
       const res = await api.post("/auth/send-otp", { phone });
       setDevOtp(res.data?.dev_otp || "989898");
     } catch {
-      // Offline / cloud static fallback: always allow fixed OTP 989898
+      // Offline / demo fallback: allow fixed OTP 989898
       setDevOtp("989898");
     } finally {
       setDevOtp("989898");
       setStep("otp");
       startCountdown();
       setLoading(false);
+      setTimeout(() => {
+        otpRefs.current[0]?.focus();
+      }, 100);
     }
   }
 
   async function verifyOTPWithCode(code: string) {
-    if (code.length < 6) { setError("Enter the 6-digit OTP"); return; }
-    setLoading(true); setError("");
+    if (code.length < 6) {
+      setError("Please enter the 6-digit OTP");
+      return;
+    }
+    setLoading(true);
+    setError("");
 
     const loginWithDemoUser = () => {
       const demoUser = {
@@ -87,7 +82,7 @@ export default function LoginPage() {
         setAuth(access_token, refresh_token, user, company);
         navigate("/ai-verification", { replace: true });
       } catch {
-        // Fallback for Vercel demo mode
+        // Fallback for Vercel / offline demo mode
         loginWithDemoUser();
       } finally {
         setLoading(false);
@@ -101,20 +96,24 @@ export default function LoginPage() {
       setAuth(access_token, refresh_token, user, company);
       navigate("/ai-verification", { replace: true });
     } catch (e: any) {
-      setError(e.response?.data?.detail || "Invalid OTP. Use fixed OTP: 989898");
+      setError(e.response?.data?.detail || "Invalid OTP. Use demo OTP: 989898");
       setOtp(["", "", "", "", "", ""]);
       otpRefs.current[0]?.focus();
-    } finally { setLoading(false); }
-  }
-
-  async function verifyOTP() {
-    return verifyOTPWithCode(otp.join(""));
+    } finally {
+      setLoading(false);
+    }
   }
 
   function startCountdown() {
     setCountdown(30);
     const interval = setInterval(() => {
-      setCountdown(c => { if (c <= 1) { clearInterval(interval); return 0; } return c - 1; });
+      setCountdown((c) => {
+        if (c <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return c - 1;
+      });
     }, 1000);
   }
 
@@ -125,212 +124,890 @@ export default function LoginPage() {
     setOtp(next);
     if (val && i < 5) otpRefs.current[i + 1]?.focus();
     if (!val && i > 0) otpRefs.current[i - 1]?.focus();
-    // Pass next directly — avoids reading stale otp closure
+
     if (next.join("").length === 6) {
       setTimeout(() => verifyOTPWithCode(next.join("")), 120);
     }
   }
-  return (
-    <div style={{
-      minHeight: "100vh", background: C.ink,
-      display: "flex", alignItems: "center", justifyContent: "center",
-      padding: 20,
-    }}>
-      {/* Background gradient */}
-      <div style={{
-        position: "fixed", inset: 0, pointerEvents: "none",
-        background: "radial-gradient(ellipse at 20% 20%, rgba(245,166,35,0.05) 0%, transparent 60%), radial-gradient(ellipse at 80% 80%, rgba(0,212,200,0.04) 0%, transparent 60%)",
-      }} />
 
-      <div style={{
-        width: "100%", maxWidth: 880, position: "relative", zIndex: 1,
-      }}>
-        {/* Logo area */}
-        <div style={{ textAlign: "center", marginBottom: 40 }}>
-          <div style={{
-            display: "inline-flex", width: 64, height: 64,
-            alignItems: "center", justifyContent: "center",
-            marginBottom: 16,
-          }}>
-            <img src={logoApp} style={{ width: 64, height: 64, objectFit: "contain" }} alt="Daynisc App Logo" />
+  function handleKeyDown(i: number, e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "Backspace" && !otp[i] && i > 0) {
+      otpRefs.current[i - 1]?.focus();
+    }
+  }
+
+  return (
+    <div
+      style={{
+        minHeight: "100vh",
+        width: "100%",
+        background: "#f8fafc",
+        position: "relative",
+        overflowX: "hidden",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
+        fontFamily:
+          '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+      }}
+    >
+      {/* ── Soft Ambient Aurora Background Shapes (Matching Screenshot) ──── */}
+      <div
+        style={{
+          position: "fixed",
+          inset: 0,
+          pointerEvents: "none",
+          zIndex: 0,
+          overflow: "hidden",
+        }}
+      >
+        {/* Soft blue curved organic glow at bottom-left */}
+        <div
+          style={{
+            position: "absolute",
+            bottom: "-15%",
+            left: "-10%",
+            width: "55vw",
+            height: "45vh",
+            borderRadius: "50%",
+            background:
+              "radial-gradient(ellipse at center, rgba(191, 219, 254, 0.45) 0%, rgba(224, 231, 255, 0.2) 50%, transparent 75%)",
+            filter: "blur(60px)",
+          }}
+        />
+
+        {/* Ambient top-center subtle cyan-blue glow */}
+        <div
+          style={{
+            position: "absolute",
+            top: "-10%",
+            right: "25%",
+            width: "40vw",
+            height: "35vh",
+            borderRadius: "50%",
+            background:
+              "radial-gradient(ellipse at center, rgba(219, 234, 254, 0.4) 0%, transparent 70%)",
+            filter: "blur(70px)",
+          }}
+        />
+
+        {/* Bottom subtle wave svg line */}
+        <svg
+          style={{
+            position: "absolute",
+            bottom: 0,
+            left: 0,
+            width: "100%",
+            height: "220px",
+            opacity: 0.5,
+          }}
+          viewBox="0 0 1440 280"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path
+            d="M0 160C240 220 480 260 720 230C960 200 1200 100 1440 140V280H0V160Z"
+            fill="url(#wave-grad)"
+          />
+          <defs>
+            <linearGradient id="wave-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#e0e7ff" stopOpacity="0.4" />
+              <stop offset="50%" stopColor="#dbeafe" stopOpacity="0.3" />
+              <stop offset="100%" stopColor="#f1f5f9" stopOpacity="0.1" />
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+
+      {/* ── Main Content Container ────────────────────────────────────────── */}
+      <div
+        style={{
+          position: "relative",
+          zIndex: 10,
+          maxWidth: 1200,
+          width: "100%",
+          margin: "0 auto",
+          padding: "48px 32px 32px 32px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 48,
+          flexWrap: "wrap",
+          flex: 1,
+        }}
+      >
+        {/* ── Left Column: Brand Hero & Value Badges ───────────────────────── */}
+        <div
+          style={{
+            flex: "1 1 460px",
+            maxWidth: 540,
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          {/* 3D App Icon */}
+          <div style={{ display: "inline-flex", marginBottom: 12 }}>
+            <img
+              src={logoApp}
+              alt="Daynisc ERP Logo"
+              style={{
+                width: 64,
+                height: 64,
+                objectFit: "contain",
+                filter: "drop-shadow(0 12px 20px rgba(37, 99, 235, 0.22))",
+              }}
+            />
           </div>
-          <h1 style={{
-            fontFamily: "'Syne',sans-serif", fontSize: 26,
-            fontWeight: 800, color: "#fff", marginBottom: 6,
-          }}>AI ERP Platform</h1>
+
+          {/* Daynisc ERP Brand Name */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "baseline",
+              gap: 8,
+              marginTop: 4,
+            }}
+          >
+            <span
+              style={{
+                fontSize: 32,
+                fontWeight: 800,
+                color: "#0f172a",
+                letterSpacing: "-0.6px",
+              }}
+            >
+              Daynisc
+            </span>
+            <span
+              style={{
+                fontSize: 32,
+                fontWeight: 800,
+                color: "#2563eb",
+                letterSpacing: "-0.6px",
+              }}
+            >
+              ERP
+            </span>
+          </div>
+
+          {/* Subtitle */}
+          <div
+            style={{
+              fontSize: 15,
+              fontWeight: 500,
+              color: "#64748b",
+              marginTop: 4,
+            }}
+          >
+            AI Powered Business Solutions
+          </div>
+
+          {/* Blue Accent Pill Bar */}
+          <div
+            style={{
+              width: 32,
+              height: 4,
+              borderRadius: 2,
+              background: "#2563eb",
+              marginTop: 22,
+              marginBottom: 26,
+            }}
+          />
+
+          {/* Headline */}
+          <h1
+            style={{
+              fontSize: 44,
+              fontWeight: 800,
+              color: "#0f172a",
+              lineHeight: 1.16,
+              letterSpacing: "-1px",
+              margin: "0 0 16px 0",
+            }}
+          >
+            Smarter Business{" "}
+            <span style={{ color: "#2563eb", display: "block" }}>
+              Starts Here.
+            </span>
+          </h1>
+
+          {/* Paragraph */}
+          <p
+            style={{
+              fontSize: 15.5,
+              color: "#64748b",
+              lineHeight: 1.65,
+              maxWidth: 440,
+              margin: "0 0 42px 0",
+            }}
+          >
+            Manage your business with intelligent tools, simpler workflows and a
+            smarter tomorrow.
+          </p>
+
+          {/* 3 Horizontal Feature Badges */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "flex-start",
+              gap: 36,
+              flexWrap: "wrap",
+            }}
+          >
+            {/* Feature 1: Manage Operations */}
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                textAlign: "center",
+                width: 82,
+              }}
+            >
+              <div
+                style={{
+                  width: 52,
+                  height: 52,
+                  borderRadius: "50%",
+                  background: "#eff6ff",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  boxShadow: "0 4px 12px rgba(59, 130, 246, 0.12)",
+                }}
+              >
+                {/* Blue Bar Chart Icon */}
+                <svg
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#2563eb"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <line x1="18" y1="20" x2="18" y2="10" />
+                  <line x1="12" y1="20" x2="12" y2="4" />
+                  <line x1="6" y1="20" x2="6" y2="14" />
+                </svg>
+              </div>
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: "#1e293b",
+                  marginTop: 10,
+                  lineHeight: 1.35,
+                }}
+              >
+                Manage
+                <br />
+                Operations
+              </div>
+            </div>
+
+            {/* Feature 2: Secure & Reliable */}
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                textAlign: "center",
+                width: 82,
+              }}
+            >
+              <div
+                style={{
+                  width: 52,
+                  height: 52,
+                  borderRadius: "50%",
+                  background: "#ecfdf5",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  boxShadow: "0 4px 12px rgba(16, 185, 129, 0.12)",
+                }}
+              >
+                {/* Green Shield Icon */}
+                <svg
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#10b981"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                  <polyline points="9 12 11 14 15 10" />
+                </svg>
+              </div>
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: "#1e293b",
+                  marginTop: 10,
+                  lineHeight: 1.35,
+                }}
+              >
+                Secure
+                <br />
+                &amp; Reliable
+              </div>
+            </div>
+
+            {/* Feature 3: AI Driven Insights */}
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                textAlign: "center",
+                width: 82,
+              }}
+            >
+              <div
+                style={{
+                  width: 52,
+                  height: 52,
+                  borderRadius: "50%",
+                  background: "#f5f3ff",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  boxShadow: "0 4px 12px rgba(139, 92, 246, 0.12)",
+                }}
+              >
+                {/* Purple Lightning Bolt Icon */}
+                <svg
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#8b5cf6"
+                  strokeWidth="2.2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                </svg>
+              </div>
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: "#1e293b",
+                  marginTop: 10,
+                  lineHeight: 1.35,
+                }}
+              >
+                AI Driven
+                <br />
+                Insights
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Two columns: Web OTP Login and Mobile QR login */}
-        <div style={{
-          display: "flex",
-          gap: 32,
-          flexDirection: "row",
-          flexWrap: "wrap",
-          justifyContent: "center",
-          alignItems: "stretch",
-        }}>
-          {/* Web Login Card */}
-          <div style={{
-            flex: 1, minWidth: 320, maxWidth: 420,
-            background: C.card, border: `1px solid ${C.border}`,
-            borderRadius: 12, padding: 32,
-            display: "flex", flexDirection: "column", justifyContent: "center",
-          }}>
-            {step === "phone" ? (
-              <>
-                <h2 style={{ fontFamily: "'Syne',sans-serif", fontSize: 18, fontWeight: 700, color: "#fff", marginBottom: 6 }}>
-                  Login with OTP
-                </h2>
-                <p style={{ color: C.muted, fontSize: 12, fontFamily: "monospace", marginBottom: 24 }}>
-                  Enter your registered mobile number
-                </p>
+        {/* ── Right Column: Floating Elevated White Card ───────────────────── */}
+        <div
+          style={{
+            flex: "1 1 380px",
+            maxWidth: 440,
+            background: "#ffffff",
+            borderRadius: 24,
+            padding: "44px 38px",
+            boxShadow:
+              "0 20px 60px -15px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(226, 232, 240, 0.8)",
+            display: "flex",
+            flexDirection: "column",
+            position: "relative",
+            margin: "0 auto",
+          }}
+        >
+          {/* Centered Glowing App Icon in Squircle */}
+          <div
+            style={{
+              width: 68,
+              height: 68,
+              borderRadius: 18,
+              background: "#ffffff",
+              boxShadow:
+                "0 10px 25px -4px rgba(37, 99, 235, 0.16), 0 0 0 1px rgba(226, 232, 240, 0.9)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              margin: "0 auto",
+            }}
+          >
+            <img
+              src={logoApp}
+              alt="App Logo"
+              style={{ width: 44, height: 44, objectFit: "contain" }}
+            />
+          </div>
 
-                <div style={{ marginBottom: 16 }}>
-                  <label style={{ fontSize: 10, color: C.muted, fontFamily: "monospace", letterSpacing: 1.5, display: "block", marginBottom: 8 }}>
-                    MOBILE NUMBER
-                  </label>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <div style={{
-                      padding: "10px 14px", background: C.steel,
-                      border: `1px solid ${C.border}`, borderRadius: 6,
-                      color: C.amber, fontFamily: "monospace", fontSize: 14,
-                      fontWeight: 600, flexShrink: 0,
-                    }}>+91</div>
-                    <input
-                      type="tel" maxLength={10} value={phone}
-                      onChange={e => { setPhone(e.target.value.replace(/\D/g, "")); setError(""); }}
-                      onKeyDown={e => e.key === "Enter" && sendOTP()}
-                      placeholder="9876543210"
-                      autoFocus
-                      style={{
-                        flex: 1, background: C.steel,
-                        border: `1px solid ${error ? C.red + "66" : C.border}`,
-                        borderRadius: 6, padding: "10px 14px",
-                        color: "#d6dae6", fontFamily: "monospace", fontSize: 15,
-                        letterSpacing: 2, outline: "none",
-                      }}
-                    />
-                  </div>
-                </div>
+          {/* App Title */}
+          <div
+            style={{
+              fontSize: 24,
+              fontWeight: 800,
+              color: "#0f172a",
+              textAlign: "center",
+              marginTop: 14,
+              letterSpacing: "-0.4px",
+            }}
+          >
+            Daynisc ERP
+          </div>
 
-                {error && <p style={{ color: C.red, fontSize: 12, fontFamily: "monospace", marginBottom: 16 }}>{error}</p>}
+          {/* Welcome Back tracking */}
+          <div
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: "3px",
+              color: "#94a3b8",
+              textAlign: "center",
+              marginTop: 4,
+              marginBottom: 28,
+              textTransform: "uppercase",
+            }}
+          >
+            Welcome Back
+          </div>
 
-                <button onClick={sendOTP} disabled={loading || phone.length !== 10} style={{
-                  width: "100%", padding: "13px",
-                  background: phone.length === 10 ? C.amber : "rgba(245,166,35,0.3)",
-                  border: "none", borderRadius: 8,
-                  color: phone.length === 10 ? C.ink : "rgba(0,0,0,0.5)",
-                  fontFamily: "'Syne',sans-serif", fontSize: 14, fontWeight: 700,
-                  cursor: phone.length === 10 ? "pointer" : "default",
-                  transition: "all 0.2s",
-                }}>
-                  {loading ? "Sending…" : "Send OTP →"}
-                </button>
-              </>
-            ) : (
-              <>
-                <h2 style={{ fontFamily: "'Syne',sans-serif", fontSize: 18, fontWeight: 700, color: "#fff", marginBottom: 6 }}>
-                  Enter OTP
-                </h2>
-                <p style={{ color: C.muted, fontSize: 12, fontFamily: "monospace", marginBottom: 24 }}>
-                  Sent to +91-{phone.slice(0, 3)}XXXXX{phone.slice(-2)}
-                </p>
+          {/* ── STEP 1: Phone Number Input ─────────────────────────────────── */}
+          {step === "phone" ? (
+            <div>
+              <div
+                style={{
+                  fontSize: 17,
+                  fontWeight: 800,
+                  color: "#0f172a",
+                  marginBottom: 3,
+                }}
+              >
+                Login with OTP
+              </div>
+              <div
+                style={{
+                  fontSize: 13,
+                  color: "#64748b",
+                  marginBottom: 22,
+                }}
+              >
+                Enter your registered mobile number
+              </div>
 
-                {/* Fixed OTP hint */}
+              {/* Mobile Number Label */}
+              <label
+                style={{
+                  display: "block",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: "#334155",
+                  marginBottom: 8,
+                }}
+              >
+                Mobile Number
+              </label>
+
+              {/* Input Group with India Flag & +91 Selector */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  background: "#f8fafc",
+                  border: error ? "1.5px solid #ef4444" : "1.5px solid #e2e8f0",
+                  borderRadius: 12,
+                  overflow: "hidden",
+                  height: 48,
+                  transition: "border-color 0.15s ease",
+                }}
+              >
+                {/* Flag + Country Code */}
                 <div
-                  onClick={() => {
-                    const code = ["9", "8", "9", "8", "9", "8"];
-                    setOtp(code);
-                    verifyOTPWithCode("989898");
-                  }}
-                  title="Click to auto-fill and login"
                   style={{
-                    marginBottom: 16, padding: "10px 14px",
-                    background: "rgba(0,212,200,0.1)",
-                    border: "1px solid rgba(0,212,200,0.3)",
-                    borderRadius: 8, textAlign: "center",
-                    cursor: "pointer",
-                    transition: "all 0.2s",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    padding: "0 12px",
+                    background: "#ffffff",
+                    borderRight: "1.5px solid #e2e8f0",
+                    height: "100%",
+                    fontSize: 14,
+                    fontWeight: 600,
+                    color: "#1e293b",
+                    userSelect: "none",
                   }}
                 >
-                  <span style={{ color: C.muted, fontFamily: "monospace", fontSize: 11 }}>Fixed OTP: </span>
-                  <span style={{ color: C.cyan, fontFamily: "monospace", fontSize: 18, fontWeight: 800, letterSpacing: 4 }}>989898</span>
-                  <div style={{ color: C.cyan, fontSize: 11, marginTop: 4, opacity: 0.8 }}>(Click here to auto-fill & login)</div>
+                  <span style={{ fontSize: 16 }}>🇮🇳</span>
+                  <span>+91</span>
+                  <svg
+                    width="10"
+                    height="10"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#64748b"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
                 </div>
 
-                {/* OTP boxes */}
-                <div style={{ display: "flex", gap: 6, marginBottom: 20 }}>
-                  {otp.map((digit, i) => (
-                    <input
-                      key={i}
-                      ref={el => { otpRefs.current[i] = el; }}
-                      type="tel" maxLength={1} value={digit}
-                      onChange={e => handleOtpChange(i, e.target.value)}
-                      onKeyDown={e => {
-                        if (e.key === "Backspace" && !digit && i > 0) {
-                          otpRefs.current[i - 1]?.focus();
-                        }
-                      }}
-                      autoFocus={i === 0}
-                      style={{
-                        flex: 1, minWidth: 0, maxWidth: 52, height: 52,
-                        background: digit ? "rgba(245,166,35,0.08)" : C.steel,
-                        border: `2px solid ${digit ? C.amber : C.border}`,
-                        borderRadius: 8, textAlign: "center",
-                        color: C.amber, fontFamily: "'Syne',sans-serif",
-                        fontSize: 20, fontWeight: 800, outline: "none",
-                        transition: "all 0.15s",
-                      }}
-                    />
-                  ))}
+                {/* Input Field */}
+                <input
+                  type="tel"
+                  maxLength={10}
+                  value={phone}
+                  onChange={(e) => {
+                    setPhone(e.target.value.replace(/\D/g, ""));
+                    setError("");
+                  }}
+                  onKeyDown={(e) => e.key === "Enter" && sendOTP()}
+                  placeholder="9876543210"
+                  autoFocus
+                  style={{
+                    flex: 1,
+                    border: "none",
+                    outline: "none",
+                    background: "transparent",
+                    padding: "0 14px",
+                    fontSize: 15,
+                    fontWeight: 500,
+                    color: "#0f172a",
+                    letterSpacing: "0.8px",
+                  }}
+                />
+              </div>
+
+              {/* Error Message */}
+              {error && (
+                <div
+                  style={{
+                    color: "#ef4444",
+                    fontSize: 12,
+                    fontWeight: 500,
+                    marginTop: 8,
+                  }}
+                >
+                  {error}
                 </div>
+              )}
 
-                {error && <p style={{ color: C.red, fontSize: 12, fontFamily: "monospace", marginBottom: 16 }}>{error}</p>}
+              {/* Demo Helper Hint */}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginTop: 10,
+                  fontSize: 11.5,
+                  color: "#64748b",
+                }}
+              >
+                <span>Demo mobile: <b>9876543210</b></span>
+                <span
+                  onClick={() => {
+                    setPhone("9876543210");
+                    setError("");
+                  }}
+                  style={{
+                    color: "#2563eb",
+                    cursor: "pointer",
+                    fontWeight: 600,
+                  }}
+                >
+                  Auto-fill
+                </span>
+              </div>
 
-                <button onClick={verifyOTP} disabled={loading || otp.join("").length < 6} style={{
-                  width: "100%", padding: "13px",
-                  background: otp.join("").length === 6 ? C.amber : "rgba(245,166,35,0.3)",
-                  border: "none", borderRadius: 8,
-                  color: otp.join("").length === 6 ? C.ink : "rgba(0,0,0,0.5)",
-                  fontFamily: "'Syne',sans-serif", fontSize: 14, fontWeight: 700,
-                  cursor: otp.join("").length === 6 ? "pointer" : "default",
-                }}>
-                  {loading ? "Verifying…" : "Verify & Login →"}
+              {/* Send OTP Button (Blue-to-Indigo Gradient) */}
+              <button
+                onClick={sendOTP}
+                disabled={loading || phone.length !== 10}
+                style={{
+                  width: "100%",
+                  height: 48,
+                  marginTop: 22,
+                  background:
+                    phone.length === 10
+                      ? "linear-gradient(135deg, #3b82f6 0%, #4f46e5 100%)"
+                      : "linear-gradient(135deg, #93c5fd 0%, #a5b4fc 100%)",
+                  border: "none",
+                  borderRadius: 12,
+                  color: "#ffffff",
+                  fontSize: 14.5,
+                  fontWeight: 600,
+                  cursor: phone.length === 10 && !loading ? "pointer" : "default",
+                  boxShadow:
+                    phone.length === 10
+                      ? "0 6px 20px -2px rgba(59, 130, 246, 0.45)"
+                      : "none",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  transition: "all 0.15s ease",
+                }}
+              >
+                <span>{loading ? "Sending OTP..." : "Send OTP"}</span>
+                {!loading && <span style={{ fontSize: 16 }}>→</span>}
+              </button>
+            </div>
+          ) : (
+            /* ── STEP 2: Enter Verification Code ───────────────────────────── */
+            <div>
+              <div
+                style={{
+                  fontSize: 17,
+                  fontWeight: 800,
+                  color: "#0f172a",
+                  marginBottom: 3,
+                }}
+              >
+                Enter Verification Code
+              </div>
+              <div
+                style={{
+                  fontSize: 13,
+                  color: "#64748b",
+                  marginBottom: 16,
+                }}
+              >
+                We sent a 6-digit code to{" "}
+                <b style={{ color: "#0f172a" }}>+91 {phone}</b>
+              </div>
+
+              {/* Instant Auto-Fill Chip for Demo / Testing */}
+              <div
+                onClick={() => {
+                  const demoCode = ["9", "8", "9", "8", "9", "8"];
+                  setOtp(demoCode);
+                  verifyOTPWithCode("989898");
+                }}
+                title="Click to auto-fill demo OTP and login"
+                style={{
+                  background: "#eff6ff",
+                  border: "1px dashed #60a5fa",
+                  borderRadius: 10,
+                  padding: "9px 13px",
+                  marginBottom: 20,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ fontSize: 14 }}>⚡</span>
+                  <span style={{ fontSize: 12.5, color: "#1e40af", fontWeight: 600 }}>
+                    Fixed OTP: <b>989898</b>
+                  </span>
+                </div>
+                <span
+                  style={{
+                    fontSize: 11.5,
+                    color: "#2563eb",
+                    fontWeight: 700,
+                  }}
+                >
+                  Click to Auto-Fill →
+                </span>
+              </div>
+
+              {/* 6 Digit OTP Input Boxes */}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  gap: 6,
+                  marginBottom: 16,
+                }}
+              >
+                {otp.map((digit, i) => (
+                  <input
+                    key={i}
+                    ref={(el) => (otpRefs.current[i] = el)}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={digit}
+                    onChange={(e) => handleOtpChange(i, e.target.value)}
+                    onKeyDown={(e) => handleKeyDown(i, e)}
+                    style={{
+                      width: 44,
+                      height: 50,
+                      textAlign: "center",
+                      fontSize: 19,
+                      fontWeight: 700,
+                      borderRadius: 10,
+                      border: "1.5px solid #e2e8f0",
+                      background: "#f8fafc",
+                      color: "#0f172a",
+                      outline: "none",
+                      transition: "border-color 0.15s ease",
+                    }}
+                    onFocus={(e) =>
+                      (e.target.style.borderColor = "#2563eb")
+                    }
+                    onBlur={(e) =>
+                      (e.target.style.borderColor = "#e2e8f0")
+                    }
+                  />
+                ))}
+              </div>
+
+              {/* Error text */}
+              {error && (
+                <div
+                  style={{
+                    color: "#ef4444",
+                    fontSize: 12,
+                    fontWeight: 500,
+                    marginBottom: 12,
+                  }}
+                >
+                  {error}
+                </div>
+              )}
+
+              {/* Verify & Enter Button */}
+              <button
+                onClick={() => verifyOTPWithCode(otp.join(""))}
+                disabled={loading || otp.join("").length !== 6}
+                style={{
+                  width: "100%",
+                  height: 48,
+                  marginTop: 6,
+                  background:
+                    otp.join("").length === 6
+                      ? "linear-gradient(135deg, #3b82f6 0%, #4f46e5 100%)"
+                      : "linear-gradient(135deg, #93c5fd 0%, #a5b4fc 100%)",
+                  border: "none",
+                  borderRadius: 12,
+                  color: "#ffffff",
+                  fontSize: 14.5,
+                  fontWeight: 600,
+                  cursor:
+                    otp.join("").length === 6 && !loading
+                      ? "pointer"
+                      : "default",
+                  boxShadow:
+                    otp.join("").length === 6
+                      ? "0 6px 20px -2px rgba(59, 130, 246, 0.45)"
+                      : "none",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                }}
+              >
+                <span>{loading ? "Verifying..." : "Verify & Enter Dashboard"}</span>
+                {!loading && <span style={{ fontSize: 16 }}>→</span>}
+              </button>
+
+              {/* Change Phone / Resend Row */}
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginTop: 18,
+                  fontSize: 12.5,
+                }}
+              >
+                <button
+                  onClick={() => {
+                    setStep("phone");
+                    setError("");
+                  }}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "#64748b",
+                    cursor: "pointer",
+                    padding: 0,
+                    fontWeight: 500,
+                  }}
+                >
+                  ← Change Number
                 </button>
-
-                <div style={{ textAlign: "center", marginTop: 16 }}>
-                  {countdown > 0 ? (
-                    <span style={{ color: C.muted, fontFamily: "monospace", fontSize: 12 }}>
-                      Resend in {countdown}s
-                    </span>
-                  ) : (
-                    <button onClick={() => { sendOTP(); startCountdown(); }} style={{
-                      background: "none", border: "none", color: C.cyan,
-                      fontFamily: "monospace", fontSize: 12, cursor: "pointer",
-                    }}>
-                      Resend OTP
-                    </button>
-                  )}
-                  <span style={{ color: C.border, margin: "0 10px" }}>·</span>
-                  <button onClick={() => { setStep("phone"); setOtp(["","","","","",""]); setError(""); }} style={{
-                    background: "none", border: "none", color: C.muted,
-                    fontFamily: "monospace", fontSize: 12, cursor: "pointer",
-                  }}>
-                    Change number
+                {countdown > 0 ? (
+                  <span style={{ color: "#94a3b8" }}>Resend in {countdown}s</span>
+                ) : (
+                  <button
+                    onClick={sendOTP}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "#2563eb",
+                      cursor: "pointer",
+                      fontWeight: 600,
+                      padding: 0,
+                    }}
+                  >
+                    Resend Code
                   </button>
-                </div>
-              </>
-            )}
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Need Help Footer Link (Matches Screenshot) */}
+          <div
+            style={{
+              textAlign: "center",
+              marginTop: 32,
+              fontSize: 12.5,
+              color: "#64748b",
+            }}
+          >
+            <span>Need help? </span>
+            <span
+              onClick={() => navigate("/download")}
+              style={{
+                color: "#2563eb",
+                fontWeight: 600,
+                cursor: "pointer",
+                textDecoration: "none",
+              }}
+            >
+              Contact Administrator
+            </span>
           </div>
-
-
         </div>
+      </div>
 
-        <p style={{ textAlign: "center", color: C.border, fontFamily: "monospace", fontSize: 11, marginTop: 24 }}>
-          AI ERP Platform · Enterprise Edition
-        </p>
+      {/* ── Bottom Tagline (Matches Screenshot: PLAN • PROCESS • PROGRESS) ─── */}
+      <div
+        style={{
+          position: "relative",
+          zIndex: 10,
+          maxWidth: 1200,
+          width: "100%",
+          margin: "0 auto",
+          padding: "0 32px 28px 32px",
+        }}
+      >
+        <span
+          style={{
+            fontSize: 11,
+            fontWeight: 700,
+            letterSpacing: "3px",
+            color: "#94a3b8",
+            textTransform: "uppercase",
+          }}
+        >
+          PLAN &nbsp;•&nbsp; PROCESS &nbsp;•&nbsp; PROGRESS
+        </span>
       </div>
     </div>
   );
 }
-

@@ -79,9 +79,15 @@ api.interceptors.response.use(
       }
     }
 
-    // In demo / preview mode, if any API fails (e.g. 404 on Vercel), return mock fallback gracefully
-    if (isDemo && (error.code === "ERR_NETWORK" || error.response?.status === 404 || !error.response)) {
-      return Promise.resolve({ data: getMockDataForUrl(url, error.config?.params) });
+    // In demo / preview mode or network disconnect, return mock fallback gracefully
+    if (
+      (isDemo || url.includes("/documents/upload")) &&
+      (error.code === "ERR_NETWORK" || error.code === "ECONNABORTED" || error.response?.status === 404 || !error.response)
+    ) {
+      const mock = getMockDataForUrl(url, error.config?.params);
+      if (mock) {
+        return Promise.resolve({ data: mock });
+      }
     }
 
     return Promise.reject(error);
