@@ -4,9 +4,18 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import { useAuthStore } from "../store/authStore";
 
+const GITHUB_REPO_URL = "https://github.com/dbdigitallabs/Daynisc_Pro";
+const GITHUB_CLONE_URL = "https://github.com/dbdigitallabs/Daynisc_Pro.git";
+
+const GithubIcon = ({ size = 16 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" style={{ flexShrink: 0, display: "inline-block" }}>
+    <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
+  </svg>
+);
+
 const TERMINAL_COMMANDS = {
-  powershell: "git clone https://github.com/bhaveshkhimsuriya023-stack/Daynisc.git ; cd Daynisc ; .\\start_all.bat",
-  cmd: "git clone https://github.com/bhaveshkhimsuriya023-stack/Daynisc.git && cd Daynisc && start_all.bat",
+  powershell: `git clone ${GITHUB_CLONE_URL} ; cd Daynisc_Pro ; .\\start_all.bat`,
+  cmd: `git clone ${GITHUB_CLONE_URL} && cd Daynisc_Pro && start_all.bat`,
 };
 
 export default function DownloadLandingPage() {
@@ -156,8 +165,42 @@ export default function DownloadLandingPage() {
           ))}
         </nav>
 
-        {/* Top Right: Copy Terminal Command Pill Button */}
+        {/* Top Right: GitHub Link & Copy Terminal Command Pill Button */}
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <a
+            href={GITHUB_REPO_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="View Daynisc on GitHub"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 7,
+              background: "#ffffff",
+              color: "#0f172a",
+              border: "1.5px solid #e2e8f0",
+              borderRadius: 9999,
+              padding: "9px 18px",
+              fontSize: 13.5,
+              fontWeight: 600,
+              textDecoration: "none",
+              cursor: "pointer",
+              boxShadow: "0 1px 3px rgba(0, 0, 0, 0.05)",
+              transition: "all 0.15s ease",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = "#94a3b8";
+              e.currentTarget.style.background = "#f8fafc";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = "#e2e8f0";
+              e.currentTarget.style.background = "#ffffff";
+            }}
+          >
+            <GithubIcon size={16} />
+            <span>GitHub</span>
+          </a>
+
           <button
             onClick={() => copyTerminalCommand()}
             style={{
@@ -368,47 +411,102 @@ export default function DownloadLandingPage() {
                 flex: 1,
               }}>
                 <span style={{ color: "#38bdf8", fontWeight: 700 }}>&gt;</span>
-                <span style={{ color: "#e2e8f0" }}>{TERMINAL_COMMANDS[terminalTab]}</span>
+                <span style={{ color: "#e2e8f0" }}>
+                  <span>git clone </span>
+                  <a
+                    href={GITHUB_REPO_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Open GitHub repository (opens in new tab)"
+                    style={{
+                      color: "#38bdf8",
+                      textDecoration: "underline",
+                      textUnderlineOffset: 3,
+                      cursor: "pointer",
+                      fontWeight: 600,
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.color = "#93c5fd")}
+                    onMouseLeave={(e) => (e.currentTarget.style.color = "#38bdf8")}
+                  >
+                    {GITHUB_CLONE_URL}
+                  </a>
+                  <span>{terminalTab === "powershell" ? " ; cd Daynisc_Pro ; .\\start_all.bat" : " && cd Daynisc_Pro && start_all.bat"}</span>
+                </span>
               </div>
 
-              {/* Copy Button */}
-              <button
-                type="button"
-                onClick={() => copyTerminalCommand()}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 7,
-                  background: copied ? "#15803d" : "#2563eb",
-                  color: "#ffffff",
-                  border: "none",
-                  borderRadius: 8,
-                  padding: "9px 18px",
-                  fontSize: 13,
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  transition: "all 0.15s ease",
-                  flexShrink: 0,
-                  boxShadow: copied ? "0 0 16px rgba(34, 197, 94, 0.4)" : "0 4px 12px rgba(37, 99, 235, 0.3)",
-                }}
-              >
-                {copied ? (
-                  <>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                    <span>Copied!</span>
-                  </>
-                ) : (
-                  <>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-                    </svg>
-                    <span>Copy Command</span>
-                  </>
-                )}
-              </button>
+              {/* Action Buttons: GitHub Link & Copy Button */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                <a
+                  href={GITHUB_REPO_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Open GitHub Repository in a new tab"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    background: "rgba(255, 255, 255, 0.08)",
+                    color: "#f8fafc",
+                    border: "1px solid rgba(255, 255, 255, 0.16)",
+                    borderRadius: 8,
+                    padding: "9px 14px",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    textDecoration: "none",
+                    cursor: "pointer",
+                    transition: "all 0.15s ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.16)";
+                    e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.32)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "rgba(255, 255, 255, 0.08)";
+                    e.currentTarget.style.borderColor = "rgba(255, 255, 255, 0.16)";
+                  }}
+                >
+                  <GithubIcon size={14} />
+                  <span>Open GitHub</span>
+                </a>
+
+                <button
+                  type="button"
+                  onClick={() => copyTerminalCommand()}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 7,
+                    background: copied ? "#15803d" : "#2563eb",
+                    color: "#ffffff",
+                    border: "none",
+                    borderRadius: 8,
+                    padding: "9px 18px",
+                    fontSize: 13,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    transition: "all 0.15s ease",
+                    flexShrink: 0,
+                    boxShadow: copied ? "0 0 16px rgba(34, 197, 94, 0.4)" : "0 4px 12px rgba(37, 99, 235, 0.3)",
+                  }}
+                >
+                  {copied ? (
+                    <>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                      <span>Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                      </svg>
+                      <span>Copy Command</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -424,22 +522,42 @@ export default function DownloadLandingPage() {
             gap: 8,
           }}>
             <span>⚡ Paste and run in terminal to start Daynisc locally with live TallyPort 9000 sync</span>
-            <button
-              type="button"
-              onClick={handleDownload}
-              style={{
-                background: "none",
-                border: "none",
-                color: "#2563eb",
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: "pointer",
-                textDecoration: "underline",
-                padding: 0,
-              }}
-            >
-              Or download ZIP package
-            </button>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <a
+                href={GITHUB_REPO_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  color: "#2563eb",
+                  fontWeight: 600,
+                  textDecoration: "underline",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
+                  fontSize: 12,
+                }}
+              >
+                <GithubIcon size={13} />
+                <span>View on GitHub</span>
+              </a>
+              <span style={{ color: "#cbd5e1" }}>•</span>
+              <button
+                type="button"
+                onClick={handleDownload}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "#2563eb",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  textDecoration: "underline",
+                  padding: 0,
+                }}
+              >
+                Download ZIP package
+              </button>
+            </div>
           </div>
         </div>
 
@@ -833,6 +951,35 @@ export default function DownloadLandingPage() {
             </p>
           </div>
           <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
+            <a
+              href={GITHUB_REPO_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                background: "rgba(255, 255, 255, 0.1)",
+                color: "#ffffff",
+                border: "1px solid rgba(255, 255, 255, 0.22)",
+                borderRadius: 9999,
+                padding: "12px 22px",
+                fontSize: 14,
+                fontWeight: 600,
+                textDecoration: "none",
+                cursor: "pointer",
+                transition: "all 0.15s ease",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = "rgba(255, 255, 255, 0.2)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "rgba(255, 255, 255, 0.1)";
+              }}
+            >
+              <GithubIcon size={16} />
+              <span>GitHub Repo</span>
+            </a>
             <button
               onClick={() => copyTerminalCommand()}
               style={{

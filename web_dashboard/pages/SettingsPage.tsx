@@ -16,10 +16,10 @@ export default function SettingsPage() {
 
   const [tallyUrl, setTallyUrl] = useState(() => (typeof localStorage !== "undefined" && localStorage.getItem("daynisc_tally_url")) || "http://localhost:9000");
   const [tallyCompany, setTallyCompany] = useState(() => (typeof localStorage !== "undefined" && localStorage.getItem("daynisc_tally_company")) || "");
-  const [odooUrl, setOdooUrl] = useState("http://localhost:8069");
-  const [odooDb, setOdooDb] = useState("");
-  const [odooUsername, setOdooUsername] = useState("");
-  const [odooPassword, setOdooPassword] = useState("");
+  const [odooUrl, setOdooUrl] = useState(() => (typeof localStorage !== "undefined" && localStorage.getItem("daynisc_odoo_url")) || "http://localhost:8069");
+  const [odooDb, setOdooDb] = useState(() => (typeof localStorage !== "undefined" && localStorage.getItem("daynisc_odoo_db")) || "");
+  const [odooUsername, setOdooUsername] = useState(() => (typeof localStorage !== "undefined" && localStorage.getItem("daynisc_odoo_username")) || "");
+  const [odooPassword, setOdooPassword] = useState(() => (typeof localStorage !== "undefined" && localStorage.getItem("daynisc_odoo_password")) || "");
   const [testingOdoo, setTestingOdoo] = useState(false);
   const [testingTally, setTestingTally] = useState(false);
   const [lanUrl, setLanUrl] = useState("http://localhost:8000/api/v1");
@@ -61,8 +61,12 @@ export default function SettingsPage() {
   const saveMutation = useMutation({
     mutationFn: (payload: Record<string, any>) => {
       if (typeof localStorage !== "undefined") {
-        if (payload.tally_company) localStorage.setItem("daynisc_tally_company", payload.tally_company);
-        if (payload.tally_url) localStorage.setItem("daynisc_tally_url", payload.tally_url);
+        if (payload.tally_company !== undefined) localStorage.setItem("daynisc_tally_company", payload.tally_company);
+        if (payload.tally_url !== undefined) localStorage.setItem("daynisc_tally_url", payload.tally_url);
+        if (payload.odoo_url !== undefined) localStorage.setItem("daynisc_odoo_url", payload.odoo_url);
+        if (payload.odoo_db !== undefined) localStorage.setItem("daynisc_odoo_db", payload.odoo_db);
+        if (payload.odoo_username !== undefined) localStorage.setItem("daynisc_odoo_username", payload.odoo_username);
+        if (payload.odoo_password !== undefined) localStorage.setItem("daynisc_odoo_password", payload.odoo_password);
       }
       return api.patch("/settings/company", payload);
     },
@@ -139,9 +143,9 @@ export default function SettingsPage() {
       <h1 style={{ fontSize: 22, fontWeight: 800, color: T.text1, marginBottom: 24, letterSpacing: "-0.4px" }}>Settings</h1>
 
       <div style={{ display: "flex", borderBottom: `1px solid ${T.border}`, marginBottom: 28 }}>
-        {tabBtn("general", "General",     <IconSettings size={14} color={tab === "general" ? T.primary : T.text3} />)}
-        {tabBtn("tally",   "ERP (Tally & Odoo)",  <IconLink size={14} color={tab === "tally" ? T.primary : T.text3} />)}
-        {tabBtn("device",  "Device Sync",  <IconLink size={14} color={tab === "device" ? T.primary : T.text3} />)}
+        {tabBtn("general", "General", <IconSettings size={14} color={tab === "general" ? T.primary : T.text3} />)}
+        {tabBtn("tally", "ERP (Tally & Odoo)", <IconLink size={14} color={tab === "tally" ? T.primary : T.text3} />)}
+        {tabBtn("device", "Device Sync", <IconLink size={14} color={tab === "device" ? T.primary : T.text3} />)}
       </div>
 
       {tab === "general" && (
@@ -150,9 +154,9 @@ export default function SettingsPage() {
             <h2 style={{ fontSize: 15, fontWeight: 700, color: T.text1, marginBottom: 20 }}>Company Information</h2>
             {[
               { label: "Company Name", value: company?.name || "Demo Company" },
-              { label: "GSTIN",        value: company?.gstin || "—" },
-              { label: "Plan",         value: company?.plan || "Enterprise" },
-              { label: "Email",        value: user?.email || "—" },
+              { label: "GSTIN", value: company?.gstin || "—" },
+              { label: "Plan", value: company?.plan || "Enterprise" },
+              { label: "Email", value: user?.email || "—" },
             ].map(f => (
               <div key={f.label} style={{ marginBottom: 16 }}>
                 <label style={{ fontSize: 11, fontWeight: 600, color: T.text3, textTransform: "uppercase", letterSpacing: "0.5px", display: "block", marginBottom: 6 }}>
@@ -181,9 +185,9 @@ export default function SettingsPage() {
               </div>
             </div>
             {[
-              { label: "Name",  value: user?.name  || "—" },
+              { label: "Name", value: user?.name || "—" },
               { label: "Phone", value: user?.phone || "—" },
-              { label: "Role",  value: user?.role  || "—" },
+              { label: "Role", value: user?.role || "—" },
             ].map(f => (
               <div key={f.label} style={{ marginBottom: 14 }}>
                 <label style={{ fontSize: 11, fontWeight: 600, color: T.text3, textTransform: "uppercase", letterSpacing: "0.5px", display: "block", marginBottom: 5 }}>
@@ -244,207 +248,207 @@ export default function SettingsPage() {
           <div style={{ display: "grid", gridTemplateColumns: activeErp === "both" ? "repeat(auto-fit, minmax(420px, 1fr))" : "1fr", gap: 20 }}>
             {/* TallyPrime Integration Card (shown only when Tally or Both selected) */}
             {(activeErp === "tally" || activeErp === "both") && (
-            <div style={cardStyle({ padding: 24 })}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                <span style={{ fontSize: 16 }}>📊</span>
-                <h2 style={{ fontSize: 15, fontWeight: 700, color: T.text1, margin: 0 }}>TallyPrime Integration</h2>
-              </div>
-              <p style={{ fontSize: 12.5, color: T.text3, marginBottom: 18 }}>Connect to local TallyPrime via XML HTTP (default port 9000)</p>
-              
-              <div style={{ marginBottom: 14 }}>
-                <label style={{ fontSize: 12, fontWeight: 600, color: T.text2, display: "block", marginBottom: 6 }}>Tally URL</label>
-                <input 
-                  value={tallyUrl} 
-                  onChange={e => setTallyUrl(e.target.value)}
-                  placeholder="http://localhost:9000" 
-                  style={{
-                    width: "100%", padding: "9px 12px",
-                    border: `1px solid ${T.border}`, borderRadius: 8,
-                    fontSize: 13, color: T.text1, outline: "none",
-                    fontFamily: "'Inter',sans-serif",
-                  }} 
-                />
-              </div>
-              <div style={{ marginBottom: 18 }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: T.text2, margin: 0 }}>Company Name (PC-Specific)</label>
+              <div style={cardStyle({ padding: 24 })}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                  <span style={{ fontSize: 16 }}>📊</span>
+                  <h2 style={{ fontSize: 15, fontWeight: 700, color: T.text1, margin: 0 }}>TallyPrime Integration</h2>
+                </div>
+                <p style={{ fontSize: 12.5, color: T.text3, marginBottom: 18 }}>Connect to local TallyPrime via XML HTTP (default port 9000)</p>
+
+                <div style={{ marginBottom: 14 }}>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: T.text2, display: "block", marginBottom: 6 }}>Tally URL</label>
+                  <input
+                    value={tallyUrl}
+                    onChange={e => setTallyUrl(e.target.value)}
+                    placeholder="http://localhost:9000"
+                    style={{
+                      width: "100%", padding: "9px 12px",
+                      border: `1px solid ${T.border}`, borderRadius: 8,
+                      fontSize: 13, color: T.text1, outline: "none",
+                      fontFamily: "'Inter',sans-serif",
+                    }}
+                  />
+                </div>
+                <div style={{ marginBottom: 18 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: T.text2, margin: 0 }}>Company Name (PC-Specific)</label>
+                    <button
+                      type="button"
+                      onClick={testTallyConnection}
+                      style={{ background: "none", border: "none", color: T.primary, fontSize: 11, fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}
+                    >
+                      ⚡ Auto-Detect Active Company
+                    </button>
+                  </div>
+                  <input
+                    value={tallyCompany}
+                    onChange={e => {
+                      setTallyCompany(e.target.value);
+                      if (typeof localStorage !== "undefined") {
+                        localStorage.setItem("daynisc_tally_company", e.target.value);
+                      }
+                    }}
+                    placeholder="Auto-detected from Tally (e.g. TCS)"
+                    style={{
+                      width: "100%", padding: "9px 12px",
+                      border: `1px solid ${T.border}`, borderRadius: 8,
+                      fontSize: 13, color: T.text1, outline: "none",
+                      fontFamily: "'Inter',sans-serif",
+                    }}
+                  />
+                </div>
+
+                <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
                   <button
-                    type="button"
                     onClick={testTallyConnection}
-                    style={{ background: "none", border: "none", color: T.primary, fontSize: 11, fontWeight: 700, cursor: "pointer", textDecoration: "underline" }}
+                    disabled={testingTally}
+                    style={{
+                      padding: "9px 18px", background: "#f8fafc",
+                      border: `1px solid ${T.border}`, borderRadius: 8,
+                      color: T.text2, fontSize: 12.5, fontWeight: 600, cursor: "pointer",
+                      display: "flex", alignItems: "center", gap: 6
+                    }}
                   >
-                    ⚡ Auto-Detect Active Company
+                    {testingTally ? "Testing..." : "Test Connection"}
+                  </button>
+                  <button
+                    onClick={() => saveMutation.mutate({ tally_url: tallyUrl, tally_company: tallyCompany, active_erp: activeErp })}
+                    disabled={saveMutation.isPending}
+                    style={{
+                      padding: "9px 18px", background: T.primary,
+                      border: "none", borderRadius: 8,
+                      color: "#fff", fontSize: 12.5, fontWeight: 600, cursor: "pointer",
+                      opacity: saveMutation.isPending ? 0.7 : 1
+                    }}
+                  >
+                    {saveMutation.isPending ? "Saving..." : "Save Tally"}
                   </button>
                 </div>
-                <input 
-                  value={tallyCompany} 
-                  onChange={e => {
-                    setTallyCompany(e.target.value);
-                    if (typeof localStorage !== "undefined") {
-                      localStorage.setItem("daynisc_tally_company", e.target.value);
-                    }
-                  }}
-                  placeholder="Auto-detected from Tally (e.g. TCS)" 
-                  style={{
-                    width: "100%", padding: "9px 12px",
-                    border: `1px solid ${T.border}`, borderRadius: 8,
-                    fontSize: 13, color: T.text1, outline: "none",
-                    fontFamily: "'Inter',sans-serif",
-                  }} 
-                />
-              </div>
 
-              <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
-                <button 
-                  onClick={testTallyConnection}
-                  disabled={testingTally}
-                  style={{
-                    padding: "9px 18px", background: "#f8fafc",
-                    border: `1px solid ${T.border}`, borderRadius: 8,
-                    color: T.text2, fontSize: 12.5, fontWeight: 600, cursor: "pointer",
-                    display: "flex", alignItems: "center", gap: 6
-                  }}
-                >
-                  {testingTally ? "Testing..." : "Test Connection"}
-                </button>
-                <button 
-                  onClick={() => saveMutation.mutate({ tally_url: tallyUrl, tally_company: tallyCompany, active_erp: activeErp })}
-                  disabled={saveMutation.isPending}
-                  style={{
-                    padding: "9px 18px", background: T.primary,
-                    border: "none", borderRadius: 8,
-                    color: "#fff", fontSize: 12.5, fontWeight: 600, cursor: "pointer",
-                    opacity: saveMutation.isPending ? 0.7 : 1
-                  }}
-                >
-                  {saveMutation.isPending ? "Saving..." : "Save Tally"}
-                </button>
+                <div style={{ marginTop: 20, padding: "12px 14px", background: "#f0fdf4", borderRadius: 8, border: "1px solid #bbf7d0" }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: "#166534", marginBottom: 4 }}>TallyPrime Setup</div>
+                  <ol style={{ fontSize: 11.5, color: "#15803d", lineHeight: 1.8, paddingLeft: 16, margin: 0 }}>
+                    <li>Open TallyPrime → Press F12 (Configure)</li>
+                    <li>Go to Advanced Configuration → Enable HTTP Server (Port 9000)</li>
+                    <li>Open your company in TallyPrime and test connection</li>
+                  </ol>
+                </div>
               </div>
-
-              <div style={{ marginTop: 20, padding: "12px 14px", background: "#f0fdf4", borderRadius: 8, border: "1px solid #bbf7d0" }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: "#166534", marginBottom: 4 }}>TallyPrime Setup</div>
-                <ol style={{ fontSize: 11.5, color: "#15803d", lineHeight: 1.8, paddingLeft: 16, margin: 0 }}>
-                  <li>Open TallyPrime → Press F12 (Configure)</li>
-                  <li>Go to Advanced Configuration → Enable HTTP Server (Port 9000)</li>
-                  <li>Open your company in TallyPrime and test connection</li>
-                </ol>
-              </div>
-            </div>
             )}
 
             {/* Odoo ERP Integration Card (shown only when Odoo or Both selected) */}
             {(activeErp === "odoo" || activeErp === "both") && (
-            <div style={cardStyle({ padding: 24 })}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                <span style={{ fontSize: 16 }}>🟣</span>
-                <h2 style={{ fontSize: 15, fontWeight: 700, color: T.text1, margin: 0 }}>Odoo ERP Integration</h2>
-              </div>
-              <p style={{ fontSize: 12.5, color: T.text3, marginBottom: 18 }}>Connect to Odoo (v14–v18+, Cloud / SaaS / On-Premise) via XML-RPC</p>
-              
-              <div style={{ marginBottom: 12 }}>
-                <label style={{ fontSize: 12, fontWeight: 600, color: T.text2, display: "block", marginBottom: 5 }}>Odoo Server URL</label>
-                <input 
-                  value={odooUrl} 
-                  onChange={e => setOdooUrl(e.target.value)}
-                  placeholder="http://localhost:8069 or https://mycompany.odoo.com" 
-                  style={{
-                    width: "100%", padding: "9px 12px",
-                    border: `1px solid ${T.border}`, borderRadius: 8,
-                    fontSize: 13, color: T.text1, outline: "none",
-                    fontFamily: "'Inter',sans-serif",
-                  }} 
-                />
-              </div>
+              <div style={cardStyle({ padding: 24 })}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                  <span style={{ fontSize: 16 }}>🟣</span>
+                  <h2 style={{ fontSize: 15, fontWeight: 700, color: T.text1, margin: 0 }}>Odoo ERP Integration</h2>
+                </div>
+                <p style={{ fontSize: 12.5, color: T.text3, marginBottom: 18 }}>Connect to Odoo (v14–v18+, Cloud / SaaS / On-Premise) via XML-RPC</p>
 
-              <div style={{ marginBottom: 12 }}>
-                <label style={{ fontSize: 12, fontWeight: 600, color: T.text2, display: "block", marginBottom: 5 }}>Database Name</label>
-                <input 
-                  value={odooDb} 
-                  onChange={e => setOdooDb(e.target.value)}
-                  placeholder="e.g. odoo, daynisc_db" 
-                  style={{
-                    width: "100%", padding: "9px 12px",
-                    border: `1px solid ${T.border}`, borderRadius: 8,
-                    fontSize: 13, color: T.text1, outline: "none",
-                    fontFamily: "'Inter',sans-serif",
-                  }} 
-                />
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 18 }}>
-                <div>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: T.text2, display: "block", marginBottom: 5 }}>Username / Email</label>
-                  <input 
-                    value={odooUsername} 
-                    onChange={e => setOdooUsername(e.target.value)}
-                    placeholder="admin / user@odoo.com" 
+                <div style={{ marginBottom: 12 }}>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: T.text2, display: "block", marginBottom: 5 }}>Odoo Server URL</label>
+                  <input
+                    value={odooUrl}
+                    onChange={e => setOdooUrl(e.target.value)}
+                    placeholder="http://localhost:8069 or https://mycompany.odoo.com"
                     style={{
                       width: "100%", padding: "9px 12px",
                       border: `1px solid ${T.border}`, borderRadius: 8,
                       fontSize: 13, color: T.text1, outline: "none",
                       fontFamily: "'Inter',sans-serif",
-                    }} 
+                    }}
                   />
                 </div>
-                <div>
-                  <label style={{ fontSize: 12, fontWeight: 600, color: T.text2, display: "block", marginBottom: 5 }}>API Key / Password</label>
-                  <input 
-                    type="password"
-                    value={odooPassword} 
-                    onChange={e => setOdooPassword(e.target.value)}
-                    placeholder="••••••••" 
+
+                <div style={{ marginBottom: 12 }}>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: T.text2, display: "block", marginBottom: 5 }}>Database Name</label>
+                  <input
+                    value={odooDb}
+                    onChange={e => setOdooDb(e.target.value)}
+                    placeholder="e.g. odoo, daynisc_db"
                     style={{
                       width: "100%", padding: "9px 12px",
                       border: `1px solid ${T.border}`, borderRadius: 8,
                       fontSize: 13, color: T.text1, outline: "none",
                       fontFamily: "'Inter',sans-serif",
-                    }} 
+                    }}
                   />
                 </div>
-              </div>
 
-              <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
-                <button 
-                  onClick={testOdooConnection}
-                  disabled={testingOdoo}
-                  style={{
-                    padding: "9px 18px", background: "#f8fafc",
-                    border: `1px solid ${T.border}`, borderRadius: 8,
-                    color: T.text2, fontSize: 12.5, fontWeight: 600, cursor: "pointer",
-                    display: "flex", alignItems: "center", gap: 6
-                  }}
-                >
-                  {testingOdoo ? "Testing..." : "Test Odoo Connection"}
-                </button>
-                <button 
-                  onClick={() => saveMutation.mutate({
-                    odoo_url: odooUrl,
-                    odoo_db: odooDb,
-                    odoo_username: odooUsername,
-                    odoo_password: odooPassword,
-                    active_erp: activeErp,
-                  })}
-                  disabled={saveMutation.isPending}
-                  style={{
-                    padding: "9px 18px", background: "#7c3aed",
-                    border: "none", borderRadius: 8,
-                    color: "#fff", fontSize: 12.5, fontWeight: 600, cursor: "pointer",
-                    opacity: saveMutation.isPending ? 0.7 : 1
-                  }}
-                >
-                  {saveMutation.isPending ? "Saving..." : "Save Odoo"}
-                </button>
-              </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 18 }}>
+                  <div>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: T.text2, display: "block", marginBottom: 5 }}>Username / Email</label>
+                    <input
+                      value={odooUsername}
+                      onChange={e => setOdooUsername(e.target.value)}
+                      placeholder="admin / user@odoo.com"
+                      style={{
+                        width: "100%", padding: "9px 12px",
+                        border: `1px solid ${T.border}`, borderRadius: 8,
+                        fontSize: 13, color: T.text1, outline: "none",
+                        fontFamily: "'Inter',sans-serif",
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: T.text2, display: "block", marginBottom: 5 }}>API Key / Password</label>
+                    <input
+                      type="password"
+                      value={odooPassword}
+                      onChange={e => setOdooPassword(e.target.value)}
+                      placeholder="••••••••"
+                      style={{
+                        width: "100%", padding: "9px 12px",
+                        border: `1px solid ${T.border}`, borderRadius: 8,
+                        fontSize: 13, color: T.text1, outline: "none",
+                        fontFamily: "'Inter',sans-serif",
+                      }}
+                    />
+                  </div>
+                </div>
 
-              <div style={{ marginTop: 20, padding: "12px 14px", background: "#faf5ff", borderRadius: 8, border: "1px solid #e9d5ff" }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: "#6b21a8", marginBottom: 4 }}>Odoo API Key Setup</div>
-                <ol style={{ fontSize: 11.5, color: "#7e22ce", lineHeight: 1.8, paddingLeft: 16, margin: 0 }}>
-                  <li>Log in to Odoo → Click user avatar top right → <b>Preferences / My Profile</b></li>
-                  <li>Go to <b>Account Security</b> tab → Click <b>New API Key</b></li>
-                  <li>Copy the generated API Key and paste it into the Password field above</li>
-                </ol>
+                <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+                  <button
+                    onClick={testOdooConnection}
+                    disabled={testingOdoo}
+                    style={{
+                      padding: "9px 18px", background: "#f8fafc",
+                      border: `1px solid ${T.border}`, borderRadius: 8,
+                      color: T.text2, fontSize: 12.5, fontWeight: 600, cursor: "pointer",
+                      display: "flex", alignItems: "center", gap: 6
+                    }}
+                  >
+                    {testingOdoo ? "Testing..." : "Test Odoo Connection"}
+                  </button>
+                  <button
+                    onClick={() => saveMutation.mutate({
+                      odoo_url: odooUrl,
+                      odoo_db: odooDb,
+                      odoo_username: odooUsername,
+                      odoo_password: odooPassword,
+                      active_erp: activeErp,
+                    })}
+                    disabled={saveMutation.isPending}
+                    style={{
+                      padding: "9px 18px", background: "#7c3aed",
+                      border: "none", borderRadius: 8,
+                      color: "#fff", fontSize: 12.5, fontWeight: 600, cursor: "pointer",
+                      opacity: saveMutation.isPending ? 0.7 : 1
+                    }}
+                  >
+                    {saveMutation.isPending ? "Saving..." : "Save Odoo"}
+                  </button>
+                </div>
+
+                <div style={{ marginTop: 20, padding: "12px 14px", background: "#faf5ff", borderRadius: 8, border: "1px solid #e9d5ff" }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: "#6b21a8", marginBottom: 4 }}>Odoo API Key Setup</div>
+                  <ol style={{ fontSize: 11.5, color: "#7e22ce", lineHeight: 1.8, paddingLeft: 16, margin: 0 }}>
+                    <li>Log in to Odoo → Click user avatar top right → <b>Preferences / My Profile</b></li>
+                    <li>Go to <b>Account Security</b> tab → Click <b>New API Key</b></li>
+                    <li>Copy the generated API Key and paste it into the Password field above</li>
+                  </ol>
+                </div>
               </div>
-            </div>
             )}
           </div>
         </div>

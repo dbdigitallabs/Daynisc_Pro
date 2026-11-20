@@ -78,28 +78,46 @@ export default function ERPSyncPage() {
   // Config State (stored PC-wise via localStorage)
   const [tallyUrl, setTallyUrl] = useState(() => (typeof localStorage !== "undefined" && localStorage.getItem("daynisc_tally_url")) || "http://localhost:9000");
   const [tallyCompany, setTallyCompany] = useState<string>(() => (typeof localStorage !== "undefined" && localStorage.getItem("daynisc_tally_company")) || "");
-  const [odooUrl, setOdooUrl] = useState("http://localhost:8069");
-  const [odooDb, setOdooDb] = useState("");
-  const [odooUsername, setOdooUsername] = useState("");
-  const [odooPassword, setOdooPassword] = useState("");
+  const [odooUrl, setOdooUrl] = useState(() => (typeof localStorage !== "undefined" && localStorage.getItem("daynisc_odoo_url")) || "http://localhost:8069");
+  const [odooDb, setOdooDb] = useState(() => (typeof localStorage !== "undefined" && localStorage.getItem("daynisc_odoo_db")) || "");
+  const [odooUsername, setOdooUsername] = useState(() => (typeof localStorage !== "undefined" && localStorage.getItem("daynisc_odoo_username")) || "");
+  const [odooPassword, setOdooPassword] = useState(() => (typeof localStorage !== "undefined" && localStorage.getItem("daynisc_odoo_password")) || "");
   const [savingSettings, setSavingSettings] = useState(false);
   const [showConfig, setShowConfig] = useState(false);
   const [configTab, setConfigTab] = useState<"tally" | "odoo">("tally");
 
   const { data: pendingData, isLoading: pendingLoading, refetch: refetchPending } = useQuery({
-    queryKey: ["tally-pending"],
+    queryKey: ["erp-pending", activeErp],
     queryFn: () =>
       api
-        .get("/accounting/vouchers", { params: { tally_synced: false, limit: 200 } })
+        .get("/accounting/vouchers", {
+          params: {
+            ...(activeErp === "odoo"
+              ? { odoo_synced: false }
+              : activeErp === "tally"
+              ? { tally_synced: false }
+              : {}),
+            limit: 200,
+          },
+        })
         .then((r) => r.data)
         .catch(() => ({ items: [] })),
   });
 
   const { data: historyData, isLoading: historyLoading } = useQuery({
-    queryKey: ["tally-history"],
+    queryKey: ["erp-history", activeErp],
     queryFn: () =>
       api
-        .get("/accounting/vouchers", { params: { tally_synced: true, limit: 100 } })
+        .get("/accounting/vouchers", {
+          params: {
+            ...(activeErp === "odoo"
+              ? { odoo_synced: true }
+              : activeErp === "tally"
+              ? { tally_synced: true }
+              : {}),
+            limit: 100,
+          },
+        })
         .then((r) => r.data)
         .catch(() => ({ items: [] })),
     enabled: activeTab === "history",
@@ -108,20 +126,26 @@ export default function ERPSyncPage() {
   const rawPending: SyncVoucher[] = pendingData?.items || [];
   const rawHistory: SyncVoucher[] = historyData?.items || [];
 
-  // Filtered pending vouchers
+  // Filtered pending vouchers based on active ERP selection
   const pendingVouchers = rawPending.filter((v) => {
     const matchesSearch =
       (v.voucher_number || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
       (v.party_name || "").toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = typeFilter === "all" || v.voucher_type === typeFilter;
     const matchesErp =
-      activeErpFilter === "all" ||
-      (activeErpFilter === "tally" && !v.tally_synced) ||
-      (activeErpFilter === "odoo" && !v.odoo_synced);
+      activeErp === "odoo"
+        ? !v.odoo_synced
+        : activeErp === "tally"
+        ? !v.tally_synced
+        : activeErpFilter === "all"
+        ? (!v.tally_synced || !v.odoo_synced)
+        : activeErpFilter === "tally"
+        ? !v.tally_synced
+        : !v.odoo_synced;
     return matchesSearch && matchesType && matchesErp;
   });
 
-  const totalPendingValue = rawPending.reduce((s, v) => s + Number(v.total || 0), 0);
+  const totalPendingValue = pendingVouchers.reduce((s, v) => s + Number(v.total || 0), 0);
 
   async function testConnection() {
     setTestingConn(true);
@@ -199,6 +223,8 @@ export default function ERPSyncPage() {
         localStorage.setItem("daynisc_tally_url", tallyUrl);
         localStorage.setItem("daynisc_odoo_url", odooUrl);
         localStorage.setItem("daynisc_odoo_db", odooDb);
+        localStorage.setItem("daynisc_odoo_username", odooUsername);
+        localStorage.setItem("daynisc_odoo_password", odooPassword);
       }
       await api.patch("/settings/company", {
         tally_url: tallyUrl,
@@ -249,7 +275,8 @@ export default function ERPSyncPage() {
       await api.post(`/erp/sync/voucher/${id}`);
       toast.success(`Voucher ${voucherNum} synced to TallyPrime!`);
       await refetchPending();
-      qc.invalidateQueries({ queryKey: ["tally-history"] });
+      qc.invalidateQueries({ queryKey: ["erp-history"] });
+      qc.invalidateQueries({ queryKey: ["erp-pending"] });
     } catch (e: any) {
       const errMsg = e.response?.data?.detail || e.message || "Sync failed";
       toast.error(`Sync error: ${errMsg}`);
@@ -265,7 +292,8 @@ export default function ERPSyncPage() {
       const res = await api.post(`/erp/sync/odoo/${id}`);
       toast.success(`Voucher ${voucherNum} synced to Odoo (${res.data?.odoo_response?.odoo_ref || "Success"})!`);
       await refetchPending();
-      qc.invalidateQueries({ queryKey: ["tally-history"] });
+      qc.invalidateQueries({ queryKey: ["erp-history"] });
+      qc.invalidateQueries({ queryKey: ["erp-pending"] });
     } catch (e: any) {
       const errMsg = e.response?.data?.detail || e.message || "Odoo sync failed";
       toast.error(`Odoo sync error: ${errMsg}`);
@@ -288,7 +316,8 @@ export default function ERPSyncPage() {
         toast.error(`${res.data.failed} vouchers failed to sync.`);
       }
       await refetchPending();
-      qc.invalidateQueries({ queryKey: ["tally-history"] });
+      qc.invalidateQueries({ queryKey: ["erp-history"] });
+      qc.invalidateQueries({ queryKey: ["erp-pending"] });
     } catch (e: any) {
       const errMsg = e.response?.data?.detail || e.message || "Bulk sync failed";
       toast.error(`Bulk sync failed: ${errMsg}`);
@@ -309,7 +338,8 @@ export default function ERPSyncPage() {
         toast.error(`${res.data.failed} vouchers failed to sync to Odoo.`);
       }
       await refetchPending();
-      qc.invalidateQueries({ queryKey: ["tally-history"] });
+      qc.invalidateQueries({ queryKey: ["erp-history"] });
+      qc.invalidateQueries({ queryKey: ["erp-pending"] });
     } catch (e: any) {
       const errMsg = e.response?.data?.detail || e.message || "Odoo bulk sync failed";
       toast.error(`Odoo bulk sync failed: ${errMsg}`);
@@ -1023,9 +1053,9 @@ export default function ERPSyncPage() {
         {[
           {
             label: "Pending to Sync",
-            value: String(rawPending.length),
-            color: rawPending.length > 0 ? T.amber : T.green,
-            subtitle: "Verified entries awaiting push",
+            value: String(pendingVouchers.length),
+            color: pendingVouchers.length > 0 ? T.amber : T.green,
+            subtitle: activeErp === "odoo" ? "Verified entries awaiting push to Odoo" : activeErp === "both" ? "Awaiting Tally / Odoo push" : "Verified entries awaiting push",
           },
           {
             label: "Pending Amount",
@@ -1037,11 +1067,19 @@ export default function ERPSyncPage() {
             label: "Successfully Synced",
             value: String(rawHistory.length),
             color: T.green,
-            subtitle: "Imported into TallyPrime",
+            subtitle: activeErp === "odoo" ? "Imported into Odoo ERP" : activeErp === "both" ? "Imported into ERP" : "Imported into TallyPrime",
           },
           {
             label: "Sync Errors",
-            value: String(rawPending.filter((v) => v.tally_error).length),
+            value: String(
+              rawPending.filter((v) =>
+                activeErp === "odoo"
+                  ? v.odoo_error
+                  : activeErp === "tally"
+                  ? v.tally_error
+                  : v.tally_error || v.odoo_error
+              ).length
+            ),
             color: T.red,
             subtitle: "Need connection or retry",
           },
@@ -1371,7 +1409,10 @@ export default function ERPSyncPage() {
                       <td style={{ ...tdStyle, color: T.text1 }}>{v.party_name || "—"}</td>
                       <td style={{ ...tdStyle, fontWeight: 700, color: T.green }}>{inr(v.total)}</td>
                       <td style={tdStyle}>
-                        <SyncBadge synced={true} />
+                        <SyncBadge
+                          synced={activeErp === "odoo" ? Boolean(v.odoo_synced || true) : v.tally_synced}
+                          label={activeErp === "odoo" ? "Odoo" : "Tally"}
+                        />
                       </td>
                     </tr>
                   );

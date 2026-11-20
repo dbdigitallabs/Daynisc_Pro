@@ -654,12 +654,14 @@ async def get_production_order(order_id: str):
 # ── Accounting ────────────────────────────────────────────────────────────────
 
 @app.get("/api/v1/accounting/vouchers")
-async def list_vouchers(voucher_type: Optional[str] = None, tally_synced: Optional[bool] = None, limit: int = 2000):
+async def list_vouchers(voucher_type: Optional[str] = None, tally_synced: Optional[bool] = None, odoo_synced: Optional[bool] = None, limit: int = 2000):
     items = SEED_VOUCHERS
     if voucher_type:
         items = [v for v in items if v["voucher_type"] == voucher_type]
     if tally_synced is not None:
         items = [v for v in items if bool(v.get("tally_synced")) == tally_synced]
+    if odoo_synced is not None:
+        items = [v for v in items if bool(v.get("odoo_synced")) == odoo_synced]
     return {"items": items[:limit], "total": len(items)}
 
 @app.get("/api/v1/accounting/outstanding")
@@ -1738,6 +1740,7 @@ async def verify_document(doc_id: str, payload: dict):
                 "voucher_type": vtype,
                 "voucher_date": extracted_data.get("invoice_date") or datetime.now().strftime("%Y-%m-%d"),
                 "party_name": extracted_data.get("party_name") or "Unknown Party",
+                "party_gstin": extracted_data.get("party_gstin") or extracted_data.get("gstin") or "",
                 "subtotal": round(total / 1.18, 2),
                 "total_cgst": round(total * 0.09 / 1.18, 2),
                 "total_sgst": round(total * 0.09 / 1.18, 2),
@@ -1745,61 +1748,98 @@ async def verify_document(doc_id: str, payload: dict):
                 "total": total,
                 "line_items": line_items,
                 "tally_synced": False,
+                "odoo_synced": False,
                 "is_cancelled": False,
                 "narration": f"AI-extracted from {doc_type} {extracted_data.get('invoice_number', '')}".strip(),
             }
             SEED_VOUCHERS.insert(0, new_vch)
 
-            # Auto-sync to TallyPrime if connection is active
+            active_erp = (SAVED_COMPANY_SETTINGS.get("active_erp") or "tally").lower()
+
+            # Auto-sync to TallyPrime if active and online
             tally_synced = False
             tally_message = None
-            try:
-                from tally_connector import TallyConnector
-                t_url = SAVED_COMPANY_SETTINGS.get("tally_url") or "http://localhost:9000"
-                t_comp = SAVED_COMPANY_SETTINGS.get("tally_company") or "DB Digital Labs"
-                tc = TallyConnector(tally_url=t_url, company_name=t_comp)
-                conn = await tc.test_connection()
-                if conn.get("connected"):
-                    sync_payload = {
-                        "voucher_date": str(new_vch["voucher_date"]),
-                        "reference_number": new_vch["voucher_number"],
-                        "party_name": new_vch["party_name"],
-                        "narration": new_vch["narration"],
-                        "total": float(new_vch["total"]),
-                        "amount": float(new_vch["total"]),
-                        "line_items": new_vch["line_items"],
-                    }
-                    if vtype == "purchase":
-                        t_res = await tc.push_purchase_voucher(sync_payload)
-                    elif vtype == "sales":
-                        t_res = await tc.push_sales_voucher(sync_payload)
-                    elif vtype == "payment":
-                        t_res = await tc.push_payment_voucher(sync_payload)
-                    elif vtype == "receipt":
-                        t_res = await tc.push_receipt_voucher(sync_payload)
-                    else:
-                        t_res = None
+            if active_erp in ("tally", "both"):
+                try:
+                    from tally_connector import TallyConnector
+                    t_url = SAVED_COMPANY_SETTINGS.get("tally_url") or "http://localhost:9000"
+                    t_comp = SAVED_COMPANY_SETTINGS.get("tally_company") or "DB Digital Labs"
+                    tc = TallyConnector(tally_url=t_url, company_name=t_comp)
+                    conn = await tc.test_connection()
+                    if conn.get("connected"):
+                        sync_payload = {
+                            "voucher_date": str(new_vch["voucher_date"]),
+                            "reference_number": new_vch["voucher_number"],
+                            "party_name": new_vch["party_name"],
+                            "narration": new_vch["narration"],
+                            "total": float(new_vch["total"]),
+                            "amount": float(new_vch["total"]),
+                            "line_items": new_vch["line_items"],
+                        }
+                        if vtype == "purchase":
+                            t_res = await tc.push_purchase_voucher(sync_payload)
+                        elif vtype == "sales":
+                            t_res = await tc.push_sales_voucher(sync_payload)
+                        elif vtype == "payment":
+                            t_res = await tc.push_payment_voucher(sync_payload)
+                        elif vtype == "receipt":
+                            t_res = await tc.push_receipt_voucher(sync_payload)
+                        else:
+                            t_res = None
 
-                    if t_res and t_res.get("success"):
-                        new_vch["tally_synced"] = True
-                        new_vch["tally_error"] = None
-                        tally_synced = True
-                        tally_message = f"Voucher {new_vch['voucher_number']} successfully pushed to TallyPrime!"
+                        if t_res and t_res.get("success"):
+                            new_vch["tally_synced"] = True
+                            new_vch["tally_error"] = None
+                            tally_synced = True
+                            tally_message = f"Voucher {new_vch['voucher_number']} successfully pushed to TallyPrime!"
+                        else:
+                            err = t_res.get("error") if t_res else "Tally push failed"
+                            new_vch["tally_synced"] = False
+                            new_vch["tally_error"] = err
+                            tally_message = f"Approved, but Tally sync warning: {err}"
                     else:
-                        err = t_res.get("error") if t_res else "Tally push failed"
-                        new_vch["tally_synced"] = False
-                        new_vch["tally_error"] = err
-                        tally_message = f"Approved, but Tally sync warning: {err}"
-                else:
-                    tally_message = "Approved! Tally server offline; queued for sync."
-            except Exception as e:
-                new_vch["tally_synced"] = False
-                new_vch["tally_error"] = str(e)
-                tally_message = f"Approved! Tally sync failed: {str(e)}"
+                        tally_message = "Approved! Tally server offline; queued for sync."
+                except Exception as e:
+                    new_vch["tally_synced"] = False
+                    new_vch["tally_error"] = str(e)
+                    tally_message = f"Approved! Tally sync failed: {str(e)}"
+
+            # Auto-sync to Odoo ERP if active and configured
+            odoo_synced = False
+            odoo_message = None
+            if active_erp in ("odoo", "both"):
+                try:
+                    from odoo_connector import OdooConnector
+                    o_url = SAVED_COMPANY_SETTINGS.get("odoo_url") or "http://localhost:8069"
+                    o_db = SAVED_COMPANY_SETTINGS.get("odoo_db") or ""
+                    o_user = SAVED_COMPANY_SETTINGS.get("odoo_username") or ""
+                    o_pass = SAVED_COMPANY_SETTINGS.get("odoo_password") or ""
+                    if o_db and o_user and o_pass:
+                        oc = OdooConnector(url=o_url, db=o_db, username=o_user, password=o_pass)
+                        o_conn = oc.test_connection()
+                        if o_conn.get("connected") and o_conn.get("authenticated"):
+                            o_res = oc.sync_voucher(new_vch, vtype)
+                            if o_res and o_res.get("success"):
+                                new_vch["odoo_synced"] = True
+                                new_vch["odoo_ref"] = o_res.get("odoo_ref")
+                                new_vch["odoo_error"] = None
+                                odoo_synced = True
+                                odoo_message = f"Voucher {new_vch['voucher_number']} successfully pushed to Odoo ({o_res.get('odoo_ref')})!"
+                            else:
+                                new_vch["odoo_synced"] = False
+                                new_vch["odoo_error"] = o_res.get("error", "Odoo push failed")
+                        else:
+                            odoo_message = "Approved! Odoo offline or credentials needed; queued for sync."
+                except Exception as e:
+                    new_vch["odoo_synced"] = False
+                    new_vch["odoo_error"] = str(e)
+                    odoo_message = f"Approved! Odoo sync warning: {str(e)}"
     else:
         doc_found["status"] = "failed"
         tally_synced = False
         tally_message = None
+        odoo_synced = False
+        odoo_message = None
 
     return {
         "success": True,
@@ -1807,6 +1847,8 @@ async def verify_document(doc_id: str, payload: dict):
         "voucher_id": new_vch.get("id") if approve and 'new_vch' in locals() else str(uuid.uuid4()) if approve else None,
         "tally_synced": tally_synced,
         "tally_message": tally_message,
+        "odoo_synced": odoo_synced,
+        "odoo_message": odoo_message,
     }
 
 # ── Tally ─────────────────────────────────────────────────────────────────────

@@ -1,7 +1,7 @@
 # Daynisc Pro — Complete Tech Stack & Architectural Master Document
 
 > **Platform:** Daynisc Pro (Enterprise AI-Powered ERP & Tally Automation)  
-> **Repository:** [https://github.com/bhaveshkhimsuriya023-stack/Daynisc](https://github.com/bhaveshkhimsuriya023-stack/Daynisc)  
+> **Repository:** [https://github.com/dbdigitallabs/Daynisc_Pro](https://github.com/dbdigitallabs/Daynisc_Pro)  
 > **Live Web Application:** [https://webdashboard-dun.vercel.app](https://webdashboard-dun.vercel.app)  
 > **Database Provider:** Supabase Cloud PostgreSQL (AWS Mumbai `ap-south-1`)  
 

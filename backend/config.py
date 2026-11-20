@@ -76,9 +76,15 @@ class Settings(BaseSettings):
     AI_CONFIDENCE_THRESHOLD: float = 0.85  # Auto-approve above this
     OCR_FALLBACK: str = "tesseract"
 
-    # ── Tally ─────────────────────────────────────────────────────────────────
+    # ── Tally & Odoo ERP ──────────────────────────────────────────────────────
+    ACTIVE_ERP: str = "tally"  # "tally" | "odoo" | "both"
     TALLY_DEFAULT_URL: str = "http://localhost:9000"
     TALLY_TIMEOUT: int = 30
+    ODOO_URL: str = "http://localhost:8069"
+    ODOO_DB: str = ""
+    ODOO_USERNAME: str = ""
+    ODOO_PASSWORD: str = ""
+    ODOO_TIMEOUT: int = 15
 
     # ── GST Portal ────────────────────────────────────────────────────────────
     GST_CLIENT_ID: str = ""

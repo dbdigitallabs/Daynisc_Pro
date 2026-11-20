@@ -96,6 +96,26 @@ async def _mark_synced(db: AsyncSession, voucher_id: str, error: str | None = No
         await db.rollback()
 
 
+async def _mark_odoo_synced(db: AsyncSession, voucher_id: str, odoo_ref: str | None = None, error: str | None = None):
+    try:
+        if error:
+            await db.execute(text("""
+                UPDATE accounting_vouchers
+                SET narration = CONCAT(COALESCE(narration,''), ' [ODOO ERROR: ', :err, ']')
+                WHERE id = :id
+            """), {"id": voucher_id, "err": error[:200]})
+        else:
+            ref_tag = f" [ODOO SYNCED: {odoo_ref}]" if odoo_ref else " [ODOO SYNCED]"
+            await db.execute(text("""
+                UPDATE accounting_vouchers
+                SET narration = CONCAT(COALESCE(narration,''), :tag)
+                WHERE id = :id
+            """), {"id": voucher_id, "tag": ref_tag})
+        await db.commit()
+    except Exception:
+        await db.rollback()
+
+
 # ── Connection Test ───────────────────────────────────────────────────────────
 
 @router.get("/connection/test/tally")
@@ -340,8 +360,89 @@ async def sync_voucher_to_odoo(
 
     try:
         res = connector.sync_voucher(payload, voucher.get("voucher_type"))
-        await _mark_synced(db, voucher_id)
-        return {"success": True, "odoo_response": res}
+        await _mark_odoo_synced(db, voucher_id, odoo_ref=res.get("odoo_ref"))
+        return {
+            "success": True,
+            "odoo_response": res,
+            "message": f"Voucher {voucher.get('voucher_number')} synced to Odoo ({res.get('odoo_ref')})!"
+        }
     except Exception as e:
-        await _mark_synced(db, voucher_id, error=str(e))
+        await _mark_odoo_synced(db, voucher_id, error=str(e))
         raise HTTPException(status_code=502, detail=f"Odoo sync failed: {str(e)}")
+
+
+@router.post("/sync/odoo/bulk")
+async def bulk_sync_to_odoo(
+    db: AsyncSession = Depends(get_db),
+    user: CurrentUser = Depends(get_current_user),
+):
+    """Push pending accounting vouchers to Odoo ERP."""
+    await _set_schema(db, user.db_schema)
+
+    pending = await _rows(db, """
+        SELECT id, voucher_type FROM accounting_vouchers
+        WHERE NOT is_cancelled
+          AND (narration IS NULL OR narration NOT LIKE '%[ODOO SYNCED%')
+          AND created_at >= NOW() - INTERVAL '30 days'
+        ORDER BY voucher_date ASC
+        LIMIT 100
+    """)
+
+    synced = 0
+    failed = 0
+    errors = []
+
+    url = getattr(settings, "ODOO_URL", "http://localhost:8069")
+    odoo_db = getattr(settings, "ODOO_DB", "")
+    username = getattr(settings, "ODOO_USERNAME", "")
+    password = getattr(settings, "ODOO_PASSWORD", "")
+
+    connector = OdooConnector(url=url, db=odoo_db, username=username, password=password)
+    conn = connector.test_connection()
+    if not conn.get("connected") or not conn.get("authenticated"):
+        raise HTTPException(status_code=502, detail="Cannot connect to Odoo. Check credentials in Settings.")
+
+    for row in pending:
+        voucher_id = row["id"]
+        try:
+            voucher = await _get_voucher(db, voucher_id, user.db_schema)
+            if not voucher:
+                failed += 1
+                continue
+
+            line_items = await _get_line_items(db, voucher_id)
+            payload = {
+                "voucher_number": voucher.get("voucher_number", ""),
+                "reference_number": voucher.get("reference_number") or voucher.get("voucher_number", ""),
+                "voucher_date": str(voucher.get("voucher_date", "")),
+                "party_name": voucher.get("party_name", "Valued Partner"),
+                "party_gstin": voucher.get("party_gstin", ""),
+                "narration": voucher.get("narration", ""),
+                "total": float(voucher.get("total") or 0),
+                "subtotal": float(voucher.get("subtotal") or voucher.get("total") or 0),
+                "line_items": [
+                    {
+                        "name": item.get("item_name") or item.get("name") or "General Item",
+                        "quantity": float(item.get("qty") or item.get("quantity") or 1.0),
+                        "rate": float(item.get("rate") or 0),
+                    }
+                    for item in line_items
+                ],
+            }
+
+            res = connector.sync_voucher(payload, voucher.get("voucher_type"))
+            await _mark_odoo_synced(db, voucher_id, odoo_ref=res.get("odoo_ref"))
+            synced += 1
+        except Exception as e:
+            await _mark_odoo_synced(db, voucher_id, error=str(e))
+            failed += 1
+            errors.append({"id": voucher_id, "error": str(e)[:200]})
+
+    return {
+        "success": True,
+        "synced": synced,
+        "failed": failed,
+        "total": len(pending),
+        "errors": errors[:5],
+        "message": f"Odoo sync completed. Synced: {synced}, Failed: {failed}",
+    }

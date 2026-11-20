@@ -6,11 +6,14 @@ Supports:
 - Partner (Vendor / Customer) search & auto-creation with GSTIN
 - Purchase Bill (in_invoice) creation & auto-posting
 - Sales Invoice (out_invoice) creation & auto-posting
-- Payments & Receipts (account.payment)
+- Payments & Receipts (account.payment) with automatic Journal selection
+- Automatic default Expense/Income account detection
+- Comprehensive SSL tolerance for local self-signed setups and cloud Odoo
 """
 from __future__ import annotations
 import socket
 import logging
+import ssl
 import xmlrpc.client
 from datetime import date, datetime
 from typing import Any
@@ -20,7 +23,7 @@ logger = logging.getLogger("odoo_connector")
 
 
 class TimeoutTransport(xmlrpc.client.Transport):
-    def __init__(self, timeout: float = 8.0, use_datetime: bool = False):
+    def __init__(self, timeout: float = 12.0, use_datetime: bool = False):
         super().__init__(use_datetime=use_datetime)
         self.timeout = timeout
 
@@ -31,8 +34,13 @@ class TimeoutTransport(xmlrpc.client.Transport):
 
 
 class SafeTimeoutTransport(xmlrpc.client.SafeTransport):
-    def __init__(self, timeout: float = 8.0, use_datetime: bool = False):
-        super().__init__(use_datetime=use_datetime)
+    def __init__(self, timeout: float = 12.0, use_datetime: bool = False, context: ssl.SSLContext | None = None):
+        if context is None:
+            # Tolerant SSL context to support LAN/local self-signed certificates without blocking
+            context = ssl.create_default_context()
+            context.check_hostname = False
+            context.verify_mode = ssl.CERT_NONE
+        super().__init__(use_datetime=use_datetime, context=context)
         self.timeout = timeout
 
     def make_connection(self, host):
@@ -58,7 +66,7 @@ class OdooConnector:
         db: str = "",
         username: str = "",
         password: str = "",
-        timeout: float = 6.0
+        timeout: float = 10.0
     ):
         clean_url = (url or "http://localhost:8069").rstrip("/")
         if not clean_url.startswith("http://") and not clean_url.startswith("https://"):
@@ -115,7 +123,6 @@ class OdooConnector:
 
             if self.db and self.username and self.password:
                 uid = self.authenticate()
-                # Get company name
                 company_name = self.get_company_name()
                 return {
                     "connected": True,
@@ -135,19 +142,33 @@ class OdooConnector:
         except Exception as e:
             return {
                 "connected": False,
+                "authenticated": False,
                 "error": str(e),
                 "message": f"Failed to connect to Odoo: {str(e)}"
             }
 
     def execute(self, model: str, method: str, *args, **kwargs) -> Any:
-        """Executes an operation via /xmlrpc/2/object."""
+        """
+        Executes an operation via /xmlrpc/2/object.
+        Handles both positional kwargs dict and keyword arguments transparently.
+        """
         uid = self.authenticate()
         try:
             models = self._get_object_proxy()
-            return models.execute_kw(self.db, uid, self.password, model, method, list(args), kwargs)
+
+            call_args = list(args)
+            call_kwargs = dict(kwargs)
+
+            # If caller passed a dict as the last positional argument, treat it as kwargs struct
+            if call_args and isinstance(call_args[-1], dict) and not call_kwargs:
+                call_kwargs = call_args.pop()
+
+            return models.execute_kw(self.db, uid, self.password, model, method, call_args, call_kwargs)
         except xmlrpc.client.Fault as fault:
+            logger.error(f"Odoo Fault [{model}.{method}]: {fault.faultString}")
             raise OdooError(f"Odoo Error [{model}.{method}]: {fault.faultString}")
         except Exception as e:
+            logger.error(f"Odoo Error [{model}.{method}]: {str(e)}")
             raise OdooError(f"Odoo operation failed: {str(e)}")
 
     def get_company_name(self) -> str:
@@ -159,6 +180,97 @@ class OdooConnector:
         except Exception:
             pass
         return "Odoo Company"
+
+    def get_default_journal(self, journal_type: str = "bank") -> int | None:
+        """Find default journal for bank/cash payments or purchase/sale invoices."""
+        try:
+            types = [journal_type]
+            if journal_type in ("bank", "cash"):
+                types = [journal_type, "bank", "cash"]
+            journals = self.execute(
+                "account.journal",
+                "search_read",
+                [[("type", "in", types)]],
+                {"fields": ["id", "name", "type"], "limit": 1}
+            )
+            if journals and len(journals) > 0:
+                jid = journals[0]["id"]
+                return int(jid[0] if isinstance(jid, (list, tuple)) else jid)
+        except Exception:
+            pass
+        return None
+
+    def get_default_expense_account(self) -> int | None:
+        """Find default expense account for vendor bill lines."""
+        try:
+            # 1. Standard modern Odoo (v15 - v18+) account_type
+            accounts = self.execute(
+                "account.account",
+                "search_read",
+                [[("account_type", "in", ["expense", "expense_direct", "expense_depreciation"])]],
+                {"fields": ["id", "name", "code"], "limit": 1}
+            )
+            if accounts and len(accounts) > 0:
+                aid = accounts[0]["id"]
+                return int(aid[0] if isinstance(aid, (list, tuple)) else aid)
+
+            # 2. Legacy Odoo (v14) internal_group
+            accounts = self.execute(
+                "account.account",
+                "search_read",
+                [[("internal_group", "=", "expense")]],
+                {"fields": ["id", "name", "code"], "limit": 1}
+            )
+            if accounts and len(accounts) > 0:
+                aid = accounts[0]["id"]
+                return int(aid[0] if isinstance(aid, (list, tuple)) else aid)
+        except Exception:
+            pass
+        return None
+
+    def get_default_income_account(self) -> int | None:
+        """Find default income account for customer invoice lines."""
+        try:
+            # 1. Standard modern Odoo (v15 - v18+) account_type
+            accounts = self.execute(
+                "account.account",
+                "search_read",
+                [[("account_type", "in", ["income", "income_other"])]],
+                {"fields": ["id", "name", "code"], "limit": 1}
+            )
+            if accounts and len(accounts) > 0:
+                aid = accounts[0]["id"]
+                return int(aid[0] if isinstance(aid, (list, tuple)) else aid)
+
+            # 2. Legacy Odoo (v14) internal_group
+            accounts = self.execute(
+                "account.account",
+                "search_read",
+                [[("internal_group", "=", "income")]],
+                {"fields": ["id", "name", "code"], "limit": 1}
+            )
+            if accounts and len(accounts) > 0:
+                aid = accounts[0]["id"]
+                return int(aid[0] if isinstance(aid, (list, tuple)) else aid)
+        except Exception:
+            pass
+        return None
+
+    def get_country_id(self, code: str = "IN") -> int | None:
+        """Get country ID by 2-letter ISO code."""
+        try:
+            countries = self.execute(
+                "res.country",
+                "search_read",
+                [[("code", "=", code.upper())]],
+                {"fields": ["id"], "limit": 1}
+            )
+            if countries and len(countries) > 0:
+                cid = countries[0]["id"]
+                return int(cid[0] if isinstance(cid, (list, tuple)) else cid)
+        except Exception:
+            pass
+        return None
 
     def get_or_create_partner(
         self,
@@ -177,25 +289,33 @@ class OdooConnector:
 
         # 1. Search by GSTIN / vat if provided
         if clean_gstin:
-            partners = self.execute(
-                "res.partner",
-                "search_read",
-                [[["vat", "=", clean_gstin]]],
-                {"fields": ["id", "name", "vat"], "limit": 1}
-            )
-            if partners:
-                return partners[0]["id"]
+            try:
+                partners = self.execute(
+                    "res.partner",
+                    "search_read",
+                    [[("vat", "=", clean_gstin)]],
+                    {"fields": ["id", "name", "vat"], "limit": 1}
+                )
+                if partners and len(partners) > 0:
+                    pid = partners[0]["id"]
+                    return int(pid[0] if isinstance(pid, (list, tuple)) else pid)
+            except Exception as e:
+                logger.warning(f"Odoo partner search by vat failed: {e}")
 
         # 2. Search by Name
         if clean_name:
-            partners = self.execute(
-                "res.partner",
-                "search_read",
-                [[["name", "=ilike", clean_name]]],
-                {"fields": ["id", "name"], "limit": 1}
-            )
-            if partners:
-                return partners[0]["id"]
+            try:
+                partners = self.execute(
+                    "res.partner",
+                    "search_read",
+                    [[("name", "=ilike", clean_name)]],
+                    {"fields": ["id", "name"], "limit": 1}
+                )
+                if partners and len(partners) > 0:
+                    pid = partners[0]["id"]
+                    return int(pid[0] if isinstance(pid, (list, tuple)) else pid)
+            except Exception as e:
+                logger.warning(f"Odoo partner search by name failed: {e}")
 
         # 3. Create Partner
         partner_vals = {
@@ -204,14 +324,31 @@ class OdooConnector:
         }
         if clean_gstin:
             partner_vals["vat"] = clean_gstin
+            if len(clean_gstin) == 15:
+                cid = self.get_country_id("IN")
+                if cid:
+                    partner_vals["country_id"] = cid
         if phone:
             partner_vals["phone"] = phone
         if email:
             partner_vals["email"] = email
 
-        partner_id = self.execute("res.partner", "create", [partner_vals])
-        logger.info(f"Created new Odoo partner: {clean_name} (ID: {partner_id})")
-        return partner_id
+        try:
+            partner_id = self.execute("res.partner", "create", [partner_vals])
+            if isinstance(partner_id, (list, tuple)):
+                partner_id = partner_id[0]
+            if isinstance(partner_id, dict):
+                partner_id = partner_id.get("id")
+            logger.info(f"Created new Odoo partner: {clean_name} (ID: {partner_id})")
+            return int(partner_id)
+        except Exception as e:
+            # Fallback with minimal required fields
+            logger.warning(f"Odoo create partner with full fields failed ({e}), retrying with minimal fields")
+            minimal_vals = {"name": clean_name or "Valued Partner", "is_company": True}
+            partner_id = self.execute("res.partner", "create", [minimal_vals])
+            if isinstance(partner_id, (list, tuple)):
+                partner_id = partner_id[0]
+            return int(partner_id)
 
     def _format_date(self, d: Any) -> str:
         """Ensure date is formatted as YYYY-MM-DD for Odoo."""
@@ -244,51 +381,99 @@ class OdooConnector:
         ref_no = voucher.get("reference_number") or voucher.get("voucher_number") or ""
         line_items = voucher.get("line_items") or []
 
+        # Find default expense account to prevent "Account is required on invoice line" error
+        default_account_id = self.get_default_expense_account()
+
         invoice_line_ids = []
         if line_items:
             for item in line_items:
                 item_name = item.get("name") or item.get("item_name") or item.get("description") or "Item / Service"
                 qty = float(item.get("qty") or item.get("quantity") or 1.0)
                 rate = float(item.get("rate") or item.get("price_unit") or item.get("amount") or 0.0)
-                invoice_line_ids.append((0, 0, {
+                if rate == 0.0 and voucher.get("total"):
+                    rate = float(voucher.get("total")) / max(qty, 1.0)
+
+                line_dict: dict[str, Any] = {
                     "name": item_name,
                     "quantity": qty,
                     "price_unit": rate,
-                }))
+                }
+                if default_account_id:
+                    line_dict["account_id"] = default_account_id
+
+                invoice_line_ids.append((0, 0, line_dict))
         else:
             total_amt = float(voucher.get("subtotal") or voucher.get("total") or 0.0)
-            invoice_line_ids.append((0, 0, {
+            line_dict = {
                 "name": f"Purchase as per Bill #{ref_no}",
                 "quantity": 1.0,
                 "price_unit": total_amt,
-            }))
+            }
+            if default_account_id:
+                line_dict["account_id"] = default_account_id
+            invoice_line_ids.append((0, 0, line_dict))
 
-        move_vals = {
+        # Look up purchase journal if available
+        purchase_journal_id = self.get_default_journal("purchase")
+
+        move_vals: dict[str, Any] = {
             "move_type": "in_invoice",
             "partner_id": partner_id,
             "invoice_date": inv_date,
+            "date": inv_date,
             "ref": ref_no,
             "invoice_line_ids": invoice_line_ids,
-            "narration": voucher.get("narration") or f"Daynisc Pro Auto-Sync #{voucher.get('voucher_number')}"
+            "narration": voucher.get("narration") or f"Daynisc Pro Auto-Sync #{ref_no}"
         }
+        if purchase_journal_id:
+            move_vals["journal_id"] = purchase_journal_id
 
-        move_id = self.execute("account.move", "create", [move_vals])
+        try:
+            move_id = self.execute("account.move", "create", [move_vals])
+        except Exception as e:
+            # If narration or journal_id caused validation failure, retry with minimal core fields
+            if any(k in str(e).lower() for k in ("narration", "journal", "date")):
+                move_vals.pop("narration", None)
+                move_vals.pop("journal_id", None)
+                move_id = self.execute("account.move", "create", [move_vals])
+            else:
+                raise
 
+        if isinstance(move_id, (list, tuple)):
+            move_id = move_id[0]
+        if isinstance(move_id, dict):
+            move_id = move_id.get("id")
+        move_id = int(move_id)
+
+        # Attempt to confirm / post bill
         move_name = f"BILL/{move_id}"
+        is_posted = False
         try:
             self.execute("account.move", "action_post", [[move_id]])
-            read_info = self.execute("account.move", "read", [[move_id]], {"fields": ["name"]})
-            if read_info:
-                move_name = read_info[0].get("name", move_name)
+            is_posted = True
         except Exception as e:
-            logger.warning(f"Bill created (ID {move_id}) but post action failed: {e}")
+            logger.warning(f"Bill created (ID {move_id}) but action_post failed (kept as Draft): {e}")
+
+        # Read actual document reference from Odoo
+        try:
+            read_info = self.execute("account.move", "read", [[move_id]], {"fields": ["name", "state"]})
+            if read_info and len(read_info) > 0:
+                raw_name = read_info[0].get("name")
+                state = read_info[0].get("state")
+                if raw_name and raw_name != "/":
+                    move_name = raw_name
+                elif state == "draft":
+                    move_name = f"BILL/{move_id} (Draft)"
+        except Exception:
+            pass
 
         return {
             "success": True,
             "odoo_id": move_id,
             "odoo_ref": move_name,
             "type": "in_invoice",
-            "message": f"Vendor Bill created in Odoo ({move_name})"
+            "posted": is_posted,
+            "message": f"Vendor Bill created in Odoo: {move_name}"
         }
 
     def push_sales_voucher(self, voucher: dict) -> dict[str, Any]:
@@ -305,51 +490,98 @@ class OdooConnector:
         ref_no = voucher.get("voucher_number") or voucher.get("reference_number") or ""
         line_items = voucher.get("line_items") or []
 
+        # Find default income account to prevent "Account is required on invoice line" error
+        default_account_id = self.get_default_income_account()
+
         invoice_line_ids = []
         if line_items:
             for item in line_items:
                 item_name = item.get("name") or item.get("item_name") or item.get("description") or "Item / Service"
                 qty = float(item.get("qty") or item.get("quantity") or 1.0)
                 rate = float(item.get("rate") or item.get("price_unit") or item.get("amount") or 0.0)
-                invoice_line_ids.append((0, 0, {
+                if rate == 0.0 and voucher.get("total"):
+                    rate = float(voucher.get("total")) / max(qty, 1.0)
+
+                line_dict: dict[str, Any] = {
                     "name": item_name,
                     "quantity": qty,
                     "price_unit": rate,
-                }))
+                }
+                if default_account_id:
+                    line_dict["account_id"] = default_account_id
+
+                invoice_line_ids.append((0, 0, line_dict))
         else:
             total_amt = float(voucher.get("subtotal") or voucher.get("total") or 0.0)
-            invoice_line_ids.append((0, 0, {
+            line_dict = {
                 "name": f"Sales as per Invoice #{ref_no}",
                 "quantity": 1.0,
                 "price_unit": total_amt,
-            }))
+            }
+            if default_account_id:
+                line_dict["account_id"] = default_account_id
+            invoice_line_ids.append((0, 0, line_dict))
 
-        move_vals = {
+        # Look up sales journal if available
+        sales_journal_id = self.get_default_journal("sale")
+
+        move_vals: dict[str, Any] = {
             "move_type": "out_invoice",
             "partner_id": partner_id,
             "invoice_date": inv_date,
+            "date": inv_date,
             "ref": ref_no,
             "invoice_line_ids": invoice_line_ids,
             "narration": voucher.get("narration") or f"Daynisc Pro Auto-Sync #{ref_no}"
         }
+        if sales_journal_id:
+            move_vals["journal_id"] = sales_journal_id
 
-        move_id = self.execute("account.move", "create", [move_vals])
+        try:
+            move_id = self.execute("account.move", "create", [move_vals])
+        except Exception as e:
+            if any(k in str(e).lower() for k in ("narration", "journal", "date")):
+                move_vals.pop("narration", None)
+                move_vals.pop("journal_id", None)
+                move_id = self.execute("account.move", "create", [move_vals])
+            else:
+                raise
 
+        if isinstance(move_id, (list, tuple)):
+            move_id = move_id[0]
+        if isinstance(move_id, dict):
+            move_id = move_id.get("id")
+        move_id = int(move_id)
+
+        # Attempt to post invoice
         move_name = f"INV/{move_id}"
+        is_posted = False
         try:
             self.execute("account.move", "action_post", [[move_id]])
-            read_info = self.execute("account.move", "read", [[move_id]], {"fields": ["name"]})
-            if read_info:
-                move_name = read_info[0].get("name", move_name)
+            is_posted = True
         except Exception as e:
-            logger.warning(f"Customer invoice created (ID {move_id}) but post action failed: {e}")
+            logger.warning(f"Customer invoice created (ID {move_id}) but action_post failed (kept as Draft): {e}")
+
+        # Read actual document reference from Odoo
+        try:
+            read_info = self.execute("account.move", "read", [[move_id]], {"fields": ["name", "state"]})
+            if read_info and len(read_info) > 0:
+                raw_name = read_info[0].get("name")
+                state = read_info[0].get("state")
+                if raw_name and raw_name != "/":
+                    move_name = raw_name
+                elif state == "draft":
+                    move_name = f"INV/{move_id} (Draft)"
+        except Exception:
+            pass
 
         return {
             "success": True,
             "odoo_id": move_id,
             "odoo_ref": move_name,
             "type": "out_invoice",
-            "message": f"Customer Invoice created in Odoo ({move_name})"
+            "posted": is_posted,
+            "message": f"Customer Invoice created in Odoo: {move_name}"
         }
 
     def push_payment_voucher(self, voucher: dict) -> dict[str, Any]:
@@ -359,7 +591,9 @@ class OdooConnector:
         pay_date = self._format_date(voucher.get("voucher_date"))
         amount = float(voucher.get("total") or 0.0)
 
-        pay_vals = {
+        journal_id = self.get_default_journal("bank")
+
+        pay_vals: dict[str, Any] = {
             "payment_type": "outbound",
             "partner_type": "supplier",
             "partner_id": partner_id,
@@ -367,19 +601,37 @@ class OdooConnector:
             "date": pay_date,
             "ref": voucher.get("voucher_number") or voucher.get("narration") or "Daynisc Payment"
         }
+        if journal_id:
+            pay_vals["journal_id"] = journal_id
 
         payment_id = self.execute("account.payment", "create", [pay_vals])
+        if isinstance(payment_id, (list, tuple)):
+            payment_id = payment_id[0]
+        if isinstance(payment_id, dict):
+            payment_id = payment_id.get("id")
+        payment_id = int(payment_id)
+
         try:
             self.execute("account.payment", "action_post", [[payment_id]])
+        except Exception as e:
+            logger.warning(f"Payment created (ID {payment_id}) but post failed: {e}")
+
+        pay_name = f"PAY/{payment_id}"
+        try:
+            read_info = self.execute("account.payment", "read", [[payment_id]], {"fields": ["name"]})
+            if read_info and len(read_info) > 0:
+                raw_name = read_info[0].get("name")
+                if raw_name and raw_name != "/":
+                    pay_name = raw_name
         except Exception:
             pass
 
         return {
             "success": True,
             "odoo_id": payment_id,
-            "odoo_ref": f"PAY/{payment_id}",
+            "odoo_ref": pay_name,
             "type": "payment",
-            "message": f"Payment #{payment_id} recorded in Odoo"
+            "message": f"Payment {pay_name} recorded in Odoo"
         }
 
     def push_receipt_voucher(self, voucher: dict) -> dict[str, Any]:
@@ -389,7 +641,9 @@ class OdooConnector:
         pay_date = self._format_date(voucher.get("voucher_date"))
         amount = float(voucher.get("total") or 0.0)
 
-        pay_vals = {
+        journal_id = self.get_default_journal("bank")
+
+        pay_vals: dict[str, Any] = {
             "payment_type": "inbound",
             "partner_type": "customer",
             "partner_id": partner_id,
@@ -397,19 +651,37 @@ class OdooConnector:
             "date": pay_date,
             "ref": voucher.get("voucher_number") or voucher.get("narration") or "Daynisc Receipt"
         }
+        if journal_id:
+            pay_vals["journal_id"] = journal_id
 
         payment_id = self.execute("account.payment", "create", [pay_vals])
+        if isinstance(payment_id, (list, tuple)):
+            payment_id = payment_id[0]
+        if isinstance(payment_id, dict):
+            payment_id = payment_id.get("id")
+        payment_id = int(payment_id)
+
         try:
             self.execute("account.payment", "action_post", [[payment_id]])
+        except Exception as e:
+            logger.warning(f"Receipt created (ID {payment_id}) but post failed: {e}")
+
+        pay_name = f"REC/{payment_id}"
+        try:
+            read_info = self.execute("account.payment", "read", [[payment_id]], {"fields": ["name"]})
+            if read_info and len(read_info) > 0:
+                raw_name = read_info[0].get("name")
+                if raw_name and raw_name != "/":
+                    pay_name = raw_name
         except Exception:
             pass
 
         return {
             "success": True,
             "odoo_id": payment_id,
-            "odoo_ref": f"REC/{payment_id}",
+            "odoo_ref": pay_name,
             "type": "receipt",
-            "message": f"Receipt #{payment_id} recorded in Odoo"
+            "message": f"Receipt {pay_name} recorded in Odoo"
         }
 
     def sync_voucher(self, voucher: dict, voucher_type: str | None = None) -> dict[str, Any]:

@@ -869,7 +869,9 @@ export default function AIVerificationPage() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["extractions"] });
       qc.invalidateQueries({ queryKey: ["extractions-all"] });
+      qc.invalidateQueries({ queryKey: ["erp-pending"] });
       qc.invalidateQueries({ queryKey: ["tally-pending"] });
+      qc.invalidateQueries({ queryKey: ["erp-history"] });
       setSelected(null);
       toast.success(
         activeErp === "odoo"

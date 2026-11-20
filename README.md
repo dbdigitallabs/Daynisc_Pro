@@ -9,7 +9,7 @@
 [![TallyPrime](https://img.shields.io/badge/TallyPrime-XML_HTTP_Sync-004A80?style=flat-square)](https://tallysolutions.com)
 [![Electron](https://img.shields.io/badge/Electron-Windows_Desktop-47848F?style=flat-square&logo=electron&logoColor=white)](https://www.electronjs.org)
 
-**Repository:** [https://github.com/bhaveshkhimsuriya023-stack/Daynisc.git](https://github.com/bhaveshkhimsuriya023-stack/Daynisc.git)
+**Repository:** [https://github.com/dbdigitallabs/Daynisc_Pro.git](https://github.com/dbdigitallabs/Daynisc_Pro.git)
 
 ---
 
@@ -188,4 +188,4 @@ SECRET_KEY=your-secret-key-here
 ## Presentation & Materials
 
 - **Project Presentation Deck:** `AI-Powered-Bank-Automation.pptx` (included in repository root)
-- **GitHub Repository:** [https://github.com/bhaveshkhimsuriya023-stack/Daynisc.git](https://github.com/bhaveshkhimsuriya023-stack/Daynisc.git)
+- **GitHub Repository:** [https://github.com/dbdigitallabs/Daynisc_Pro.git](https://github.com/dbdigitallabs/Daynisc_Pro.git)
