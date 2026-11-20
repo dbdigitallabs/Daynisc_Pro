@@ -13,6 +13,13 @@ echo Cleaning up existing stale processes on port 3000...
 for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":3000" ^| findstr "LISTENING"') do taskkill /f /pid %%a >nul 2>&1
 timeout /t 1 /nobreak > nul
 
+:: 1b. Auto-install frontend dependencies if running from a fresh clone
+if not exist "web_dashboard\node_modules" (
+    echo.
+    echo [Setup] First-time setup detected: Installing frontend dependencies...
+    cd web_dashboard && call npm install && cd ..
+)
+
 :: 2. Launch Backend Server in a new window
 echo.
 echo [1/3] Starting Backend Server on port 8000...
