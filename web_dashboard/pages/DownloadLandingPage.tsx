@@ -6,6 +6,7 @@ import { useAuthStore } from "../store/authStore";
 
 const GITHUB_REPO_URL = "https://github.com/dbdigitallabs/Daynisc_Pro";
 const GITHUB_CLONE_URL = "https://github.com/dbdigitallabs/Daynisc_Pro.git";
+const GITHUB_ZIP_URL = "https://github.com/dbdigitallabs/Daynisc_Pro/archive/refs/heads/main.zip";
 
 const GithubIcon = ({ size = 16 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" style={{ flexShrink: 0, display: "inline-block" }}>
@@ -14,7 +15,8 @@ const GithubIcon = ({ size = 16 }: { size?: number }) => (
 );
 
 const TERMINAL_COMMANDS = {
-  powershell: `git clone ${GITHUB_CLONE_URL} ; cd Daynisc_Pro ; .\\start_all.bat`,
+  powershell: `powershell -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri '${GITHUB_ZIP_URL}' -OutFile 'Daynisc_Pro.zip'; Expand-Archive -Path 'Daynisc_Pro.zip' -DestinationPath 'Daynisc_Pro_App' -Force; Remove-Item 'Daynisc_Pro.zip'; Set-Location 'Daynisc_Pro_App\\Daynisc_Pro-main'; .\\start_all.bat"`,
+  git: `git clone ${GITHUB_CLONE_URL} ; cd Daynisc_Pro ; .\\start_all.bat`,
   cmd: `git clone ${GITHUB_CLONE_URL} && cd Daynisc_Pro && start_all.bat`,
 };
 
@@ -23,11 +25,11 @@ export default function DownloadLandingPage() {
   const [downloading, setDownloading] = useState(false);
   const [showDemoModal, setShowDemoModal] = useState(false);
   const [showDownloadModal, setShowDownloadModal] = useState(false);
-  const [terminalTab, setTerminalTab] = useState<"powershell" | "cmd">("powershell");
+  const [terminalTab, setTerminalTab] = useState<"powershell" | "git" | "cmd">("powershell");
   const [copied, setCopied] = useState(false);
   const exploreRef = useRef<HTMLDivElement>(null);
 
-  const copyTerminalCommand = (type?: "powershell" | "cmd") => {
+  const copyTerminalCommand = (type?: "powershell" | "git" | "cmd") => {
     const targetType = type || terminalTab;
     const cmd = TERMINAL_COMMANDS[targetType];
     const notify = () => {
@@ -59,10 +61,9 @@ export default function DownloadLandingPage() {
 
   const handleDownload = () => {
     setDownloading(true);
-    const downloadUrl = "/downloads/Daynisc-Pro-Windows.zip";
     const link = document.createElement("a");
-    link.href = downloadUrl;
-    link.setAttribute("download", "Daynisc-Pro-Windows.zip");
+    link.href = GITHUB_ZIP_URL;
+    link.setAttribute("download", "Daynisc_Pro.zip");
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -339,7 +340,24 @@ export default function DownloadLandingPage() {
                   transition: "all 0.15s ease",
                 }}
               >
-                PowerShell
+                PowerShell (No Git Needed)
+              </button>
+              <button
+                type="button"
+                onClick={() => setTerminalTab("git")}
+                style={{
+                  padding: "4px 10px",
+                  borderRadius: 6,
+                  border: "none",
+                  fontSize: 11.5,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  background: terminalTab === "git" ? "#0f172a" : "transparent",
+                  color: terminalTab === "git" ? "#ffffff" : "#64748b",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                Git Clone
               </button>
               <button
                 type="button"
@@ -356,7 +374,7 @@ export default function DownloadLandingPage() {
                   transition: "all 0.15s ease",
                 }}
               >
-                Command Prompt (CMD)
+                Command Prompt
               </button>
             </div>
           </div>
@@ -383,7 +401,7 @@ export default function DownloadLandingPage() {
                 <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#f59e0b", display: "inline-block" }} />
                 <span style={{ width: 10, height: 10, borderRadius: "50%", background: "#10b981", display: "inline-block" }} />
                 <span style={{ fontSize: 11.5, color: "#94a3b8", fontFamily: "monospace", marginLeft: 8 }}>
-                  {terminalTab === "powershell" ? "Windows PowerShell" : "Command Prompt"}
+                  {terminalTab === "powershell" ? "Windows PowerShell (Standard Windows Setup)" : terminalTab === "git" ? "Git Bash / Terminal" : "Command Prompt"}
                 </span>
               </div>
               <span style={{ fontSize: 11, color: "#64748b", fontWeight: 500 }}>One-Click Local Launch</span>
@@ -400,7 +418,7 @@ export default function DownloadLandingPage() {
             }}>
               <div style={{
                 fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
-                fontSize: 13,
+                fontSize: 12.5,
                 color: "#f8fafc",
                 lineHeight: 1.5,
                 overflowX: "auto",
@@ -412,25 +430,7 @@ export default function DownloadLandingPage() {
               }}>
                 <span style={{ color: "#38bdf8", fontWeight: 700 }}>&gt;</span>
                 <span style={{ color: "#e2e8f0" }}>
-                  <span>git clone </span>
-                  <a
-                    href={GITHUB_REPO_URL}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title="Open GitHub repository (opens in new tab)"
-                    style={{
-                      color: "#38bdf8",
-                      textDecoration: "underline",
-                      textUnderlineOffset: 3,
-                      cursor: "pointer",
-                      fontWeight: 600,
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.color = "#93c5fd")}
-                    onMouseLeave={(e) => (e.currentTarget.style.color = "#38bdf8")}
-                  >
-                    {GITHUB_CLONE_URL}
-                  </a>
-                  <span>{terminalTab === "powershell" ? " ; cd Daynisc_Pro ; .\\start_all.bat" : " && cd Daynisc_Pro && start_all.bat"}</span>
+                  {TERMINAL_COMMANDS[terminalTab]}
                 </span>
               </div>
 
