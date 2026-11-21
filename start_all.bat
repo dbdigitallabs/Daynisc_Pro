@@ -18,7 +18,7 @@ echo Cleaning up existing stale processes on port 3000...
 for /f "tokens=5" %%a in ('netstat -aon ^| findstr ":3000" ^| findstr "LISTENING"') do taskkill /f /pid %%a >nul 2>&1
 timeout /t 1 /nobreak > nul
 
-:: 1b. Check Node.js and Python availability
+:: 1b. Check Node.js availability
 where npm >nul 2>&1
 if %ERRORLEVEL% neq 0 (
     echo [ERROR] Node.js and npm are not installed or not in PATH!
@@ -27,7 +27,28 @@ if %ERRORLEVEL% neq 0 (
     exit /b 1
 )
 
-:: 1c. Auto-install frontend dependencies if running from a fresh clone
+:: 1c. Check and resolve Python command
+set "PY_CMD="
+where python >nul 2>&1 && set "PY_CMD=python"
+if not defined PY_CMD (
+    where py >nul 2>&1 && set "PY_CMD=py"
+)
+if not defined PY_CMD (
+    echo [ERROR] Python is not installed or not in PATH!
+    echo Please install Python from https://www.python.org
+    pause
+    exit /b 1
+)
+
+:: 1d. Auto-install backend dependencies (fastapi, uvicorn, etc.) if missing
+echo Checking backend dependencies...
+%PY_CMD% -c "import fastapi, uvicorn" >nul 2>&1
+if %ERRORLEVEL% neq 0 (
+    echo [Setup] Installing required backend dependencies (fastapi, uvicorn)...
+    %PY_CMD% -m pip install fastapi uvicorn requests python-multipart
+)
+
+:: 1e. Auto-install frontend dependencies if running from a fresh clone
 if not exist "%ROOT_DIR%web_dashboard\node_modules" (
     echo.
     echo [Setup] First-time setup detected: Installing frontend dependencies...
@@ -39,7 +60,7 @@ if not exist "%ROOT_DIR%web_dashboard\node_modules" (
 :: 2. Launch Backend Server in a new window
 echo.
 echo [1/3] Starting Backend Server on port 8000...
-start "Daynisc Backend" cmd /k "cd /d ""%ROOT_DIR%backend"" && (where python >nul 2>&1 && python demo_server.py || (where py >nul 2>&1 && py demo_server.py || echo [ERROR] Python not found. Please install Python from python.org))"
+start "Daynisc Backend" cmd /k "cd /d ""%ROOT_DIR%backend"" && %PY_CMD% demo_server.py"
 timeout /t 2 /nobreak > nul
 
 :: 3. Launch Frontend Server in a new window
